@@ -17,8 +17,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $email = mysqli_real_escape_string($conn, $_POST['email']);
     $password = $_POST['password'];
     
-    // First check in users table
-    $sql = "SELECT * FROM users WHERE email = ?";
+    // Check in users table for admin
+    $sql = "SELECT * FROM users WHERE email = ? AND user_type = 'admin'";
     $stmt = mysqli_prepare($conn, $sql);
     mysqli_stmt_bind_param($stmt, "s", $email);
     mysqli_stmt_execute($stmt);
@@ -26,12 +26,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     
     if (mysqli_num_rows($result) > 0) {
         $user = mysqli_fetch_assoc($result);
-        // For users table, check if password matches
-        if ($user['password'] == $password) {
+        // Verify password hash
+        if (password_verify($password, $user['password'])) {
             $_SESSION['user_id'] = $user['id'];
             $_SESSION['user_type'] = $user['user_type'];
             $_SESSION['token'] = $user['remember_token'];
-            $_SESSION['user_name'] = $user['first_name'] . ' ' . $user['last_name'];
+            $_SESSION['user_name'] = $user['name'];
             
             header("Location: dashboard.php");
             exit();
@@ -118,7 +118,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
 
                     <p class="mt-auto mb-0">
-                        <script>document.write(new Date().getFullYear())</script> © IPN Academy - Developed By <span class="fw-bold text-decoration-underline text-uppercase text-reset fs-12">Endeavour Digital</span>
+                        <script>document.write(new Date().getFullYear())</script> © IPN Academy - Developed By <span class="fw-bold text-decoration-underline text-uppercase text-reset fs-12"><a href="https://endeavourdigital.in">Endeavour Digital</a></span>
                     </p>
                 </div>
             </div>
