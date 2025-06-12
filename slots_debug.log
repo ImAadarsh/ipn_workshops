@@ -1,0 +1,11 @@
+
+
+2025-04-20 11:17:55 - Request received
+POST data: Array
+(
+    [trainer_id] => 1
+    [date] => 2025-04-20
+    [show_all] => 1
+)
+
+Error: Unauthorized access
