@@ -41,7 +41,7 @@
         <li class="side-nav-title">Management</li>
 
         <!-- Users Management -->
-        <li class="side-nav-item">
+        <!-- <li class="side-nav-item">
             <a data-bs-toggle="collapse" href="#sidebarUsers" aria-expanded="false" aria-controls="sidebarUsers" class="side-nav-link">
                 <span class="menu-icon"><i class="ti ti-users"></i></span>
                 <span class="menu-text">Users</span>
@@ -66,10 +66,10 @@
                     </li>
                 </ul>
             </div>
-        </li>
+        </li> -->
 
         <!-- Trainers Management -->
-        <li class="side-nav-item">
+        <!-- <li class="side-nav-item">
             <a data-bs-toggle="collapse" href="#sidebarTrainers" aria-expanded="false" aria-controls="sidebarTrainers" class="side-nav-link">
                 <span class="menu-icon"><i class="ti ti-user-star"></i></span>
                 <span class="menu-text">Trainers</span>
@@ -91,8 +91,8 @@
             </div>
         </li>
 
-        <!-- Bookings Management -->
-        <li class="side-nav-item">
+        <-- Bookings Management -->
+        <!-- <li class="side-nav-item">
             <a data-bs-toggle="collapse" href="#sidebarBookings" aria-expanded="false" aria-controls="sidebarBookings" class="side-nav-link">
                 <span class="menu-icon"><i class="ti ti-calendar"></i></span>
                 <span class="menu-text">Bookings</span>
@@ -120,10 +120,10 @@
             </div>
         </li>
 
-        <li class="side-nav-title">Payments & Transactions</li>
+        <li class="side-nav-title">Payments & Transactions</li>  -->
 
         <!-- Coupons -->
-        <li class="side-nav-item">
+        <!-- <li class="side-nav-item">
             <a data-bs-toggle="collapse" href="#sidebarCoupons" aria-expanded="false" aria-controls="sidebarCoupons" class="side-nav-link">
                 <span class="menu-icon"><i class="ti ti-discount"></i></span>
                 <span class="menu-text">Coupons</span>
@@ -143,10 +143,10 @@
                     </li>
                 </ul>
             </div>
-        </li>
+        </li> -->
 
         <!-- Reports -->
-        <li class="side-nav-item">
+        <!-- <li class="side-nav-item">
             <a data-bs-toggle="collapse" href="#sidebarTransactions" aria-expanded="false" aria-controls="sidebarTransactions" class="side-nav-link">
                 <span class="menu-icon"><i class="ti ti-report"></i></span>
                 <span class="menu-text">Transactions</span>
@@ -173,10 +173,10 @@
             </div>
         </li>
 
-        <li class="side-nav-title">Reports & Analytics</li>
+        <li class="side-nav-title">Reports & Analytics</li> -->
 
         <!-- Reports -->
-        <li class="side-nav-item">
+        <!-- <li class="side-nav-item">
             <a data-bs-toggle="collapse" href="#sidebarReports" aria-expanded="false" aria-controls="sidebarReports" class="side-nav-link">
                 <span class="menu-icon"><i class="ti ti-report"></i></span>
                 <span class="menu-text">Reports</span>
@@ -202,10 +202,10 @@
                     </li>
                 </ul>
             </div>
-        </li>
+        </li> -->
 
         <!-- Reviews & Ratings -->
-        <li class="side-nav-item">
+        <!-- <li class="side-nav-item">
             <a data-bs-toggle="collapse" href="#sidebarReviews" aria-expanded="false" aria-controls="sidebarReviews" class="side-nav-link">
                 <span class="menu-icon"><i class="ti ti-star"></i></span>
                 <span class="menu-text">Reviews</span>
@@ -227,10 +227,10 @@
             </div>
         </li>
 
-        <li class="side-nav-title">Content Management</li>
+        <li class="side-nav-title">Content Management</li> -->
 
         <!-- Blog Management -->
-        <li class="side-nav-item">
+        <!-- <li class="side-nav-item">
             <a data-bs-toggle="collapse" href="#sidebarBlogs" aria-expanded="false" aria-controls="sidebarBlogs" class="side-nav-link">
                 <span class="menu-icon"><i class="ti ti-article"></i></span>
                 <span class="menu-text">Blog</span>
@@ -255,10 +255,10 @@
                     </li>
                 </ul>
             </div>
-        </li>
+        </li> -->
 
         <!-- Events Management -->
-        <li class="side-nav-item">
+        <!-- <li class="side-nav-item">
             <a data-bs-toggle="collapse" href="#sidebarEvents" aria-expanded="false" aria-controls="sidebarEvents" class="side-nav-link">
                 <span class="menu-icon"><i class="ti ti-calendar-event"></i></span>
                 <span class="menu-text">Events</span>
@@ -278,17 +278,17 @@
                     </li>
                 </ul>
             </div>
-        </li>
+        </li> -->
 
-        <li class="side-nav-title">Settings</li>
+        <!-- <li class="side-nav-title">Settings</li> -->
 
         <!-- Account Settings -->
-        <li class="side-nav-item">
+        <!-- <li class="side-nav-item">
             <a href="profile.php" class="side-nav-link">
                 <span class="menu-icon"><i class="ti ti-settings"></i></span>
                 <span class="menu-text">Settings</span>
             </a>
-        </li>
+        </li> -->
 
         <!-- Logout -->
         <li class="side-nav-item">
