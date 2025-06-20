@@ -89,13 +89,34 @@ if (!empty($upcomingWorkshops)) {
             <div class="page-container">
                 <div class="row">
                     <div class="col-12">
-                        <div class="page-title-head d-flex align-items-sm-center flex-sm-row flex-column">
-                            <div class="flex-grow-1">
-                                <h4 class="fs-18 text-uppercase fw-bold m-0">Dashboard</h4>
+                        <div class="page-title-box">
+                            <div class="page-title-right">
+                                <ol class="breadcrumb m-0">
+                                    <li class="breadcrumb-item"><a href="dashboard.php">Dashboard</a></li>
+                                </ol>
                             </div>
+                            <h4 class="page-title">Dashboard</h4>
                                         </div>
                                             </div>
                                         </div>
+
+                <!-- Quick Actions -->
+                <div class="row">
+                    <div class="col-12">
+                                <div class="card">
+                                    <div class="card-body">
+                                <h4 class="header-title mb-3">Quick Actions</h4>
+                                <div class="row g-2">
+                                    <div class="col-md-3">
+                                        <a href="registered_users.php" class="btn btn-primary w-100">
+                                            <i class="ti ti-users me-1"></i> View Registered Users
+                                        </a>
+                                            </div>
+                                        </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
 
                 <!-- Upcoming Workshops Section -->
                 <div class="row mt-4">
@@ -135,8 +156,8 @@ if (!empty($upcomingWorkshops)) {
                                                                     <i class="ti ti-brand-zoom me-1"></i> Zoom Link Added
                                                 </span>
                                                                 <?php endif; ?>
-                                            </div>
-                                        </div>
+                                                    </div>
+                                                </div>
                                                         <p class="text-muted mb-3 fs-5"><?php echo $workshop['trainer_name']; ?></p>
                                                         <div class="row">
                                                             <div class="col-md-4">
@@ -144,11 +165,11 @@ if (!empty($upcomingWorkshops)) {
                                                                 <p class="text-muted mb-0 fs-5">
                                                                     <?php echo date('d M Y, h:i A', strtotime($workshop['start_date'])); ?>
                                                                 </p>
-                                    </div>
+                                            </div>
                                                             <div class="col-md-4">
                                                                 <h5 class="mb-1">Duration</h5>
                                                                 <p class="text-muted mb-0 fs-5"><?php echo $workshop['duration']; ?></p>
-                                </div>
+                                                    </div>
                                                             <div class="col-md-4">
                                                                 <h5 class="mb-1">Price</h5>
                                                                 <?php if ($workshop['cut_price']): ?>
@@ -159,22 +180,22 @@ if (!empty($upcomingWorkshops)) {
                                                                 <?php else: ?>
                                                                 <p class="mb-0 text-success fs-5">₹<?php echo number_format($workshop['price'], 2); ?></p>
                                                                 <?php endif; ?>
-                            </div>
-                                            </div>
+                                                </div>
+                                                    </div>
                                                         <div class="row mt-3">
                                                             <div class="col-md-4">
                                                                 <span class="fw-bold">B2B User Enrollment:</span>
                                                                 <span class="badge bg-primary fs-5 ms-1"><?php echo $featuredStats['b2b']; ?></span>
-                                        </div>
+                                                </div>
                                                             <div class="col-md-4">
                                                                 <span class="fw-bold">B2C User Enrollment:</span>
                                                                 <span class="badge bg-success fs-5 ms-1"><?php echo $featuredStats['b2c']; ?></span>
-                                    </div>
+                                            </div>
                                                             <div class="col-md-4">
                                                                 <span class="fw-bold">Mails Sent:</span>
                                                                 <span class="badge bg-warning text-dark fs-5 ms-1"><?php echo $featuredStats['mail_sent']; ?></span>
-                                                    </div>
-                                                </div>
+                                        </div>
+                                    </div>
                                                         <div class="mt-4">
                                                             <a href="workshop-details.php?id=<?php echo $workshop['id']; ?>" class="btn btn-primary btn-lg">View Details</a>
                                                             <?php if ($workshop['rlink']): ?>
@@ -195,10 +216,10 @@ if (!empty($upcomingWorkshops)) {
                                                                 <a href="https://ipnacademy.in/workshop_assessment_report.php?workshop_id=<?php echo $workshop['id']; ?>" class="btn btn-info btn-sm" target="_blank">
                                                                     <i class="ti ti-file-report me-1"></i> Assessment Report
                                                                 </a>
-                                                    </div>
-                                                </div>
                                             </div>
-                                                    </div>
+                                        </div>
+                                    </div>
+                                            </div>
                             <?php else: ?>
                                                 <div class="d-flex align-items-center mb-3">
                                                     <?php if ($workshop['image']): ?>
