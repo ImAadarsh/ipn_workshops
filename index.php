@@ -67,7 +67,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
 <head>
     <meta charset="utf-8" />
-    <title>Log In | IPN Academy - Shape Your Future with Confidence</title>
+    <title>Log In | IPN Academy - Workshops Controls & More</title>
 <?php include 'includes/head.php'; ?>
 </head>
 
