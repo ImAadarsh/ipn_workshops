@@ -550,10 +550,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         <div class="row mt-4">
                                             <div class="col-12">
                                                 <div class="card">
-                                                    <div class="card-header">
+                                                    <div class="card-header d-flex justify-content-between align-items-center">
                                                         <h5 class="card-title mb-0">
                                                             <i class="ti ti-user-plus me-1"></i> Bulk Enroll Teachers by School
                                                         </h5>
+                                                        <a href="school_links.php?workshop_id=<?php echo $workshop_id; ?>" class="btn btn-outline-primary btn-sm">
+                                                            <i class="ti ti-link me-1"></i> Generate School Enrollment Link
+                                                        </a>
                                                     </div>
                                                     <div class="card-body text-center">
                                                         <p>Enroll multiple teachers from a single school into this workshop.</p>
