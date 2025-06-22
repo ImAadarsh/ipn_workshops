@@ -11,7 +11,7 @@ function getNotifications($conn, $user_id, $user_type) {
         $query = "SELECT 
             'new_user' as type,
             u.id,
-            CONCAT(u.first_name, ' ', u.last_name) as name,
+            u.name as name,
             u.created_at as time,
             'New user registration' as message
             FROM users u 
@@ -20,7 +20,7 @@ function getNotifications($conn, $user_id, $user_type) {
             SELECT 
             'new_booking' as type,
             b.id,
-            CONCAT(u.first_name, ' ', u.last_name) as name,
+            u.name as name,
             b.created_at as time,
             'New booking created' as message
             FROM bookings b 
@@ -30,7 +30,7 @@ function getNotifications($conn, $user_id, $user_type) {
             SELECT 
             'new_review' as type,
             tr.id,
-            CONCAT(u.first_name, ' ', u.last_name) as name,
+            u.name as name,
             tr.created_at as time,
             'New trainer review' as message
             FROM trainer_reviews tr
@@ -42,7 +42,7 @@ function getNotifications($conn, $user_id, $user_type) {
         $query = "SELECT 
             'booking_update' as type,
             b.id,
-            CONCAT(t.first_name, ' ', t.last_name) as name,
+            t.name as name,
             b.updated_at as time,
             CASE 
                 WHEN b.status = 'confirmed' THEN 'Booking confirmed'

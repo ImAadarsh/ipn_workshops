@@ -185,7 +185,7 @@
 </div>
 
 <!-- Add this JavaScript at the end of the file -->
-<script>
+<!-- <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Load notifications
     function loadNotifications() {
@@ -280,4 +280,4 @@ document.addEventListener('DOMContentLoaded', function() {
     // Refresh notifications every minute
     setInterval(loadNotifications, 60000);
 });
-</script>
+</script> -->

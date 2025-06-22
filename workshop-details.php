@@ -555,41 +555,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                                             <i class="ti ti-user-plus me-1"></i> Bulk Enroll Teachers by School
                                                         </h5>
                                                     </div>
-                                                    <div class="card-body">
-                                                        <div class="row mb-3">
-                                                            <div class="col-md-6">
-                                                                <label class="form-label">Select School</label>
-                                                                <select id="bulkEnrollSchool" class="form-select">
-                                                                    <option value="">-- Select School --</option>
-                                                                    <?php
-                                                                    $all_schools = mysqli_query($conn, "SELECT id, name FROM schools ORDER BY name");
-                                                                    while ($s = mysqli_fetch_assoc($all_schools)) {
-                                                                        echo '<option value="' . $s['id'] . '">' . htmlspecialchars($s['name']) . '</option>';
-                                                                    }
-                                                                    ?>
-                                                                </select>
-                                                            </div>
-                                                        </div>
-                                                        <div id="schoolUsersSection" style="display:none;">
-                                                            <form id="bulkEnrollForm">
-                                                                <div class="table-responsive mb-3">
-                                                                    <table class="table table-bordered" id="schoolUsersTable">
-                                                                        <thead>
-                                                                            <tr>
-                                                                                <th><input type="checkbox" id="selectAllSchoolUsers"></th>
-                                                                                <th>Name</th>
-                                                                                <th>Email</th>
-                                                                                <th>Mobile</th>
-                                                                                <th>Designation</th>
-                                                                                <th>Already Enrolled?</th>
-                                                                            </tr>
-                                                                        </thead>
-                                                                        <tbody></tbody>
-                                                                    </table>
-                                                                </div>
-                                                                <button type="submit" class="btn btn-success" id="enrollSelectedSchoolUsers" disabled>Enroll Selected Teachers</button>
-                                                            </form>
-                                                        </div>
+                                                    <div class="card-body text-center">
+                                                        <p>Enroll multiple teachers from a single school into this workshop.</p>
+                                                        <a href="bulk_enroll.php?workshop_id=<?php echo $workshop_id; ?>" class="btn btn-primary">
+                                                            <i class="ti ti-user-plus me-1"></i> Go to Bulk Enrollment Page
+                                                        </a>
                                                     </div>
                                                 </div>
                                             </div>
@@ -644,9 +614,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     WHERE (
                                         EXISTS (
                                             SELECT 1 FROM payments p WHERE p.workshop_id = $workshop_id AND p.payment_status = 1 AND p.school_id = s.id
-                                        )
-                                        OR EXISTS (
-                                            SELECT 1 FROM payments p INNER JOIN users u ON p.user_id = u.id WHERE p.workshop_id = $workshop_id AND p.payment_status = 1 AND u.school_id = s.id
                                         )
                                     )
                                     ORDER BY s.name ASC";
@@ -873,73 +840,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             },
                             error: function() {
                                 alert('Error enrolling users');
-                            }
-                        });
-                    });
-
-                    // Fetch users when school is selected
-                    $('#bulkEnrollSchool').on('change', function() {
-                        var schoolId = $(this).val();
-                        if (!schoolId) {
-                            $('#schoolUsersSection').hide();
-                            return;
-                        }
-                        $.get('fetch_school_users.php', {
-                            school_id: schoolId,
-                            workshop_id: <?php echo $workshop_id; ?>
-                        }, function(users) {
-                            var tbody = '';
-                            if (users.length === 0) {
-                                tbody = '<tr><td colspan="6" class="text-center">No teachers found for this school.</td></tr>';
-                            } else {
-                                users.forEach(function(user) {
-                                    tbody += '<tr>' +
-                                        '<td><input type="checkbox" class="school-user-checkbox" value="' + user.id + '"' + (user.enrolled ? ' disabled' : '') + '></td>' +
-                                        '<td>' + (user.name || '-') + '</td>' +
-                                        '<td>' + (user.email || '-') + '</td>' +
-                                        '<td>' + (user.mobile || '-') + '</td>' +
-                                        '<td>' + (user.designation || '-') + '</td>' +
-                                        '<td>' + (user.enrolled ? '<span class="badge bg-success">Yes</span>' : '<span class="badge bg-secondary">No</span>') + '</td>' +
-                                    '</tr>';
-                                });
-                            }
-                            $('#schoolUsersTable tbody').html(tbody);
-                            console.log('Loaded users:', users);
-                            $('#schoolUsersSection').show();
-                            $('#schoolUsersSection').css('display', 'block'); // force show
-                            $('#enrollSelectedSchoolUsers').prop('disabled', true);
-                        }, 'json');
-                    });
-
-                    // Select all checkboxes
-                    $(document).on('change', '#selectAllSchoolUsers', function() {
-                        $('.school-user-checkbox:enabled').prop('checked', $(this).prop('checked'));
-                        updateBulkEnrollButton();
-                    });
-                    // Individual checkbox
-                    $(document).on('change', '.school-user-checkbox', function() {
-                        updateBulkEnrollButton();
-                    });
-                    function updateBulkEnrollButton() {
-                        var checkedCount = $('.school-user-checkbox:checked').length;
-                        $('#enrollSelectedSchoolUsers').prop('disabled', checkedCount === 0);
-                    }
-                    // Handle form submit
-                    $('#bulkEnrollForm').on('submit', function(e) {
-                        e.preventDefault();
-                        var selected = $('.school-user-checkbox:checked').map(function() { return this.value; }).get();
-                        if (selected.length === 0) return;
-                        if (!confirm('Are you sure you want to enroll ' + selected.length + ' teachers in this workshop?')) return;
-                        $.post('enroll_school_users.php', {
-                            user_ids: selected,
-                            workshop_id: <?php echo $workshop_id; ?>
-                        }, function(response) {
-                            var result = JSON.parse(response);
-                            if (result.success) {
-                                alert('Successfully enrolled ' + result.enrolled + ' teachers.');
-                                $('#bulkEnrollSchool').trigger('change'); // Refresh list
-                            } else {
-                                alert('Error: ' + (result.errors ? result.errors.join('\n') : 'Unknown error.'));
                             }
                         });
                     });
