@@ -147,12 +147,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <?php endif; ?>
 
                                 <div class="row">
-                                    <div class="col-md-4">
+                                    <!-- <div class="col-md-4">
                                         <?php if ($workshop['image']): ?>
                                         <img src="<?php echo $uri.$workshop['image']; ?>" class="mb-3" style="border-radius: 20px; border: solid 8px green;" width="100%" alt="Workshop">
                                         <?php endif; ?>
-                                    </div>
-                                    <div class="col-md-8">
+                                    </div> -->
+                                    <div class="col-md-12">
                                         <div class="d-flex justify-content-between align-items-start">
                                             <h3 class="mb-2 text-primary"><?php echo $workshop['name']; ?></h3>
                                             <div>
@@ -379,6 +379,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                                             </a>
                                                             <a href="https://ipnacademy.in/workshop_assessment_report.php?workshop_id=<?php echo $workshop_id; ?>" class="btn btn-info" target="_blank">
                                                                 <i class="ti ti-file-report me-1"></i> Assessment Report
+                                                            </a>
+                                                            <a href="public_workshop_links.php?workshop_id=<?php echo $workshop_id; ?>" class="btn btn-warning" target="_blank" title="View Public School Enrollment Links">
+                                                                <i class="ti ti-link me-1"></i> Public School Links
                                                             </a>
                                                         </div>
                                                     </div>

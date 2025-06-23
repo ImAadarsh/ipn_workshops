@@ -198,6 +198,9 @@ if (!empty($upcomingWorkshops)) {
                                                                 </div>
                                                                 <div class="mt-4">
                                                                     <a href="workshop-details.php?id=<?php echo $workshop['id']; ?>" class="btn btn-primary btn-lg">View Details</a>
+                                                                    <a href="public_workshop_links.php?workshop_id=<?php echo $workshop['id']; ?>" class="btn btn-warning btn-lg ms-2" target="_blank" title="View Public School Enrollment Links">
+                                                                        <i class="ti ti-link"></i>
+                                                                    </a>
                                                                     <?php if ($workshop['rlink']): ?>
                                                                         <a href="<?php echo $workshop['rlink']; ?>" class="btn btn-success btn-lg ms-2" target="_blank">
                                                                             <i class="ti ti-video me-1"></i>
@@ -271,6 +274,9 @@ if (!empty($upcomingWorkshops)) {
                                                                 </div>
                                                                 <div>
                                                                     <a href="workshop-details.php?id=<?php echo $workshop['id']; ?>" class="btn btn-sm btn-primary">View Details</a>
+                                                                    <a href="public_workshop_links.php?workshop_id=<?php echo $workshop['id']; ?>" class="btn btn-warning btn-sm ms-1" target="_blank" title="View Public School Enrollment Links">
+                                                                        <i class="ti ti-link"></i>
+                                                                    </a>
                                                                     <?php if ($workshop['rlink']): ?>
                                                                         <a href="<?php echo $workshop['rlink']; ?>" class="btn btn-sm btn-success ms-1" target="_blank">
                                                                             <i class="ti ti-video"></i>
@@ -368,6 +374,9 @@ if (!empty($upcomingWorkshops)) {
                                                                 </div>
                                                                 <div class="mt-4">
                                                                     <a href="workshop-details.php?id=<?php echo $workshop['id']; ?>" class="btn btn-primary btn-lg">View Details</a>
+                                                                    <a href="public_workshop_links.php?workshop_id=<?php echo $workshop['id']; ?>" class="btn btn-warning btn-lg ms-2" target="_blank" title="View Public School Enrollment Links">
+                                                                        <i class="ti ti-link"></i>
+                                                                    </a>
                                                                     <?php if ($workshop['rlink']): ?>
                                                                         <a href="<?php echo $workshop['rlink']; ?>" class="btn btn-success btn-lg ms-2" target="_blank">
                                                                             <i class="ti ti-video me-1"></i>
@@ -436,6 +445,9 @@ if (!empty($upcomingWorkshops)) {
                                                                 </div>
                                                                 <div>
                                                                     <a href="workshop-details.php?id=<?php echo $workshop['id']; ?>" class="btn btn-sm btn-primary">View Details</a>
+                                                                    <a href="public_workshop_links.php?workshop_id=<?php echo $workshop['id']; ?>" class="btn btn-warning btn-sm ms-1" target="_blank" title="View Public School Enrollment Links">
+                                                                        <i class="ti ti-link"></i>
+                                                                    </a>
                                                                     <?php if ($workshop['rlink']): ?>
                                                                         <a href="<?php echo $workshop['rlink']; ?>" class="btn btn-sm btn-success ms-1" target="_blank">
                                                                             <i class="ti ti-video"></i>
