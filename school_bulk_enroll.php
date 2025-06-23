@@ -373,7 +373,7 @@ if (isset($_GET['export_attendance_csv']) && $_GET['export_attendance_csv'] == '
             $row['email'],
             $row['mobile'],
             $row['is_attended'] ? 'Yes' : 'No',
-            $row['attended_duration'],
+            htmlspecialchars(min($row['attended_duration'], 120)),
             $row['cpd'],
             $row['created_at']
         ]);
@@ -849,7 +849,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_existing_user']))
                                 <td><?php echo htmlspecialchars($row['email']); ?></td>
                                 <td><?php echo htmlspecialchars($row['mobile']); ?></td>
                                 <td><?php echo $row['is_attended'] ? '<span class="badge bg-success">Yes</span>' : '<span class="badge bg-danger">No</span>'; ?></td>
-                                <td><?php echo htmlspecialchars($row['attended_duration']); ?></td>
+                                <td><?php echo htmlspecialchars(min($row['attended_duration'], 120)); ?></td>
                                 <!-- <td><?php echo htmlspecialchars($row['cpd']); ?></td> -->
                                 <td><?php echo htmlspecialchars($row['created_at']); ?></td>
                             </tr>

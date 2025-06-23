@@ -246,7 +246,7 @@ if ($workshop_id && $school_id) {
                                                 <td><?php echo htmlspecialchars($row['email']); ?></td>
                                                 <td><?php echo htmlspecialchars($row['mobile']); ?></td>
                                                 <td><?php echo $row['is_attended'] ? '<span class="badge bg-success">Yes</span>' : '<span class="badge bg-danger">No</span>'; ?></td>
-                                                <td><?php echo (int)$row['attended_duration']; ?></td>
+                                                <td><?php echo htmlspecialchars(min($row['attended_duration'], 120)); ?></td>
                                             </tr>
                                         <?php endforeach; ?>
                                     <?php endif; ?>
