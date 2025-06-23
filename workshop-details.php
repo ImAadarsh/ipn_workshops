@@ -659,198 +659,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                 <!-- End Schools Registered Panel -->
 
+                <!-- Link to B2C Bulk Enrollment Page -->
                 <div class="card mb-4">
                     <div class="card-header">
-                        <h5 class="mb-0">Search and Enroll Users</h5>
+                        <h5 class="mb-0">B2C Bulk Enrollment</h5>
                     </div>
                     <div class="card-body">
-                        <form id="searchForm" class="mb-4" method="GET">
-                            <div class="row">
-                                <div class="col-md-4">
-                                    <div class="form-group">
-                                        <label for="searchName">Name</label>
-                                        <input type="text" class="form-control" id="searchName" name="name" 
-                                               value="<?php echo isset($_GET['name']) ? htmlspecialchars($_GET['name']) : ''; ?>" 
-                                               placeholder="Search by name">
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="form-group">
-                                        <label for="searchEmail">Email</label>
-                                        <input type="email" class="form-control" id="searchEmail" name="email" 
-                                               value="<?php echo isset($_GET['email']) ? htmlspecialchars($_GET['email']) : ''; ?>" 
-                                               placeholder="Search by email">
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="form-group">
-                                        <label for="searchMobile">Mobile</label>
-                                        <input type="text" class="form-control" id="searchMobile" name="mobile" 
-                                               value="<?php echo isset($_GET['mobile']) ? htmlspecialchars($_GET['mobile']) : ''; ?>" 
-                                               placeholder="Search by mobile">
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="row mt-3">
-                                <div class="col-12">
-                                    <button type="submit" class="btn btn-primary">Search</button>
-                                    <button type="button" class="btn btn-secondary" onclick="clearSearch()">Clear</button>
-                                </div>
-                            </div>
-                        </form>
-
-                        <div class="table-responsive">
-                            <table class="table table-striped">
-                                <thead>
-                                    <tr>
-                                        <th>
-                                            <div class="form-check">
-                                                <input class="form-check-input" type="checkbox" id="selectAll">
-                                            </div>
-                                        </th>
-                                        <th>Name</th>
-                                        <th>Email</th>
-                                        <th>Mobile</th>
-                                        <th>Designation</th>
-                                        <th>Institute</th>
-                                        <th>City</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="searchResults">
-                                    <!-- Search results will be populated here -->
-                                </tbody>
-                            </table>
-                        </div>
-
-                        <div class="mt-3">
-                            <button id="enrollSelected" class="btn btn-success" disabled>Enroll Selected Users</button>
-                        </div>
+                        <p class="text-muted">Enroll individual users (not associated with a specific school) into this workshop by searching for them in the system.</p>
+                        <a href="b2c_bulk_enrollment.php?workshop_id=<?php echo $workshop_id; ?>" class="btn btn-primary">
+                            <i class="ti ti-user-plus me-1"></i> Go to B2C Enrollment Page
+                        </a>
                     </div>
                 </div>
 
-                <script>
-                $(document).ready(function() {
-                    // Initial search if parameters exist
-                    if (window.location.search) {
-                        performSearch();
-                    }
 
-                    // Handle search form submission
-                    $('#searchForm').on('submit', function(e) {
-                        e.preventDefault();
-                        performSearch();
-                    });
-
-                    function performSearch() {
-                        const formData = $('#searchForm').serialize();
-                        
-                        $.ajax({
-                            url: 'search_users.php',
-                            type: 'GET',
-                            data: formData,
-                            dataType: 'json',
-                            success: function(users) {
-                                let html = '';
-                                
-                                if (!users || users.length === 0) {
-                                    html = '<tr><td colspan="7" class="text-center">No users found</td></tr>';
-                                } else {
-                                    users.forEach(user => {
-                                        html += `
-                                            <tr>
-                                                <td>
-                                                    <div class="form-check">
-                                                        <input class="form-check-input user-checkbox" type="checkbox" value="${user.id}">
-                                                    </div>
-                                                </td>
-                                                <td>${user.name || '-'}</td>
-                                                <td>${user.email || '-'}</td>
-                                                <td>${user.mobile || '-'}</td>
-                                                <td>${user.designation || '-'}</td>
-                                                <td>${user.institute_name || '-'}</td>
-                                                <td>${user.city || '-'}</td>
-                                            </tr>
-                                        `;
-                                    });
-                                }
-                                
-                                $('#searchResults').html(html);
-                                updateEnrollButton();
-                            },
-                            error: function(xhr, status, error) {
-                                console.error('Search error:', error);
-                                console.log('Status:', status);
-                                console.log('Response:', xhr.responseText);
-                                $('#searchResults').html('<tr><td colspan="7" class="text-center text-danger">Error performing search</td></tr>');
-                            }
-                        });
-                    }
-
-                    function clearSearch() {
-                        $('#searchName').val('');
-                        $('#searchEmail').val('');
-                        $('#searchMobile').val('');
-                        $('#searchResults').html('');
-                        updateEnrollButton();
-                    }
-
-                    // Handle select all checkbox
-                    $('#selectAll').on('change', function() {
-                        $('.user-checkbox').prop('checked', $(this).prop('checked'));
-                        updateEnrollButton();
-                    });
-
-                    // Handle individual checkboxes
-                    $(document).on('change', '.user-checkbox', function() {
-                        updateEnrollButton();
-                    });
-
-                    // Update enroll button state
-                    function updateEnrollButton() {
-                        const checkedCount = $('.user-checkbox:checked').length;
-                        $('#enrollSelected').prop('disabled', checkedCount === 0);
-                    }
-
-                    // Handle enroll button click
-                    $('#enrollSelected').on('click', function() {
-                        const selectedUsers = [];
-                        $('.user-checkbox:checked').each(function() {
-                            selectedUsers.push($(this).val());
-                        });
-
-                        if (selectedUsers.length === 0) return;
-
-                        if (!confirm(`Are you sure you want to enroll ${selectedUsers.length} users in this workshop?`)) {
-                            return;
-                        }
-
-                        $.ajax({
-                            url: 'enroll_users.php',
-                            type: 'POST',
-                            data: {
-                                workshop_id: <?php echo $workshop_id; ?>,
-                                user_ids: selectedUsers
-                            },
-                            success: function(response) {
-                                const result = JSON.parse(response);
-                                if (result.success) {
-                                    alert(`Successfully enrolled ${result.enrolled} users.`);
-                                    if (result.errors.length > 0) {
-                                        alert('Some errors occurred:\n' + result.errors.join('\n'));
-                                    }
-                                    // Refresh the page to show updated statistics
-                                    location.reload();
-                                } else {
-                                    alert('Error enrolling users: ' + result.errors.join('\n'));
-                                }
-                            },
-                            error: function() {
-                                alert('Error enrolling users');
-                            }
-                        });
-                    });
-                });
-                </script>
                 <?php else: ?>
                 <div class="alert alert-danger mt-4">
                     Workshop not found or has been deleted.
