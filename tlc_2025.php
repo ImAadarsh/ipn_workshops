@@ -24,13 +24,15 @@ if ($is_logged_in) {
 $stats_sql = "SELECT 
     COUNT(*) as total_users, 
     COUNT(DISTINCT city) as unique_cities, 
-    COUNT(DISTINCT institute_name) as unique_institutes 
+    COUNT(DISTINCT institute_name) as unique_institutes,
+    SUM(is_tlc_new = 1) as new_users,
+    SUM(is_tlc_new = 0) as existing_users
     FROM users WHERE tlc_2025 = 1";
 $stats_result = mysqli_query($conn, $stats_sql);
 $stats = mysqli_fetch_assoc($stats_result);
 
 // Fetch all users marked for TLC 2025
-$users_sql = "SELECT id, name, email, mobile, country_code, city, institute_name FROM users WHERE tlc_2025 = 1 ORDER BY name ASC";
+$users_sql = "SELECT id, name, email, mobile, country_code, city, institute_name, is_tlc_new, tlc_join_date FROM users WHERE tlc_2025 = 1 ORDER BY tlc_join_date DESC";
 $users_result = mysqli_query($conn, $users_sql);
 $users = [];
 if ($users_result) {
@@ -51,6 +53,66 @@ function getInitials($name) {
     }
     return strtoupper($initials);
 }
+
+// Fuzzy grouping function
+function fuzzy_group($items, $threshold = 80) {
+    $groups = [];
+    foreach ($items as $item) {
+        $found = false;
+        foreach ($groups as $key => $group) {
+            similar_text(strtolower($item), strtolower($key), $percent);
+            if ($percent >= $threshold) {
+                $groups[$key][] = $item;
+                $found = true;
+                break;
+            }
+        }
+        if (!$found) {
+            $groups[$item] = [$item];
+        }
+    }
+    return $groups;
+}
+
+// Build fuzzy groups and counts for cities and institutes
+$city_participants = [];
+$institute_participants = [];
+foreach ($users as $user) {
+    $city = trim($user['city']);
+    $institute = trim($user['institute_name']);
+    if ($city !== '') {
+        $city_participants[] = $city;
+    }
+    if ($institute !== '') {
+        $institute_participants[] = $institute;
+    }
+}
+$city_groups = fuzzy_group($city_participants, 80);
+$institute_groups = fuzzy_group($institute_participants, 80);
+
+// Count participants per fuzzy group
+function group_counts($items, $groups) {
+    $counts = [];
+    foreach ($groups as $group_key => $group_items) {
+        $counts[$group_key] = 0;
+        foreach ($items as $item) {
+            foreach ($group_items as $gitem) {
+                similar_text(strtolower($item), strtolower($gitem), $percent);
+                if ($percent >= 80) {
+                    $counts[$group_key]++;
+                    break;
+                }
+            }
+        }
+    }
+    return $counts;
+}
+$city_counts = group_counts($city_participants, $city_groups);
+$institute_counts = group_counts($institute_participants, $institute_groups);
+
+// Sort city and institute counts by participant count descending
+arsort($city_counts);
+arsort($institute_counts);
 ?>
 
 <!DOCTYPE html>
@@ -118,7 +180,7 @@ function getInitials($name) {
     
                 <!-- Stats Section -->
                 <div class="row">
-                    <div class="col-xl-4 col-lg-6">
+                    <div class="col-xl-3 col-lg-6">
                         <div class="card widget-flat">
                             <div class="card-body">
                                 <div class="float-end">
@@ -129,27 +191,53 @@ function getInitials($name) {
                             </div>
                         </div>
                     </div>
-                    <div class="col-xl-4 col-lg-6">
+                    <div class="col-xl-3 col-lg-6">
                         <div class="card widget-flat">
+                            <div class="card-body">
+                                <div class="float-end">
+                                    <i class="ti ti-user-plus widget-icon"></i>
+                                </div>
+                                <h5 class="text-muted fw-normal mt-0" title="New Users">New Users</h5>
+                                <h3 class="mt-3 mb-3"><?php echo $stats['new_users'] ?? 0; ?></h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xl-3 col-lg-6">
+                        <div class="card widget-flat">
+                            <div class="card-body">
+                                <div class="float-end">
+                                    <i class="ti ti-user widget-icon"></i>
+                                </div>
+                                <h5 class="text-muted fw-normal mt-0" title="Existing Users">Existing Users</h5>
+                                <h3 class="mt-3 mb-3"><?php echo $stats['existing_users'] ?? 0; ?></h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xl-3 col-lg-6">
+                        <a href="#unique-cities-table" class="text-decoration-none card-link-scroll">
+                        <div class="card widget-flat" style="cursor:pointer;">
                             <div class="card-body">
                                 <div class="float-end">
                                     <i class="ti ti-building-community widget-icon"></i>
                                 </div>
                                 <h5 class="text-muted fw-normal mt-0" title="Unique Cities">Unique Cities</h5>
-                                <h3 class="mt-3 mb-3"><?php echo $stats['unique_cities'] ?? 0; ?></h3>
+                                <h3 class="mt-3 mb-3"><?php echo count($city_counts); ?></h3>
                             </div>
                         </div>
+                        </a>
                     </div>
-                    <div class="col-xl-4 col-lg-6">
-                        <div class="card widget-flat">
+                    <div class="col-xl-3 col-lg-6">
+                        <a href="#unique-institutes-table" class="text-decoration-none card-link-scroll">
+                        <div class="card widget-flat" style="cursor:pointer;">
                             <div class="card-body">
                                 <div class="float-end">
                                     <i class="ti ti-school widget-icon"></i>
                                 </div>
                                 <h5 class="text-muted fw-normal mt-0" title="Unique Institutes">Unique Institutes</h5>
-                                <h3 class="mt-3 mb-3"><?php echo $stats['unique_institutes'] ?? 0; ?></h3>
+                                <h3 class="mt-3 mb-3"><?php echo count($institute_counts); ?></h3>
                             </div>
                         </div>
+                        </a>
                     </div>
                 </div>
 
@@ -177,6 +265,8 @@ function getInitials($name) {
                                                 <th>Contact Info</th>
                                                 <th>Institute</th>
                                                 <th>City</th>
+                                                <th>TLC Join Date</th>
+                                                <th>User Type</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -191,7 +281,6 @@ function getInitials($name) {
                                                         </div>
                                                         <div>
                                                             <h5 class="mb-0 fs-14"><?php echo htmlspecialchars($user['name']); ?></h5>
-                                                            <p class="mb-0 text-muted fs-12">ID: #<?php echo $user['id']; ?></p>
                                                         </div>
                                                     </div>
                                                 </td>
@@ -201,11 +290,57 @@ function getInitials($name) {
                                                 </td>
                                                 <td><?php echo htmlspecialchars($user['institute_name']); ?></td>
                                                 <td><?php echo htmlspecialchars($user['city']); ?></td>
+                                                <td<?php if ($user['tlc_join_date']) { echo ' data-order=\"' . strtotime($user['tlc_join_date']) . '\"'; } ?>><?php
+                                                    if ($user['tlc_join_date']) {
+                                                        $dt = new DateTime($user['tlc_join_date'], new DateTimeZone('UTC'));
+                                                        $dt->setTimezone(new DateTimeZone('Asia/Kolkata'));
+                                                        echo $dt->format('d M Y, h:i A');
+                                                    } else {
+                                                        echo '-';
+                                                    }
+                                                ?></td>
+                                                <td><?php echo $user['is_tlc_new'] == 1 ? '<span class="badge bg-danger">New</span>' : '<span class="badge bg-secondary">Existing</span>'; ?></td>
                                             </tr>
                                             <?php endforeach; ?>
                                         </tbody>
                                     </table>
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Fuzzy Unique Cities Table -->
+                <div class="row mt-4">
+                    <div class="col-md-6">
+                        <div class="card" id="unique-cities-table">
+                            <div class="card-header"><strong>Unique Cities (Fuzzy Grouped)</strong></div>
+                            <div class="card-body p-2">
+                                <input type="text" class="form-control mb-2" id="city-search" placeholder="Search city...">
+                                <table class="table table-sm table-bordered mb-0" id="city-table">
+                                    <thead><tr><th>#</th><th>City</th><th>Participants</th></tr></thead>
+                                    <tbody>
+                                    <?php $i=1; foreach ($city_counts as $city => $count): ?>
+                                        <tr><td><?php echo $i++; ?></td><td><?php echo htmlspecialchars($city); ?></td><td><?php echo $count; ?></td></tr>
+                                    <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card" id="unique-institutes-table">
+                            <div class="card-header"><strong>Unique Institutes (Fuzzy Grouped)</strong></div>
+                            <div class="card-body p-2">
+                                <input type="text" class="form-control mb-2" id="institute-search" placeholder="Search institute...">
+                                <table class="table table-sm table-bordered mb-0" id="institute-table">
+                                    <thead><tr><th>#</th><th>Institute</th><th>Participants</th></tr></thead>
+                                    <tbody>
+                                    <?php $i=1; foreach ($institute_counts as $inst => $count): ?>
+                                        <tr><td><?php echo $i++; ?></td><td><?php echo htmlspecialchars($inst); ?></td><td><?php echo $count; ?></td></tr>
+                                    <?php endforeach; ?>
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                     </div>
@@ -272,7 +407,15 @@ function getInitials($name) {
                             columns: ':visible'
                         }
                     }
-                ]
+                ],
+                columnDefs: [
+                    {
+                        targets: 4, // TLC Join Date column (0-based index)
+                        type: 'num',
+                        orderDataType: 'dom-data-order'
+                    }
+                ],
+                order: [[4, 'desc']]
             });
 
             $('#exportCSV').on('click', function() {
@@ -281,6 +424,31 @@ function getInitials($name) {
 
             $('#exportExcel').on('click', function() {
                 table.button('.buttons-excel').trigger();
+            });
+
+            // Add search functionality for city and institute tables
+            $('#city-search').on('keyup', function() {
+                var value = $(this).val().toLowerCase();
+                $('#city-table tbody tr').filter(function() {
+                    $(this).toggle($(this).find('td:first').text().toLowerCase().indexOf(value) > -1)
+                });
+            });
+            $('#institute-search').on('keyup', function() {
+                var value = $(this).val().toLowerCase();
+                $('#institute-table tbody tr').filter(function() {
+                    $(this).toggle($(this).find('td:first').text().toLowerCase().indexOf(value) > -1)
+                });
+            });
+
+            // Smooth scroll for card links
+            $('.card-link-scroll').on('click', function(e) {
+                var target = $(this).attr('href');
+                if (target && $(target).length) {
+                    e.preventDefault();
+                    $('html, body').animate({
+                        scrollTop: $(target).offset().top - 60 // adjust offset for header
+                    }, 500);
+                }
             });
         });
     </script>
