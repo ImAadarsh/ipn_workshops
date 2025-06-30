@@ -50,12 +50,12 @@ function get_join_link($user, $workshop) {
             font-family: 'Inter', Arial, sans-serif;
         }
         .main-card {
-            max-width: 800px;
+            max-width: 900px;
             margin: 48px auto 32px auto;
             background: #fff;
-            border-radius: 22px;
+            border-radius: 28px;
             box-shadow: 0 8px 40px #0001, 0 1.5px 8px #1976d21a;
-            padding: 2.2rem 1.5rem 2rem 1.5rem;
+            padding: 2.5rem 2.2rem 2.2rem 2.2rem;
             position: relative;
         }
         .logo {
@@ -64,7 +64,7 @@ function get_join_link($user, $workshop) {
             max-width: 140px;
         }
         .header-title {
-            font-size: 1.7rem;
+            font-size: 2.1rem;
             font-weight: 700;
             color: #1a237e;
             margin-bottom: 0.5rem;
@@ -72,29 +72,51 @@ function get_join_link($user, $workshop) {
             letter-spacing: -1px;
         }
         .header-desc {
-            font-size: 1.08rem;
+            font-size: 1.13rem;
             color: #607d8b;
             text-align: center;
-            margin-bottom: 2.1rem;
+            margin-bottom: 2.2rem;
         }
         .search-box {
-            margin: 0 auto 2rem auto;
-            max-width: 350px;
+            margin: 0 auto 2.2rem auto;
+            max-width: 400px;
         }
         .form-control {
-            font-size: 1.1em;
-            padding: 0.7em 1em;
-            border-radius: 8px;
+            font-size: 1.13em;
+            padding: 0.85em 1.1em;
+            border-radius: 10px;
+            box-shadow: 0 1px 4px #1976d21a;
+        }
+        .table-container {
+            background: #f7fbff;
+            border-radius: 18px;
+            box-shadow: 0 2px 16px #1976d21a;
+            padding: 1.5rem 1.2rem;
+            margin-bottom: 1.5rem;
         }
         .table {
             background: #fff;
-            border-radius: 12px;
+            border-radius: 14px;
             overflow: hidden;
-            font-size: 1.08rem;
+            font-size: 1.09rem;
+            margin-bottom: 0;
+        }
+        .table th, .table td {
+            padding: 1.1em 1em;
+            vertical-align: middle;
+        }
+        .table thead th {
+            background: #e3f2fd;
+            color: #1976d2;
+            font-weight: 700;
+            border-bottom: 2px solid #bbdefb;
         }
         .table-hover tbody tr:hover {
-            background: #f1f7ff;
+            background: #e3f2fd55;
             transition: background 0.2s;
+        }
+        .table tbody tr {
+            border-bottom: 1px solid #e3e8ee;
         }
         .join-link-btn {
             display: inline-flex;
@@ -103,9 +125,9 @@ function get_join_link($user, $workshop) {
             color: #fff;
             font-weight: 600;
             border: none;
-            border-radius: 6px;
-            padding: 7px 18px 7px 14px;
-            font-size: 1em;
+            border-radius: 7px;
+            padding: 9px 22px 9px 16px;
+            font-size: 1.08em;
             text-decoration: none;
             box-shadow: 0 2px 8px #1976d22a;
             margin-right: 0.7em;
@@ -127,9 +149,9 @@ function get_join_link($user, $workshop) {
             display: inline-block;
         }
         .copy-btn {
-            font-size: 0.97em;
-            padding: 6px 16px 6px 12px;
-            border-radius: 6px;
+            font-size: 1em;
+            padding: 8px 18px 8px 14px;
+            border-radius: 7px;
             border: none;
             background: #e3f2fd;
             color: #1976d2;
@@ -173,12 +195,19 @@ function get_join_link($user, $workshop) {
             z-index: 10;
             opacity: 0.95;
         }
-        @media (max-width: 600px) {
-            .main-card { padding: 1rem 0.2rem; }
-            .header-title { font-size: 1.1rem; }
-            .join-link-btn, .copy-btn { font-size: 0.97em; padding: 6px 8px; }
-            .table { font-size: 0.98em; }
+        @media (max-width: 900px) {
+            .main-card { padding: 1.2rem 0.2rem; }
+            .table-container { padding: 1rem 0.2rem; }
         }
+        @media (max-width: 600px) {
+            .main-card { padding: 0.5rem 0.1rem; }
+            .header-title { font-size: 1.1rem; }
+            .table { font-size: 0.98em; }
+            .table th, .table td { padding: 0.7em 0.5em; }
+            .table-container { padding: 0.5rem 0.1rem; }
+        }
+        /* Responsive table scroll */
+        .table-responsive { overflow-x: auto; }
     </style>
 </head>
 <body>
@@ -191,6 +220,7 @@ function get_join_link($user, $workshop) {
     <div class="search-box">
         <input type="text" id="userSearch" class="form-control" placeholder="Search by name or email...">
     </div>
+    <div class="table-container">
     <?php if (empty($users)): ?>
         <div class="alert alert-warning text-center">No users are enrolled in this workshop.</div>
     <?php else: ?>
@@ -229,6 +259,7 @@ function get_join_link($user, $workshop) {
         </table>
     </div>
     <?php endif; ?>
+    </div>
     <div class="mt-4 text-center text-muted">
         Powered by <a href="https://ipnacademy.in/" target="_blank">IPN Academy</a>
     </div>
