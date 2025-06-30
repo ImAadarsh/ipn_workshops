@@ -40,6 +40,13 @@
 
         <li class="side-nav-title">Management</li>
 
+        <li class="side-nav-item">
+            <a href="tlc_2025.php" class="side-nav-link">
+                <span class="menu-icon"><i class="ti ti-users"></i></span>
+                <span class="menu-text">TLC 2025 Users</span>
+            </a>
+        </li>
+
         <!-- Users Management -->
         <!-- <li class="side-nav-item">
             <a data-bs-toggle="collapse" href="#sidebarUsers" aria-expanded="false" aria-controls="sidebarUsers" class="side-nav-link">
