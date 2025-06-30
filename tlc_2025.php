@@ -2,8 +2,11 @@
 include 'config/show_errors.php';
 session_start();
 
-// Check if user is not logged in
-if (!isset($_SESSION['user_id'])) {
+$special_access_key = '5678y3uhsc76270e9yuwqdjq9q72u1ejqiw';
+$is_logged_in = isset($_SESSION['user_id']);
+$is_guest_access = !$is_logged_in && isset($_GET['uvx']) && $_GET['uvx'] === $special_access_key;
+
+if (!$is_logged_in && !$is_guest_access) {
     header("Location: index.php");
     exit();
 }
@@ -11,9 +14,11 @@ if (!isset($_SESSION['user_id'])) {
 // Include database connection
 $conn = require_once 'config/config.php';
 
-// Get user info from session
-$userName = $_SESSION['user_name'];
-$userType = $_SESSION['user_type'];
+// Get user info from session if logged in
+if ($is_logged_in) {
+    $userName = $_SESSION['user_name'];
+    $userType = $_SESSION['user_type'];
+}
 
 // Fetch stats for TLC 2025 users
 $stats_sql = "SELECT 
@@ -65,12 +70,24 @@ function getInitials($name) {
             color: #6c757d;
         }
     </style>
+    <?php if ($is_guest_access): ?>
+    <style>
+        .page-content {
+            margin-left: 0 !important;
+            padding: 20px;
+        }
+        .wrapper {
+            padding-top: 0 !important;
+        }
+    </style>
+    <?php endif; ?>
 </head>
 
 <body>
     <!-- Begin page -->
     <div class="wrapper">
         
+        <?php if ($is_logged_in): ?>
         <!-- Sidenav Menu Start -->
         <?php include 'includes/sidenav.php'; ?>
         <!-- Sidenav Menu End -->
@@ -78,6 +95,7 @@ function getInitials($name) {
         <!-- Topbar Start -->
         <?php include 'includes/topbar.php'; ?>
         <!-- Topbar End -->
+        <?php endif; ?>
 
         <div class="page-content">
             <div class="page-container">
@@ -85,12 +103,14 @@ function getInitials($name) {
                 <div class="row">
                     <div class="col-12">
                         <div class="page-title-box">
+                            <?php if ($is_logged_in): ?>
                             <div class="page-title-right">
                                 <ol class="breadcrumb m-0">
                                     <li class="breadcrumb-item"><a href="dashboard.php">Dashboard</a></li>
                                     <li class="breadcrumb-item active">TLC 2025 Users</li>
                                 </ol>
                             </div>
+                            <?php endif; ?>
                             <h4 class="page-title">TLC 2025 Users</h4>
                         </div>
                     </div>
@@ -192,14 +212,18 @@ function getInitials($name) {
                 </div>
 
             </div>
+            <?php if ($is_logged_in): ?>
             <!-- Footer Start -->
             <?php include 'includes/footer.php'; ?>
             <!-- end Footer -->
+            <?php endif; ?>
         </div>
     </div>
 
+    <?php if ($is_logged_in): ?>
     <!-- Theme Settings -->
     <?php include 'includes/theme_settings.php'; ?>
+    <?php endif; ?>
 
     <!-- Core JS -->
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
