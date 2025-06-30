@@ -241,6 +241,39 @@ arsort($institute_counts);
                     </div>
                 </div>
 
+                <!-- Advanced Filters Section -->
+                <div class="row mb-3">
+                    <form id="advanced-filters" class="row g-2 align-items-end">
+                        <div class="col-md-2">
+                            <label class="form-label">Date From</label>
+                            <input type="date" class="form-control" name="date_from" id="date_from">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Date To</label>
+                            <input type="date" class="form-control" name="date_to" id="date_to">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">City</label>
+                            <input type="text" class="form-control" name="filter_city" id="filter_city" placeholder="City">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Institute</label>
+                            <input type="text" class="form-control" name="filter_institute" id="filter_institute" placeholder="Institute">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">User Type</label>
+                            <select class="form-select" name="filter_user_type" id="filter_user_type">
+                                <option value="">All</option>
+                                <option value="1">New</option>
+                                <option value="0">Existing</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <button type="button" class="btn btn-primary w-100" id="apply-filters">Apply Filters</button>
+                        </div>
+                    </form>
+                </div>
+
                 <!-- Users Table -->
                 <div class="row">
                     <div class="col-12">
@@ -321,10 +354,12 @@ arsort($institute_counts);
                                     <thead><tr><th>#</th><th>City</th><th>Participants</th></tr></thead>
                                     <tbody>
                                     <?php $i=1; foreach ($city_counts as $city => $count): ?>
-                                        <tr><td><?php echo $i++; ?></td><td><?php echo htmlspecialchars($city); ?></td><td><?php echo $count; ?></td></tr>
+                                        <tr><td><?php echo $i++; ?></td><td class="city-drilldown" style="cursor:pointer;"><?php echo htmlspecialchars($city); ?></td><td><?php echo $count; ?></td></tr>
                                     <?php endforeach; ?>
                                     </tbody>
                                 </table>
+                                <button class="btn btn-outline-primary btn-sm mt-2" id="exportCityCSV">Export CSV</button>
+                                <button class="btn btn-outline-success btn-sm mt-2" id="exportCityExcel">Export Excel</button>
                             </div>
                         </div>
                     </div>
@@ -337,10 +372,12 @@ arsort($institute_counts);
                                     <thead><tr><th>#</th><th>Institute</th><th>Participants</th></tr></thead>
                                     <tbody>
                                     <?php $i=1; foreach ($institute_counts as $inst => $count): ?>
-                                        <tr><td><?php echo $i++; ?></td><td><?php echo htmlspecialchars($inst); ?></td><td><?php echo $count; ?></td></tr>
+                                        <tr><td><?php echo $i++; ?></td><td class="institute-drilldown" style="cursor:pointer;"><?php echo htmlspecialchars($inst); ?></td><td><?php echo $count; ?></td></tr>
                                     <?php endforeach; ?>
                                     </tbody>
                                 </table>
+                                <button class="btn btn-outline-primary btn-sm mt-2" id="exportInstituteCSV">Export CSV</button>
+                                <button class="btn btn-outline-success btn-sm mt-2" id="exportInstituteExcel">Export Excel</button>
                             </div>
                         </div>
                     </div>
@@ -373,6 +410,7 @@ arsort($institute_counts);
     <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.bootstrap5.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
+    <link href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.bootstrap5.min.css" rel="stylesheet" type="text/css" />
 
     <!-- App js -->
     <script src="assets/js/app.min.js"></script>
@@ -449,6 +487,104 @@ arsort($institute_counts);
                         scrollTop: $(target).offset().top - 60 // adjust offset for header
                     }, 500);
                 }
+            });
+
+            // DataTables for city and institute tables with export
+            var cityTable = $('#city-table').DataTable({
+                paging: false,
+                searching: true,
+                info: false,
+                dom: 'Bfrtip',
+                buttons: [
+                    {
+                        extend: 'csv',
+                        text: 'Export CSV',
+                        className: 'd-none',
+                        filename: 'unique_cities_<?php echo date("Y-m-d"); ?>'
+                    },
+                    {
+                        extend: 'excelHtml5',
+                        text: 'Export Excel',
+                        className: 'd-none',
+                        filename: 'unique_cities_<?php echo date("Y-m-d"); ?>'
+                    }
+                ]
+            });
+            $('#exportCityCSV').on('click', function() { cityTable.button('.buttons-csv').trigger(); });
+            $('#exportCityExcel').on('click', function() { cityTable.button('.buttons-excel').trigger(); });
+
+            var instituteTable = $('#institute-table').DataTable({
+                paging: false,
+                searching: true,
+                info: false,
+                dom: 'Bfrtip',
+                buttons: [
+                    {
+                        extend: 'csv',
+                        text: 'Export CSV',
+                        className: 'd-none',
+                        filename: 'unique_institutes_<?php echo date("Y-m-d"); ?>'
+                    },
+                    {
+                        extend: 'excelHtml5',
+                        text: 'Export Excel',
+                        className: 'd-none',
+                        filename: 'unique_institutes_<?php echo date("Y-m-d"); ?>'
+                    }
+                ]
+            });
+            $('#exportInstituteCSV').on('click', function() { instituteTable.button('.buttons-csv').trigger(); });
+            $('#exportInstituteExcel').on('click', function() { instituteTable.button('.buttons-excel').trigger(); });
+
+            // Drill-down: clicking city/institute filters main table
+            $(document).on('click', '.city-drilldown', function() {
+                var city = $(this).text().trim();
+                $('#filter_city').val(city);
+                $('#apply-filters').trigger('click');
+            });
+            $(document).on('click', '.institute-drilldown', function() {
+                var inst = $(this).text().trim();
+                $('#filter_institute').val(inst);
+                $('#apply-filters').trigger('click');
+            });
+
+            // Advanced filter logic for main user table using DataTables API
+            $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
+                if (settings.nTable.id !== 'tlc-users-table') return true;
+                var dateFrom = $('#date_from').val();
+                var dateTo = $('#date_to').val();
+                var city = $('#filter_city').val().toLowerCase();
+                var inst = $('#filter_institute').val().toLowerCase();
+                var userType = $('#filter_user_type').val();
+                var rowDateIST = data[4].trim();
+                var rowCity = data[3].toLowerCase();
+                var rowInst = data[2].toLowerCase();
+                var rowType = data[5].toLowerCase();
+                // Date filter (parse IST date string to yyyy-mm-dd)
+                if (dateFrom || dateTo) {
+                    if (rowDateIST && rowDateIST !== '-') {
+                        var parts = rowDateIST.split(',')[0].split(' '); // e.g. 01 Jun 2024
+                        var day = parts[0];
+                        var month = {
+                            Jan: '01', Feb: '02', Mar: '03', Apr: '04', May: '05', Jun: '06',
+                            Jul: '07', Aug: '08', Sep: '09', Oct: '10', Nov: '11', Dec: '12'
+                        }[parts[1]];
+                        var year = parts[2];
+                        var rowDateStr = year + '-' + month + '-' + day;
+                        if (dateFrom && rowDateStr < dateFrom) return false;
+                        if (dateTo && rowDateStr > dateTo) return false;
+                    }
+                }
+                // City filter
+                if (city && rowCity.indexOf(city) === -1) return false;
+                // Institute filter
+                if (inst && rowInst.indexOf(inst) === -1) return false;
+                // User type filter
+                if (userType !== '' && ((userType === '1' && rowType.indexOf('new') === -1) || (userType === '0' && rowType.indexOf('existing') === -1))) return false;
+                return true;
+            });
+            $('#apply-filters').on('click', function() {
+                $('#tlc-users-table').DataTable().draw();
             });
         });
     </script>
