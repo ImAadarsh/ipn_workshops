@@ -16,23 +16,12 @@ if ($workshop_query && mysqli_num_rows($workshop_query) > 0) {
     die('<div style="color:red;">Invalid workshop.</div>');
 }
 
-// Handle search
-$search_term = trim($_GET['q'] ?? '');
-$results = [];
-$searched = false;
-if ($search_term !== '') {
-    $searched = true;
-    $safe = mysqli_real_escape_string($conn, $search_term);
-    $sql = "SELECT id, name, email FROM users WHERE name LIKE '%$safe%' OR email LIKE '%$safe%' ORDER BY name LIMIT 20";
-    $res = mysqli_query($conn, $sql);
-    while ($row = mysqli_fetch_assoc($res)) {
-        // Check enrollment
-        $uid = intval($row['id']);
-        $enroll_sql = "SELECT 1 FROM payments WHERE user_id=$uid AND workshop_id=$workshop_id AND payment_status=1 LIMIT 1";
-        $enroll_res = mysqli_query($conn, $enroll_sql);
-        $row['enrolled'] = ($enroll_res && mysqli_num_rows($enroll_res) > 0);
-        $results[] = $row;
-    }
+// Fetch all enrolled users for this workshop
+$users = [];
+$sql = "SELECT u.id, u.name, u.email FROM users u INNER JOIN payments p ON p.user_id = u.id WHERE p.workshop_id = $workshop_id AND p.payment_status = 1 ORDER BY u.name";
+$res = mysqli_query($conn, $sql);
+while ($row = mysqli_fetch_assoc($res)) {
+    $users[] = $row;
 }
 
 function get_join_link($user, $workshop) {
@@ -49,7 +38,7 @@ function get_join_link($user, $workshop) {
 <html lang="en">
 <head>
     <meta charset="utf-8" />
-    <title>Find Your Joining Link | IPN Academy</title>
+    <title>All Joining Links | IPN Academy</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="assets/css/app.min.css">
     <link rel="icon" href="logo.png" type="image/png">
@@ -61,7 +50,7 @@ function get_join_link($user, $workshop) {
             font-family: 'Inter', Arial, sans-serif;
         }
         .main-card {
-            max-width: 500px;
+            max-width: 800px;
             margin: 48px auto 32px auto;
             background: #fff;
             border-radius: 22px;
@@ -97,25 +86,15 @@ function get_join_link($user, $workshop) {
             padding: 0.7em 1em;
             border-radius: 8px;
         }
-        .result-card {
-            background: #f7fbff;
+        .table {
+            background: #fff;
             border-radius: 12px;
-            box-shadow: 0 2px 8px #1976d21a;
-            padding: 1.2em 1em 1.2em 1em;
-            margin-bottom: 1.2em;
-            display: flex;
-            flex-direction: column;
-            align-items: flex-start;
+            overflow: hidden;
+            font-size: 1.08rem;
         }
-        .user-name {
-            font-weight: 600;
-            color: #263238;
-            font-size: 1.13em;
-        }
-        .user-email {
-            color: #1976d2;
-            font-size: 1em;
-            margin-bottom: 0.5em;
+        .table-hover tbody tr:hover {
+            background: #f1f7ff;
+            transition: background 0.2s;
         }
         .join-link-btn {
             display: inline-flex;
@@ -194,67 +173,79 @@ function get_join_link($user, $workshop) {
             z-index: 10;
             opacity: 0.95;
         }
-        .not-enrolled {
-            color: #b71c1c;
-            font-weight: 500;
-            margin-top: 0.5em;
-        }
         @media (max-width: 600px) {
             .main-card { padding: 1rem 0.2rem; }
             .header-title { font-size: 1.1rem; }
             .join-link-btn, .copy-btn { font-size: 0.97em; padding: 6px 8px; }
+            .table { font-size: 0.98em; }
         }
     </style>
 </head>
 <body>
 <div class="main-card">
     <img src="logo.svg" alt="IPN Academy Logo" class="logo">
-    <div class="header-title">Find Your Joining Link</div>
+    <div class="header-title">All Joining Links</div>
     <div class="header-desc">
-        Search your name or email to get your unique joining link for <span class="text-primary fw-bold"><?php echo htmlspecialchars($workshop['name']); ?></span>
+        All users enrolled in <span class="text-primary fw-bold"><?php echo htmlspecialchars($workshop['name']); ?></span>
     </div>
     <div class="search-box">
-        <form method="get" action="">
-            <input type="hidden" name="workshop_id" value="<?php echo $workshop_id; ?>">
-            <input type="text" name="q" class="form-control" placeholder="Enter your name or email..." value="<?php echo htmlspecialchars($search_term); ?>" autofocus required>
-            <div class="mt-2 text-center">
-                <button type="submit" class="btn btn-primary">Search</button>
-            </div>
-        </form>
+        <input type="text" id="userSearch" class="form-control" placeholder="Search by name or email...">
     </div>
-    <?php if ($searched): ?>
-        <?php if (empty($results)): ?>
-            <div class="alert alert-warning text-center">No users found matching your search.</div>
-        <?php else: ?>
-            <?php foreach ($results as $user): ?>
-                <div class="result-card">
-                    <div class="user-name"><?php echo htmlspecialchars($user['name']); ?></div>
-                    <div class="user-email"><?php echo htmlspecialchars($user['email']); ?></div>
-                    <?php if ($user['enrolled']): ?>
-                        <?php $join_link = get_join_link($user, $workshop); ?>
+    <?php if (empty($users)): ?>
+        <div class="alert alert-warning text-center">No users are enrolled in this workshop.</div>
+    <?php else: ?>
+    <div class="table-responsive">
+        <table class="table table-bordered align-middle table-hover" id="usersTable">
+            <thead class="table-light">
+                <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Joining Link</th>
+                </tr>
+            </thead>
+            <tbody>
+            <?php foreach ($users as $user):
+                $join_link = get_join_link($user, $workshop);
+            ?>
+                <tr>
+                    <td><?php echo htmlspecialchars($user['name']); ?></td>
+                    <td><?php echo htmlspecialchars($user['email']); ?></td>
+                    <td>
                         <?php if ($join_link): ?>
                             <a href="<?php echo $join_link; ?>" target="_blank" class="join-link-btn" title="Open joining link">
-                                Join Meeting <span class="open-icon">&#128279;</span>
+                                Join <span class="open-icon">&#128279;</span>
                             </a>
                             <button class="copy-btn" data-link="<?php echo $join_link; ?>" title="Copy to clipboard">
                                 <span class="copy-text">Copy</span>
                                 <span class="checkmark">✔️</span>
                             </button>
                         <?php else: ?>
-                            <div class="not-enrolled">Joining link not available yet.</div>
+                            <span class="text-danger">Not available</span>
                         <?php endif; ?>
-                    <?php else: ?>
-                        <div class="not-enrolled">Not enrolled in this workshop.</div>
-                    <?php endif; ?>
-                </div>
+                    </td>
+                </tr>
             <?php endforeach; ?>
-        <?php endif; ?>
+            </tbody>
+        </table>
+    </div>
     <?php endif; ?>
     <div class="mt-4 text-center text-muted">
         Powered by <a href="https://ipnacademy.in/" target="_blank">IPN Academy</a>
     </div>
 </div>
 <script>
+// User search filter
+const searchInput = document.getElementById('userSearch');
+if (searchInput) {
+    searchInput.addEventListener('keyup', function() {
+        var filter = this.value.toLowerCase();
+        var rows = document.querySelectorAll('#usersTable tbody tr');
+        rows.forEach(function(row) {
+            var text = row.textContent.toLowerCase();
+            row.style.display = text.indexOf(filter) > -1 ? '' : 'none';
+        });
+    });
+}
 // Copy button
 const copyBtns = document.querySelectorAll('.copy-btn');
 copyBtns.forEach(function(btn) {
