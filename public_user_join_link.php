@@ -229,7 +229,7 @@ function get_join_link($user, $workshop) {
             <thead class="table-light">
                 <tr>
                     <th>Name</th>
-                    <th>Email</th>
+                    <!-- <th>Email</th> -->
                     <th>Joining Link</th>
                 </tr>
             </thead>
@@ -239,7 +239,7 @@ function get_join_link($user, $workshop) {
             ?>
                 <tr>
                     <td><?php echo htmlspecialchars($user['name']); ?></td>
-                    <td><?php echo htmlspecialchars($user['email']); ?></td>
+                    <!-- <td><?php echo htmlspecialchars($user['email']); ?></td> -->
                     <td>
                         <?php if ($join_link): ?>
                             <a href="<?php echo $join_link; ?>" target="_blank" class="join-link-btn" title="Open joining link">
