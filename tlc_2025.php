@@ -43,7 +43,7 @@ if ($users_result) {
 
 // Function to get initials from a full name
 function getInitials($name) {
-    $words = explode(' ', trim($name));
+    $words = explode(' ', trim($name ?? ''));
     $initials = '';
     if (!empty($words[0])) {
         $initials .= mb_substr($words[0], 0, 1, 'UTF-8');
