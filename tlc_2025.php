@@ -17,7 +17,7 @@ $conn = require_once 'config/config.php';
 // Get user info from session if logged in
 if ($is_logged_in) {
     $userName = $_SESSION['user_name'];
-    $userType = $_SESSION['user_type'];
+$userType = $_SESSION['user_type'];
 }
 
 // Fetch stats for TLC 2025 users
@@ -78,8 +78,8 @@ function fuzzy_group($items, $threshold = 80) {
 $city_participants = [];
 $institute_participants = [];
 foreach ($users as $user) {
-    $city = trim($user['city']);
-    $institute = trim($user['institute_name']);
+    $city = trim($user['city'] ?? '');
+    $institute = trim($user['institute_name'] ?? '');
     if ($city !== '') {
         $city_participants[] = $city;
     }
@@ -189,7 +189,7 @@ arsort($institute_counts);
                                 <h5 class="text-muted fw-normal mt-0" title="Total Users">Total Users</h5>
                                 <h3 class="mt-3 mb-3"><?php echo $stats['total_users'] ?? 0; ?></h3>
                             </div>
-                        </div>
+                </div>
                     </div>
                     <div class="col-xl-3 col-lg-6">
                         <div class="card widget-flat">
@@ -210,9 +210,9 @@ arsort($institute_counts);
                                 </div>
                                 <h5 class="text-muted fw-normal mt-0" title="Existing Users">Existing Users</h5>
                                 <h3 class="mt-3 mb-3"><?php echo $stats['existing_users'] ?? 0; ?></h3>
-                            </div>
-                        </div>
-                    </div>
+                                        </div>
+                                                </div>
+                                            </div>
                     <div class="col-xl-3 col-lg-6">
                         <a href="#unique-cities-table" class="text-decoration-none card-link-scroll">
                         <div class="card widget-flat" style="cursor:pointer;">
@@ -223,9 +223,9 @@ arsort($institute_counts);
                                 <h5 class="text-muted fw-normal mt-0" title="Unique Cities">Unique Cities</h5>
                                 <h3 class="mt-3 mb-3"><?php echo count($city_counts); ?></h3>
                             </div>
-                        </div>
+                                        </div>
                         </a>
-                    </div>
+                                    </div>
                     <div class="col-xl-3 col-lg-6">
                         <a href="#unique-institutes-table" class="text-decoration-none card-link-scroll">
                         <div class="card widget-flat" style="cursor:pointer;">
@@ -238,8 +238,8 @@ arsort($institute_counts);
                             </div>
                         </div>
                         </a>
-                    </div>
-                </div>
+                                    </div>
+                                    </div>
 
                 <!-- Advanced Filters Section -->
                 <div class="row mb-3">
@@ -283,44 +283,44 @@ arsort($institute_counts);
                                 <div>
                                     <button class="btn btn-primary me-2" id="exportCSV">
                                         <i class="ti ti-file-export me-1"></i> Export CSV
-                                    </button>
+                                                </button>
                                     <button class="btn btn-success" id="exportExcel">
                                         <i class="ti ti-file-spreadsheet me-1"></i> Export Excel
-                                    </button>
-                                </div>
+                                                </button>
+                                    </div>
                             </div>
                             <div class="card-body">
-                                <div class="table-responsive">
+                            <div class="table-responsive">
                                     <table id="tlc-users-table" class="table table-centered table-striped dt-responsive nowrap w-100">
                                         <thead>
-                                            <tr>
-                                                <th>User</th>
-                                                <th>Contact Info</th>
+                                        <tr>
+                                            <th>User</th>
+                                            <th>Contact Info</th>
                                                 <th>Institute</th>
                                                 <th>City</th>
                                                 <th>TLC Join Date</th>
                                                 <th>User Type</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <?php foreach ($users as $user): ?>
-                                            <tr>
-                                                <td>
-                                                    <div class="d-flex align-items-center">
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($users as $user): ?>
+                                        <tr>
+                                            <td>
+                                                <div class="d-flex align-items-center">
                                                         <div class="avatar-sm me-2 flex-shrink-0">
                                                             <span class="avatar-title bg-primary-subtle text-primary rounded-circle fs-14">
                                                                 <?php echo getInitials($user['name']); ?>
                                                             </span>
-                                                        </div>
-                                                        <div>
+                                                </div>
+                                                    <div>
                                                             <h5 class="mb-0 fs-14"><?php echo htmlspecialchars($user['name']); ?></h5>
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                                <td>
+                                                </div>
+                                                </div>
+                                            </td>
+                                            <td>
                                                     <p class="mb-0"><i class="ti ti-mail me-1"></i><?php echo htmlspecialchars($user['email']); ?></p>
                                                     <p class="mb-0"><i class="ti ti-phone me-1"></i><?php echo htmlspecialchars($user['country_code'] . ' ' . $user['mobile']); ?></p>
-                                                </td>
+                                            </td>
                                                 <td><?php echo htmlspecialchars($user['institute_name']); ?></td>
                                                 <td><?php echo htmlspecialchars($user['city']); ?></td>
                                                 <td<?php if ($user['tlc_join_date']) { echo ' data-order=\"' . strtotime($user['tlc_join_date']) . '\"'; } ?>><?php
@@ -337,11 +337,11 @@ arsort($institute_counts);
                                             <?php endforeach; ?>
                                         </tbody>
                                     </table>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                                                </div>
+                                                </div>
+                                                </div>
+                                                </div>
+                                                </div>
 
                 <!-- Fuzzy Unique Cities Table -->
                 <div class="row mt-4">
@@ -355,14 +355,14 @@ arsort($institute_counts);
                                     <tbody>
                                     <?php $i=1; foreach ($city_counts as $city => $count): ?>
                                         <tr><td><?php echo $i++; ?></td><td class="city-drilldown" style="cursor:pointer;"><?php echo htmlspecialchars($city); ?></td><td><?php echo $count; ?></td></tr>
-                                    <?php endforeach; ?>
+                                        <?php endforeach; ?>
                                     </tbody>
                                 </table>
                                 <button class="btn btn-outline-primary btn-sm mt-2" id="exportCityCSV">Export CSV</button>
                                 <button class="btn btn-outline-success btn-sm mt-2" id="exportCityExcel">Export Excel</button>
-                            </div>
-                        </div>
-                    </div>
+                                    </div>
+                                </div>
+                                </div>
                     <div class="col-md-6">
                         <div class="card" id="unique-institutes-table">
                             <div class="card-header"><strong>Unique Institutes (Fuzzy Grouped)</strong></div>
@@ -400,7 +400,7 @@ arsort($institute_counts);
     <!-- Core JS -->
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    
+
     <!-- DataTables Core and Extensions -->
     <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
@@ -428,7 +428,7 @@ arsort($institute_counts);
                         filename: 'tlc_2025_users_<?php echo date("Y-m-d"); ?>',
                         exportOptions: {
                             columns: ':visible',
-                             format: {
+                            format: {
                                 body: function (data, row, column, node) {
                                     // Strip HTML tags and extra whitespace
                                     return $(node).text().trim();
@@ -482,7 +482,7 @@ arsort($institute_counts);
             $('.card-link-scroll').on('click', function(e) {
                 var target = $(this).attr('href');
                 if (target && $(target).length) {
-                    e.preventDefault();
+                e.preventDefault();
                     $('html, body').animate({
                         scrollTop: $(target).offset().top - 60 // adjust offset for header
                     }, 500);
