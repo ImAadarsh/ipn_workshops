@@ -574,10 +574,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_existing_user']))
         <div class="card-header"><h5 class="mb-0"><i class="ti ti-chart-bar me-1"></i> School Enrollment & Investment Stats</h5></div>
         <div class="card-body">
             <div class="row text-center">
-                <div class="col-md-3"><div class="fw-bold">Registered</div><div class="fs-4 text-primary"><?php echo $stats['total_registered']; ?></div></div>
-                <div class="col-md-3"><div class="fw-bold">Enrolled</div><div class="fs-4 text-success"><?php echo $stats['total_enrolled']; ?></div></div>
+                <div class="col-md-4"><div class="fw-bold">Registered</div><div class="fs-4 text-primary"><?php echo $stats['total_registered']; ?></div></div>
+                <div class="col-md-4"><div class="fw-bold">Enrolled</div><div class="fs-4 text-success"><?php echo $stats['total_enrolled']; ?></div></div>
                 <!-- <div class="col-md-3"><div class="fw-bold">Invested Amount</div><div class="fs-4 text-info">₹<?php echo number_format($stats['invested_amount'], 2); ?></div></div> -->
-                <div class="col-md-3"><div class="fw-bold">Cultivated CPD Hours</div><div class="fs-4 text-warning"><?php echo $stats['cpd_hours']; ?></div></div>
+                <div class="col-md-4"><div class="fw-bold">Cultivated CPD Hours</div><div class="fs-4 text-warning"><?php echo $stats['cpd_hours']; ?></div></div>
             </div>
         </div>
     </div>
