@@ -47,6 +47,13 @@
             </a>
         </li>
 
+        <li class="side-nav-item">
+            <a href="generate_school_links.php" class="side-nav-link">
+                <span class="menu-icon"><i class="ti ti-link"></i></span>
+                <span class="menu-text">Generate School Links</span>
+            </a>
+        </li>
+
         <!-- Users Management -->
         <!-- <li class="side-nav-item">
             <a data-bs-toggle="collapse" href="#sidebarUsers" aria-expanded="false" aria-controls="sidebarUsers" class="side-nav-link">
