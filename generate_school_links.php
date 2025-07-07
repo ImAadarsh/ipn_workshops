@@ -15,11 +15,6 @@ while ($row = mysqli_fetch_assoc($schools_result)) {
     $schools[] = $row;
 }
 
-// Debug: Check if schools are loaded
-if (empty($schools)) {
-    echo '<div class="alert alert-warning">No schools found in the database.</div>';
-}
-
 // Fetch all upcoming workshops (type=0)
 $workshops = [];
 $workshops_result = mysqli_query($conn, "SELECT id, name, start_date, type FROM workshops WHERE type = 0 AND is_deleted = 0 AND start_date >= CURDATE() ORDER BY start_date ASC");
@@ -166,11 +161,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['school_id']) && isset
                                             </option>
                                         <?php endforeach; ?>
                                     </select>
-                                    <?php if (empty($schools)): ?>
-                                        <small class="text-muted">No schools available</small>
-                                    <?php else: ?>
-                                        <small class="text-muted"><?php echo count($schools); ?> schools available</small>
-                                    <?php endif; ?>
                                 </div>
 
                                 <!-- Workshop Selection -->
@@ -292,7 +282,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // School selection change
     schoolSelect.addEventListener('change', function() {
-        console.log('School selected:', this.value);
         updateGenerateButton();
         loadSchoolLinks();
     });
@@ -376,11 +365,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const noSchoolDiv = document.getElementById('no-school-selected');
         const tbody = document.getElementById('selected-links-tbody');
         
-        console.log('Loading links for school ID:', schoolId);
-        console.log('selectedLinksDiv:', selectedLinksDiv);
-        console.log('noSchoolDiv:', noSchoolDiv);
-        console.log('tbody:', tbody);
-        
         if (!schoolId) {
             selectedLinksDiv.style.display = 'none';
             noSchoolDiv.style.display = 'block';
@@ -393,14 +377,9 @@ document.addEventListener('DOMContentLoaded', function() {
         tbody.innerHTML = '<tr><td colspan="5" class="text-center">Loading...</td></tr>';
         
         // Fetch links for selected school
-        console.log('Fetching from:', `get_school_links.php?school_id=${schoolId}`);
         fetch(`get_school_links.php?school_id=${schoolId}`)
-            .then(response => {
-                console.log('Response status:', response.status);
-                return response.json();
-            })
+            .then(response => response.json())
             .then(data => {
-                console.log('Response data:', data);
                 if (data.success && data.links.length > 0) {
                     tbody.innerHTML = data.links.map(link => `
                         <tr>

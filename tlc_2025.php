@@ -55,7 +55,7 @@ function getInitials($name) {
 }
 
 // Fuzzy grouping function
-function fuzzy_group($items, $threshold = 80) {
+function fuzzy_group($items, $threshold = 90) {
     $groups = [];
     foreach ($items as $item) {
         $found = false;
@@ -87,8 +87,8 @@ foreach ($users as $user) {
         $institute_participants[] = $institute;
     }
 }
-$city_groups = fuzzy_group($city_participants, 80);
-$institute_groups = fuzzy_group($institute_participants, 80);
+$city_groups = fuzzy_group($city_participants, 90);
+$institute_groups = fuzzy_group($institute_participants, 90);
 
 // Count participants per fuzzy group
 function group_counts($items, $groups) {
@@ -98,7 +98,7 @@ function group_counts($items, $groups) {
         foreach ($items as $item) {
             foreach ($group_items as $gitem) {
                 similar_text(strtolower($item), strtolower($gitem), $percent);
-                if ($percent >= 80) {
+                if ($percent >= 90) {
                     $counts[$group_key]++;
                     break;
                 }
