@@ -146,8 +146,6 @@ while ($row = mysqli_fetch_assoc($result)) {
             </form>
             <form method="POST">
                 <div class="mb-2 d-flex gap-2 flex-wrap">
-                    <button type="button" id="selectAllBtn" class="btn btn-secondary">Select All</button>
-                    <button type="button" id="unselectAllBtn" class="btn btn-outline-secondary">Unselect All</button>
                     <button type="submit" name="grant_action" value="grant" class="btn btn-success" onclick="return confirm('Grant grace to selected users?')">Grant Grace to Selected</button>
                     <button type="submit" name="grant_action" value="ungrant" class="btn btn-danger" onclick="return confirm('Ungrant grace for selected users?')">Ungrant Grace for Selected</button>
                 </div>
@@ -217,15 +215,6 @@ $(function() {
     var table = $('#graceGrantTable').DataTable({
         "order": [],
         "pageLength": 25
-    });
-
-    // Select all on all pages
-    $('#selectAllBtn').on('click', function() {
-        $('#graceGrantTable').find('input.row-check').prop('checked', true);
-    });
-
-    $('#unselectAllBtn').on('click', function() {
-        $('#graceGrantTable').find('input.row-check').prop('checked', false);
     });
 
     // Header checkbox
