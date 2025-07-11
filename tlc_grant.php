@@ -49,8 +49,15 @@ $search = isset($_GET['search']) ? trim($_GET['search']) : '';
 $grace_filter = isset($_GET['grace_filter']) ? $_GET['grace_filter'] : '';
 $min_duration = isset($_GET['min_duration']) ? (int)$_GET['min_duration'] : '';
 $max_duration = isset($_GET['max_duration']) ? (int)$_GET['max_duration'] : '';
+$applied_filter = isset($_GET['applied_filter']) ? $_GET['applied_filter'] : 'applied'; // default to 'applied'
 
-$where = ["t.reason IS NOT NULL", "t.reason != ''"];
+$where = [];
+if ($applied_filter === 'applied') {
+    $where[] = "t.reason IS NOT NULL";
+    $where[] = "t.reason != ''";
+} elseif ($applied_filter === 'not_applied') {
+    $where[] = "(t.reason IS NULL OR t.reason = '')";
+}
 if ($search) {
     $search_esc = mysqli_real_escape_string($conn, $search);
     $where[] = "(t.name LIKE '%$search_esc%' OR t.email LIKE '%$search_esc%' OR t.user_id LIKE '%$search_esc%' OR u.mobile LIKE '%$search_esc%' OR u.institute_name LIKE '%$search_esc%')";
@@ -110,6 +117,13 @@ while ($row = mysqli_fetch_assoc($result)) {
                 <div class="alert alert-success"><?php echo htmlspecialchars($msg); ?></div>
             <?php endif; ?>
             <form method="GET" class="row g-2 align-items-end mb-3">
+                <div class="col-md-2">
+                    <select name="applied_filter" class="form-select">
+                        <option value="">All</option>
+                        <option value="applied" <?php if($applied_filter==='applied') echo 'selected'; ?>>Applied</option>
+                        <option value="not_applied" <?php if($applied_filter==='not_applied') echo 'selected'; ?>>Not Applied</option>
+                    </select>
+                </div>
                 <div class="col-md-3">
                     <input type="text" name="search" class="form-control" placeholder="Search by name, email, user id, phone, or institute..." value="<?php echo htmlspecialchars($search); ?>">
                 </div>
@@ -126,12 +140,14 @@ while ($row = mysqli_fetch_assoc($result)) {
                 <div class="col-md-2">
                     <input type="number" name="max_duration" class="form-control" placeholder="Max Duration" value="<?php echo isset($_GET['max_duration']) ? (int)$_GET['max_duration'] : '' ?>">
                 </div>
-                <div class="col-md-2">
+                <div class="col-md-1">
                     <button class="btn btn-primary w-100" type="submit">Filter</button>
                 </div>
             </form>
             <form method="POST">
-                <div class="mb-2 d-flex gap-2">
+                <div class="mb-2 d-flex gap-2 flex-wrap">
+                    <button type="button" id="selectAllBtn" class="btn btn-secondary">Select All</button>
+                    <button type="button" id="unselectAllBtn" class="btn btn-outline-secondary">Unselect All</button>
                     <button type="submit" name="grant_action" value="grant" class="btn btn-success" onclick="return confirm('Grant grace to selected users?')">Grant Grace to Selected</button>
                     <button type="submit" name="grant_action" value="ungrant" class="btn btn-danger" onclick="return confirm('Ungrant grace for selected users?')">Ungrant Grace for Selected</button>
                 </div>
@@ -202,6 +218,12 @@ $(function() {
     });
     $('#selectAll').on('change', function() {
         $('.row-check').prop('checked', this.checked);
+    });
+    $('#selectAllBtn').on('click', function() {
+        $('.row-check').prop('checked', true);
+    });
+    $('#unselectAllBtn').on('click', function() {
+        $('.row-check').prop('checked', false);
     });
 });
 </script>
