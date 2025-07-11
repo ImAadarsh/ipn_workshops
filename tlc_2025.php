@@ -26,6 +26,7 @@ $stats_sql = "SELECT
     COUNT(DISTINCT city) as unique_cities, 
     COUNT(DISTINCT institute_name) as unique_institutes,
     SUM(is_tlc_new = 1) as new_users,
+    SUM(tlc_mail_sent = 1) as mail_stats,
     SUM(is_tlc_new = 0) as existing_users
     FROM users WHERE tlc_2025 = 1";
 $stats_result = mysqli_query($conn, $stats_sql);
@@ -189,7 +190,18 @@ arsort($institute_counts);
                                 <h5 class="text-muted fw-normal mt-0" title="Total Users">Total Users</h5>
                                 <h3 class="mt-3 mb-3"><?php echo $stats['total_users'] ?? 0; ?></h3>
                             </div>
-                </div>
+                            </div>
+                    </div>
+                    <div class="col-xl-3 col-lg-6">
+                        <div class="card widget-flat">
+                            <div class="card-body">
+                                <div class="float-end">
+                                    <i class="ti ti-user-plus widget-icon"></i>
+                                </div>
+                                <h5 class="text-muted fw-normal mt-0" title="New Users">Total Mail Sent</h5>
+                                <h3 class="mt-3 mb-3"><?php echo $stats['mail_stats'] ?? 0; ?></h3>
+                            </div>
+                        </div>
                     </div>
                     <div class="col-xl-3 col-lg-6">
                         <div class="card widget-flat">
