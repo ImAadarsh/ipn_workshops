@@ -124,11 +124,19 @@ foreach ($durations as $row) {
     <meta charset="utf-8" />
     <title>TLC Join Durations | IPN Academy</title>
     <?php include 'includes/head.php'; ?>
+    <?php if ($is_guest_access): ?>
+    <style>
+        .page-content { margin-left: 0 !important; padding: 20px; }
+        .wrapper { padding-top: 0 !important; }
+    </style>
+    <?php endif; ?>
 </head>
 <body>
 <div class="wrapper">
-    <?php include 'includes/sidenav.php'; ?>
-    <?php include 'includes/topbar.php'; ?>
+    <?php if ($is_logged_in): ?>
+        <?php include 'includes/sidenav.php'; ?>
+        <?php include 'includes/topbar.php'; ?>
+    <?php endif; ?>
     <div class="page-content">
         <div class="page-container">
             <div class="row mb-4">
@@ -276,7 +284,9 @@ foreach ($durations as $row) {
         </div>
     </div>
     <?php include 'includes/footer.php'; ?>
-    <?php include 'includes/theme_settings.php'; ?>
+    <?php if ($is_logged_in): ?>
+        <?php include 'includes/theme_settings.php'; ?>
+    <?php endif; ?>
 </div>
 <script src="assets/js/vendor.min.js"></script>
 <script src="assets/js/app.min.js"></script>
