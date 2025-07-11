@@ -66,6 +66,12 @@
                 <span class="menu-text">TLC Join Durations</span>
             </a>
         </li>
+        <li class="side-nav-item">
+            <a href="tlc_grant.php" class="side-nav-link">
+                <span class="menu-icon"><i class="ti ti-award"></i></span>
+                <span class="menu-text">TLC Grace Grant</span>
+            </a>
+        </li>
 
         <li class="side-nav-item">
             <a href="generate_school_links.php" class="side-nav-link">

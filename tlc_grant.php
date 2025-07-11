@@ -35,18 +35,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['grant_ids'])) {
 
 // Search/filter
 $search = isset($_GET['search']) ? trim($_GET['search']) : '';
-$where = [];
+$where = ["t.reason IS NOT NULL", "t.reason != ''"];
 if ($search) {
     $search_esc = mysqli_real_escape_string($conn, $search);
-    $where[] = "(t.name LIKE '%$search_esc%' OR t.email LIKE '%$search_esc%' OR t.user_id LIKE '%$search_esc%')";
+    $where[] = "(t.name LIKE '%$search_esc%' OR t.email LIKE '%$search_esc%' OR t.user_id LIKE '%$search_esc%' OR u.mobile LIKE '%$search_esc%' OR u.institute_name LIKE '%$search_esc%')";
 }
 $where_sql = $where ? 'WHERE ' . implode(' AND ', $where) : '';
 
-// Get one row per user_id, with the latest reason
-$sql = "SELECT t.user_id, t.name, t.email, MAX(t.reason) as reason, MAX(t.grace_grant) as grace_grant
+// Get one row per user_id, with the latest reason, and join users for mobile/institute_name
+$sql = "SELECT t.user_id, t.name, t.email, MAX(t.reason) as reason, MAX(t.grace_grant) as grace_grant, u.mobile, u.institute_name, SUM(t.total_duration) as total_duration
         FROM tlc_join_durations t
+        LEFT JOIN users u ON t.user_id = u.id
         $where_sql
-        GROUP BY t.user_id, t.name, t.email
+        GROUP BY t.user_id, t.name, t.email, u.mobile, u.institute_name
         ORDER BY t.user_id DESC";
 $result = mysqli_query($conn, $sql);
 
@@ -81,8 +82,8 @@ while ($row = mysqli_fetch_assoc($result)) {
                 <div class="alert alert-success"><?php echo htmlspecialchars($msg); ?></div>
             <?php endif; ?>
             <form method="GET" class="mb-3">
-                <div class="input-group" style="max-width:400px;">
-                    <input type="text" name="search" class="form-control" placeholder="Search by name, email, user id..." value="<?php echo htmlspecialchars($search); ?>">
+                <div class="input-group" style="max-width:500px;">
+                    <input type="text" name="search" class="form-control" placeholder="Search by name, email, user id, phone, or institute..." value="<?php echo htmlspecialchars($search); ?>">
                     <button class="btn btn-primary" type="submit">Search</button>
                 </div>
             </form>
@@ -98,6 +99,9 @@ while ($row = mysqli_fetch_assoc($result)) {
                                 <th>User ID</th>
                                 <th>Name</th>
                                 <th>Email</th>
+                                <th>Mobile</th>
+                                <th>Institute</th>
+                                <th>Total Duration (min)</th>
                                 <th>Reason</th>
                                 <th>Grace Granted?</th>
                                 <th>Action</th>
@@ -110,6 +114,9 @@ while ($row = mysqli_fetch_assoc($result)) {
                                 <td><?php echo htmlspecialchars($row['user_id']); ?></td>
                                 <td><?php echo htmlspecialchars($row['name']); ?></td>
                                 <td><?php echo htmlspecialchars($row['email']); ?></td>
+                                <td><?php echo htmlspecialchars($row['mobile']); ?></td>
+                                <td><?php echo htmlspecialchars($row['institute_name']); ?></td>
+                                <td><?php echo (int)$row['total_duration']; ?></td>
                                 <td><?php echo htmlspecialchars($row['reason']); ?></td>
                                 <td>
                                     <?php if ($row['grace_grant']): ?>
