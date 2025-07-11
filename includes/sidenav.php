@@ -60,6 +60,12 @@
                 <span class="menu-text">TLC Feedback Day 02</span>
             </a>
         </li>
+        <li class="side-nav-item">
+            <a href="tlc_durations.php" class="side-nav-link">
+                <span class="menu-icon"><i class="ti ti-clock"></i></span>
+                <span class="menu-text">TLC Join Durations</span>
+            </a>
+        </li>
 
         <li class="side-nav-item">
             <a href="generate_school_links.php" class="side-nav-link">
