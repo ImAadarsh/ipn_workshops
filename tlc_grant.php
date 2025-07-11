@@ -13,25 +13,61 @@ if (!$is_logged_in && !$is_guest_access) {
 
 $conn = require_once 'config/config.php';
 
-// Handle grace grant action (single or multiple)
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['grant_ids'])) {
-    $user_ids = array_map('intval', $_POST['grant_ids']);
-    if ($user_ids) {
-        $user_ids_str = implode(',', $user_ids);
-        // Set grace_grant=1 for all records of these user_ids
-        mysqli_query($conn, "UPDATE tlc_join_durations SET grace_grant=1 WHERE user_id IN ($user_ids_str)");
-        $msg = "Grace granted for selected users.";
+// Handle grant/ungrant actions
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Multi-select
+    if (isset($_POST['grant_ids']) && isset($_POST['grant_action'])) {
+        $user_ids = array_map('intval', $_POST['grant_ids']);
+        if ($user_ids) {
+            $user_ids_str = implode(',', $user_ids);
+            if ($_POST['grant_action'] === 'grant') {
+                mysqli_query($conn, "UPDATE tlc_join_durations SET grace_grant=1 WHERE user_id IN ($user_ids_str)");
+                $msg = "Grace granted for selected users.";
+            } elseif ($_POST['grant_action'] === 'ungrant') {
+                mysqli_query($conn, "UPDATE tlc_join_durations SET grace_grant=0 WHERE user_id IN ($user_ids_str)");
+                $msg = "Grace ungranted for selected users.";
+            }
+        }
+    }
+    // Single action
+    if (isset($_POST['single_action'])) {
+        foreach ($_POST['single_action'] as $uid => $action) {
+            $uid = (int)$uid;
+            if ($action === 'grant') {
+                mysqli_query($conn, "UPDATE tlc_join_durations SET grace_grant=1 WHERE user_id = $uid");
+                $msg = "Grace granted for user $uid.";
+            } elseif ($action === 'ungrant') {
+                mysqli_query($conn, "UPDATE tlc_join_durations SET grace_grant=0 WHERE user_id = $uid");
+                $msg = "Grace ungranted for user $uid.";
+            }
+        }
     }
 }
 
-// Search/filter
+// Filters
 $search = isset($_GET['search']) ? trim($_GET['search']) : '';
+$grace_filter = isset($_GET['grace_filter']) ? $_GET['grace_filter'] : '';
+$min_duration = isset($_GET['min_duration']) ? (int)$_GET['min_duration'] : '';
+$max_duration = isset($_GET['max_duration']) ? (int)$_GET['max_duration'] : '';
+
 $where = ["t.reason IS NOT NULL", "t.reason != ''"];
 if ($search) {
     $search_esc = mysqli_real_escape_string($conn, $search);
     $where[] = "(t.name LIKE '%$search_esc%' OR t.email LIKE '%$search_esc%' OR t.user_id LIKE '%$search_esc%' OR u.mobile LIKE '%$search_esc%' OR u.institute_name LIKE '%$search_esc%')";
 }
+if ($grace_filter !== '' && ($grace_filter === '0' || $grace_filter === '1')) {
+    $where[] = "t.grace_grant = " . (int)$grace_filter;
+}
 $where_sql = $where ? 'WHERE ' . implode(' AND ', $where) : '';
+
+$having = [];
+if ($min_duration !== '') {
+    $having[] = "SUM(t.total_duration) >= $min_duration";
+}
+if ($max_duration !== '') {
+    $having[] = "SUM(t.total_duration) <= $max_duration";
+}
+$having_sql = !empty($having) ? 'HAVING ' . implode(' AND ', $having) : '';
 
 // Get one row per user_id, with the latest reason, and join users for mobile/institute_name
 $sql = "SELECT t.user_id, t.name, t.email, MAX(t.reason) as reason, MAX(t.grace_grant) as grace_grant, u.mobile, u.institute_name, SUM(t.total_duration) as total_duration
@@ -39,6 +75,7 @@ $sql = "SELECT t.user_id, t.name, t.email, MAX(t.reason) as reason, MAX(t.grace_
         LEFT JOIN users u ON t.user_id = u.id
         $where_sql
         GROUP BY t.user_id, t.name, t.email, u.mobile, u.institute_name
+        $having_sql
         ORDER BY t.user_id DESC";
 $result = mysqli_query($conn, $sql);
 
@@ -72,15 +109,31 @@ while ($row = mysqli_fetch_assoc($result)) {
             <?php if (!empty($msg)): ?>
                 <div class="alert alert-success"><?php echo htmlspecialchars($msg); ?></div>
             <?php endif; ?>
-            <form method="GET" class="mb-3">
-                <div class="input-group" style="max-width:500px;">
+            <form method="GET" class="row g-2 align-items-end mb-3">
+                <div class="col-md-3">
                     <input type="text" name="search" class="form-control" placeholder="Search by name, email, user id, phone, or institute..." value="<?php echo htmlspecialchars($search); ?>">
-                    <button class="btn btn-primary" type="submit">Search</button>
+                </div>
+                <div class="col-md-2">
+                    <select name="grace_filter" class="form-select">
+                        <option value="">All</option>
+                        <option value="1" <?php if(isset($_GET['grace_filter']) && $_GET['grace_filter']=='1') echo 'selected'; ?>>Granted</option>
+                        <option value="0" <?php if(isset($_GET['grace_filter']) && $_GET['grace_filter']=='0') echo 'selected'; ?>>Not Granted</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <input type="number" name="min_duration" class="form-control" placeholder="Min Duration" value="<?php echo isset($_GET['min_duration']) ? (int)$_GET['min_duration'] : '' ?>">
+                </div>
+                <div class="col-md-2">
+                    <input type="number" name="max_duration" class="form-control" placeholder="Max Duration" value="<?php echo isset($_GET['max_duration']) ? (int)$_GET['max_duration'] : '' ?>">
+                </div>
+                <div class="col-md-2">
+                    <button class="btn btn-primary w-100" type="submit">Filter</button>
                 </div>
             </form>
             <form method="POST">
-                <div class="mb-2">
-                    <button type="submit" class="btn btn-success" onclick="return confirm('Grant grace to selected users?')">Grant Grace to Selected</button>
+                <div class="mb-2 d-flex gap-2">
+                    <button type="submit" name="grant_action" value="grant" class="btn btn-success" onclick="return confirm('Grant grace to selected users?')">Grant Grace to Selected</button>
+                    <button type="submit" name="grant_action" value="ungrant" class="btn btn-danger" onclick="return confirm('Ungrant grace for selected users?')">Ungrant Grace for Selected</button>
                 </div>
                 <div class="table-responsive">
                     <table class="table table-striped" id="graceGrantTable">
@@ -118,9 +171,9 @@ while ($row = mysqli_fetch_assoc($result)) {
                                 </td>
                                 <td>
                                     <?php if (!$row['grace_grant']): ?>
-                                        <button type="submit" name="grant_ids[]" value="<?php echo $row['user_id']; ?>" class="btn btn-sm btn-primary">Grant Grace</button>
+                                        <button type="submit" name="single_action[<?php echo $row['user_id']; ?>]" value="grant" class="btn btn-sm btn-primary">Grant Grace</button>
                                     <?php else: ?>
-                                        <span class="text-success">Granted</span>
+                                        <button type="submit" name="single_action[<?php echo $row['user_id']; ?>]" value="ungrant" class="btn btn-sm btn-danger">Ungrant</button>
                                     <?php endif; ?>
                                 </td>
                             </tr>
