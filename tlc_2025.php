@@ -26,7 +26,7 @@ $stats_sql = "SELECT
     COUNT(DISTINCT city) as unique_cities, 
     COUNT(DISTINCT institute_name) as unique_institutes,
     SUM(is_tlc_new = 1) as new_users,
-    SUM(tlc_mail_sent = 1) as mail_stats,
+    SUM(tlc_email_sent = 1) as mail_stats,
     SUM(is_tlc_new = 0) as existing_users
     FROM users WHERE tlc_2025 = 1";
 $stats_result = mysqli_query($conn, $stats_sql);
