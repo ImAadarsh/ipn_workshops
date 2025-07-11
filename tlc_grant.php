@@ -15,21 +15,12 @@ $conn = require_once 'config/config.php';
 
 // Handle grace grant action (single or multiple)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['grant_ids'])) {
-    $grant_ids = array_map('intval', $_POST['grant_ids']);
-    if ($grant_ids) {
-        $ids_str = implode(',', $grant_ids);
-        // Get all user_ids for selected ids
-        $user_ids = [];
-        $result = mysqli_query($conn, "SELECT DISTINCT user_id FROM tlc_join_durations WHERE id IN ($ids_str)");
-        while ($row = mysqli_fetch_assoc($result)) {
-            $user_ids[] = (int)$row['user_id'];
-        }
-        if ($user_ids) {
-            $user_ids_str = implode(',', $user_ids);
-            // Set grace_grant=1 for all records of these user_ids
-            mysqli_query($conn, "UPDATE tlc_join_durations SET grace_grant=1 WHERE user_id IN ($user_ids_str)");
-            $msg = "Grace granted for selected users.";
-        }
+    $user_ids = array_map('intval', $_POST['grant_ids']);
+    if ($user_ids) {
+        $user_ids_str = implode(',', $user_ids);
+        // Set grace_grant=1 for all records of these user_ids
+        mysqli_query($conn, "UPDATE tlc_join_durations SET grace_grant=1 WHERE user_id IN ($user_ids_str)");
+        $msg = "Grace granted for selected users.";
     }
 }
 
