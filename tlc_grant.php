@@ -177,7 +177,9 @@ while ($row = mysqli_fetch_assoc($result)) {
                                 <td><?php echo htmlspecialchars($row['mobile']); ?></td>
                                 <td><?php echo htmlspecialchars($row['institute_name']); ?></td>
                                 <td><?php echo (int)$row['total_duration']; ?></td>
-                                <td><?php echo htmlspecialchars($row['reason']); ?></td>
+                                <td>
+                                    <?php echo ($row['reason'] !== null && $row['reason'] !== '') ? htmlspecialchars($row['reason']) : '-'; ?>
+                                </td>
                                 <td>
                                     <?php if ($row['grace_grant']): ?>
                                         <span class="badge bg-success">Yes</span>
@@ -212,18 +214,24 @@ while ($row = mysqli_fetch_assoc($result)) {
 <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
 <script>
 $(function() {
-    $('#graceGrantTable').DataTable({
+    var table = $('#graceGrantTable').DataTable({
         "order": [],
         "pageLength": 25
     });
-    $('#selectAll').on('change', function() {
-        $('.row-check').prop('checked', this.checked);
-    });
+
+    // Select all on all pages
     $('#selectAllBtn').on('click', function() {
-        $('.row-check').prop('checked', true);
+        $('#graceGrantTable').find('input.row-check').prop('checked', true);
     });
+
     $('#unselectAllBtn').on('click', function() {
-        $('.row-check').prop('checked', false);
+        $('#graceGrantTable').find('input.row-check').prop('checked', false);
+    });
+
+    // Header checkbox
+    $('#selectAll').on('change', function() {
+        var checked = this.checked;
+        $('#graceGrantTable').find('input.row-check').prop('checked', checked);
     });
 });
 </script>
