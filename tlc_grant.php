@@ -129,6 +129,61 @@ while ($row = mysqli_fetch_assoc($latest_result)) {
             <?php if (!empty($msg)): ?>
                 <div class="alert alert-success"><?php echo htmlspecialchars($msg); ?></div>
             <?php endif; ?>
+            
+            <!-- Latest Grant Applications -->
+            <?php if (!empty($latest_applications)): ?>
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="ti ti-clock"></i> Latest Grant Applications
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>User</th>
+                                    <th>Contact</th>
+                                    <th>Reason</th>
+                                    <th>Status</th>
+                                    <th>Updated</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($latest_applications as $app): ?>
+                                <tr>
+                                    <td>
+                                        <strong><?php echo htmlspecialchars($app['name']); ?></strong><br>
+                                        <small class="text-muted">ID: <?php echo $app['user_id']; ?></small>
+                                    </td>
+                                    <td>
+                                        <?php echo htmlspecialchars($app['email']); ?><br>
+                                        <small class="text-muted"><?php echo htmlspecialchars($app['mobile'] ?: 'N/A'); ?></small>
+                                    </td>
+                                    <td>
+                                        <span class="text-muted small"><?php echo htmlspecialchars($app['reason']); ?></span>
+                                    </td>
+                                    <td>
+                                        <?php if ($app['grace_grant']): ?>
+                                            <span class="badge bg-success">Granted</span>
+                                        <?php else: ?>
+                                            <span class="badge bg-warning">Pending</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <small class="text-muted">
+                                            <?php echo date('d M Y H:i', strtotime($app['updated_at'])); ?>
+                                        </small>
+                                    </td>
+                                </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <?php endif; ?>
             <form method="GET" class="row g-2 align-items-end mb-3">
                 <div class="col-md-2">
                     <label class="form-label">Applied Status</label>
