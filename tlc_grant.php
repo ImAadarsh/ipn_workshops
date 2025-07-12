@@ -187,7 +187,7 @@ while ($row = mysqli_fetch_assoc($result)) {
                                 </td>
                                 <td>
                                     <?php if (!$row['grace_grant']): ?>
-                                        <button type="submit" name="single_action[<?php echo $row['user_id']; ?>]" value="grant" class="btn btn-sm btn-primary">Grant Grace</button>
+                                        <button type="submit" name="single_action[<?php echo $row['user_id']; ?>]" value="grant" class="btn btn-sm btn-primary">Grant</button>
                                     <?php else: ?>
                                         <button type="submit" name="single_action[<?php echo $row['user_id']; ?>]" value="ungrant" class="btn btn-sm btn-danger">Ungrant</button>
                                     <?php endif; ?>

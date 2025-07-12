@@ -81,7 +81,7 @@ $sql = "SELECT t.*, u.mobile, u.institute_name
         FROM tlc_join_durations t
         LEFT JOIN users u ON t.user_id = u.id
         $where_sql
-        ORDER BY t.total_duration DESC";
+        ORDER BY t.user_id ASC";
 $result = mysqli_query($conn, $sql);
 
 $durations = [];
