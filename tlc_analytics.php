@@ -91,11 +91,15 @@ $result = mysqli_query($conn, "
     GROUP BY t.user_id, u.is_tlc_new
 ");
 $duration_stats = [];
+$stats['under_100_min'] = ['new' => 0, 'old' => 0, 'total' => 0];
 $stats['over_100_min'] = ['new' => 0, 'old' => 0, 'total' => 0];
 $stats['over_200_min'] = ['new' => 0, 'old' => 0, 'total' => 0];
 $stats['over_300_min'] = ['new' => 0, 'old' => 0, 'total' => 0];
 $stats['over_324_min'] = ['new' => 0, 'old' => 0, 'total' => 0];
-$stats['under_100_min'] = ['new' => 0, 'old' => 0, 'total' => 0];
+$stats['over_400_min'] = ['new' => 0, 'old' => 0, 'total' => 0];
+$stats['over_500_min'] = ['new' => 0, 'old' => 0, 'total' => 0];
+$stats['over_600_min'] = ['new' => 0, 'old' => 0, 'total' => 0];
+$stats['over_648_min'] = ['new' => 0, 'old' => 0, 'total' => 0];
 
 while ($row = mysqli_fetch_assoc($result)) {
     $duration = (int)$row['total_duration'];
@@ -125,6 +129,26 @@ while ($row = mysqli_fetch_assoc($result)) {
         $stats['over_324_min']['total']++;
         if ($is_new) $stats['over_324_min']['new']++;
         else $stats['over_324_min']['old']++;
+    }
+    if ($duration >= 400) {
+        $stats['over_400_min']['total']++;
+        if ($is_new) $stats['over_400_min']['new']++;
+        else $stats['over_400_min']['old']++;
+    }
+    if ($duration >= 500) {
+        $stats['over_500_min']['total']++;
+        if ($is_new) $stats['over_500_min']['new']++;
+        else $stats['over_500_min']['old']++;
+    }
+    if ($duration >= 600) {
+        $stats['over_600_min']['total']++;
+        if ($is_new) $stats['over_600_min']['new']++;
+        else $stats['over_600_min']['old']++;
+    }
+    if ($duration >= 648) {
+        $stats['over_648_min']['total']++;
+        if ($is_new) $stats['over_648_min']['new']++;
+        else $stats['over_648_min']['old']++;
     }
 }
 
@@ -214,13 +238,13 @@ $stats['users_with_reasons'] = mysqli_fetch_assoc($result)['count'];
 // 18. Users without reasons
 $stats['users_without_reasons'] = $stats['attended_any_day'] - $stats['users_with_reasons'];
 
-// 19. Peak performance users (324+ minutes)
+// 19. Peak performance users (648+ minutes - 2 days max)
 $result = mysqli_query($conn, "
     SELECT COUNT(*) as count FROM (
         SELECT user_id, SUM(total_duration) as total_duration
         FROM tlc_join_durations
         GROUP BY user_id
-        HAVING total_duration >= 324
+        HAVING total_duration >= 648
     ) as peak_users
 ");
 $stats['peak_performance_users'] = mysqli_fetch_assoc($result)['count'];
@@ -368,7 +392,7 @@ $stats['email_not_sent'] = mysqli_fetch_assoc($result)['count'];
                         <div class="card-body text-center">
                             <h6 class="card-title">Peak Performance</h6>
                             <h2 class="mb-0"><?php echo number_format($stats['peak_performance_users']); ?></h2>
-                            <small>324+ minutes total</small>
+                            <small>648+ minutes total (2 days max)</small>
                             <div class="drill-down-btn">Click to view users</div>
                         </div>
                     </div>
@@ -477,12 +501,40 @@ $stats['email_not_sent'] = mysqli_fetch_assoc($result)['count'];
                                             <td><strong><?php echo number_format($stats['over_300_min']['total']); ?></strong></td>
                                             <td><button class="btn btn-sm btn-outline-primary" onclick="showUsers('over_300_min')">View Users</button></td>
                                         </tr>
-                                        <tr class="table-success">
-                                            <td>≥ 324 minutes (Max)</td>
+                                        <tr>
+                                            <td>≥ 324 minutes (Day 1 Max)</td>
                                             <td><?php echo number_format($stats['over_324_min']['new']); ?></td>
                                             <td><?php echo number_format($stats['over_324_min']['old']); ?></td>
                                             <td><strong><?php echo number_format($stats['over_324_min']['total']); ?></strong></td>
-                                            <td><button class="btn btn-sm btn-success" onclick="showUsers('over_324_min')">View Users</button></td>
+                                            <td><button class="btn btn-sm btn-outline-primary" onclick="showUsers('over_324_min')">View Users</button></td>
+                                        </tr>
+                                        <tr>
+                                            <td>≥ 400 minutes</td>
+                                            <td><?php echo number_format($stats['over_400_min']['new']); ?></td>
+                                            <td><?php echo number_format($stats['over_400_min']['old']); ?></td>
+                                            <td><strong><?php echo number_format($stats['over_400_min']['total']); ?></strong></td>
+                                            <td><button class="btn btn-sm btn-outline-primary" onclick="showUsers('over_400_min')">View Users</button></td>
+                                        </tr>
+                                        <tr>
+                                            <td>≥ 500 minutes</td>
+                                            <td><?php echo number_format($stats['over_500_min']['new']); ?></td>
+                                            <td><?php echo number_format($stats['over_500_min']['old']); ?></td>
+                                            <td><strong><?php echo number_format($stats['over_500_min']['total']); ?></strong></td>
+                                            <td><button class="btn btn-sm btn-outline-primary" onclick="showUsers('over_500_min')">View Users</button></td>
+                                        </tr>
+                                        <tr>
+                                            <td>≥ 600 minutes</td>
+                                            <td><?php echo number_format($stats['over_600_min']['new']); ?></td>
+                                            <td><?php echo number_format($stats['over_600_min']['old']); ?></td>
+                                            <td><strong><?php echo number_format($stats['over_600_min']['total']); ?></strong></td>
+                                            <td><button class="btn btn-sm btn-outline-primary" onclick="showUsers('over_600_min')">View Users</button></td>
+                                        </tr>
+                                        <tr class="table-success">
+                                            <td>≥ 648 minutes (2 Days Max)</td>
+                                            <td><?php echo number_format($stats['over_648_min']['new']); ?></td>
+                                            <td><?php echo number_format($stats['over_648_min']['old']); ?></td>
+                                            <td><strong><?php echo number_format($stats['over_648_min']['total']); ?></strong></td>
+                                            <td><button class="btn btn-sm btn-success" onclick="showUsers('over_648_min')">View Users</button></td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -702,13 +754,17 @@ function showUsers(type) {
         'attended_any_day': 'Users Who Attended Any Day',
         'attended_both_days': 'Users Who Attended Both Days',
         'grace_granted': 'Users Granted Grace',
-        'peak_performance': 'Peak Performance Users (324+ minutes)',
+        'peak_performance': 'Peak Performance Users (648+ minutes)',
         'low_engagement': 'Low Engagement Users (< 100 minutes)',
         'under_100_min': 'Users with < 100 minutes total',
         'over_100_min': 'Users with ≥ 100 minutes total',
         'over_200_min': 'Users with ≥ 200 minutes total',
         'over_300_min': 'Users with ≥ 300 minutes total',
-        'over_324_min': 'Users with ≥ 324 minutes total'
+        'over_324_min': 'Users with ≥ 324 minutes total',
+        'over_400_min': 'Users with ≥ 400 minutes total',
+        'over_500_min': 'Users with ≥ 500 minutes total',
+        'over_600_min': 'Users with ≥ 600 minutes total',
+        'over_648_min': 'Users with ≥ 648 minutes total (2 days max)'
     };
     
     title.textContent = titles[type] || 'User List';
