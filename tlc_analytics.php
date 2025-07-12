@@ -69,7 +69,18 @@ $result = mysqli_query($conn, "
 ");
 $stats['old_attended_both_days'] = mysqli_fetch_assoc($result)['count'];
 
-// 8. Duration analysis - Total duration per user
+// 8. Users who attended only one day
+$result = mysqli_query($conn, "
+    SELECT COUNT(*) as count FROM (
+        SELECT user_id 
+        FROM tlc_join_durations 
+        GROUP BY user_id 
+        HAVING COUNT(DISTINCT day) = 1
+    ) as one_day
+");
+$stats['attended_one_day'] = mysqli_fetch_assoc($result)['count'];
+
+// 9. Duration analysis - Total duration per user
 $result = mysqli_query($conn, "
     SELECT 
         t.user_id,
@@ -84,11 +95,17 @@ $stats['over_100_min'] = ['new' => 0, 'old' => 0, 'total' => 0];
 $stats['over_200_min'] = ['new' => 0, 'old' => 0, 'total' => 0];
 $stats['over_300_min'] = ['new' => 0, 'old' => 0, 'total' => 0];
 $stats['over_324_min'] = ['new' => 0, 'old' => 0, 'total' => 0];
+$stats['under_100_min'] = ['new' => 0, 'old' => 0, 'total' => 0];
 
 while ($row = mysqli_fetch_assoc($result)) {
     $duration = (int)$row['total_duration'];
     $is_new = $row['is_tlc_new'] == 1;
     
+    if ($duration < 100) {
+        $stats['under_100_min']['total']++;
+        if ($is_new) $stats['under_100_min']['new']++;
+        else $stats['under_100_min']['old']++;
+    }
     if ($duration >= 100) {
         $stats['over_100_min']['total']++;
         if ($is_new) $stats['over_100_min']['new']++;
@@ -111,21 +128,21 @@ while ($row = mysqli_fetch_assoc($result)) {
     }
 }
 
-// 9. Day-wise attendance
+// 10. Day-wise attendance
 $result = mysqli_query($conn, "SELECT day, COUNT(DISTINCT user_id) as count FROM tlc_join_durations GROUP BY day ORDER BY day");
 $stats['day_wise'] = [];
 while ($row = mysqli_fetch_assoc($result)) {
     $stats['day_wise'][$row['day']] = $row['count'];
 }
 
-// 10. Grace grant statistics
+// 11. Grace grant statistics
 $result = mysqli_query($conn, "SELECT COUNT(*) as count FROM tlc_join_durations WHERE grace_grant = 1");
 $stats['grace_granted'] = mysqli_fetch_assoc($result)['count'];
 
 $result = mysqli_query($conn, "SELECT COUNT(*) as count FROM tlc_join_durations WHERE grace_grant = 0");
 $stats['grace_not_granted'] = mysqli_fetch_assoc($result)['count'];
 
-// 11. Average duration by user type
+// 12. Average duration by user type
 $result = mysqli_query($conn, "
     SELECT 
         u.is_tlc_new,
@@ -144,13 +161,103 @@ while ($row = mysqli_fetch_assoc($result)) {
     }
 }
 
-// 12. Registration vs Attendance Rate
+// 13. Geographic analysis
+$result = mysqli_query($conn, "
+    SELECT 
+        u.city,
+        COUNT(DISTINCT u.id) as total_users,
+        COUNT(DISTINCT t.user_id) as attended_users
+    FROM users u
+    LEFT JOIN tlc_join_durations t ON u.id = t.user_id
+    WHERE u.tlc_2025 = 1
+    GROUP BY u.city
+    HAVING total_users >= 5
+    ORDER BY total_users DESC
+    LIMIT 10
+");
+$stats['top_cities'] = [];
+while ($row = mysqli_fetch_assoc($result)) {
+    $stats['top_cities'][] = $row;
+}
+
+// 14. Institute analysis
+$result = mysqli_query($conn, "
+    SELECT 
+        u.institute_name,
+        COUNT(DISTINCT u.id) as total_users,
+        COUNT(DISTINCT t.user_id) as attended_users
+    FROM users u
+    LEFT JOIN tlc_join_durations t ON u.id = t.user_id
+    WHERE u.tlc_2025 = 1 AND u.institute_name IS NOT NULL AND u.institute_name != ''
+    GROUP BY u.institute_name
+    HAVING total_users >= 3
+    ORDER BY total_users DESC
+    LIMIT 10
+");
+$stats['top_institutes'] = [];
+while ($row = mysqli_fetch_assoc($result)) {
+    $stats['top_institutes'][] = $row;
+}
+
+// 15. Registration vs Attendance Rate
 $stats['attendance_rate'] = $stats['total_registrations'] > 0 ? round(($stats['attended_any_day'] / $stats['total_registrations']) * 100, 1) : 0;
 $stats['both_days_rate'] = $stats['total_registrations'] > 0 ? round(($stats['attended_both_days'] / $stats['total_registrations']) * 100, 1) : 0;
 
-// 13. New vs Old user engagement
+// 16. New vs Old user engagement
 $stats['new_engagement_rate'] = $stats['new_users'] > 0 ? round(($stats['new_attended_both_days'] / $stats['new_users']) * 100, 1) : 0;
 $stats['old_engagement_rate'] = $stats['old_users'] > 0 ? round(($stats['old_attended_both_days'] / $stats['old_users']) * 100, 1) : 0;
+
+// 17. Users with reasons (grace applications)
+$result = mysqli_query($conn, "SELECT COUNT(DISTINCT user_id) as count FROM tlc_join_durations WHERE reason IS NOT NULL AND reason != ''");
+$stats['users_with_reasons'] = mysqli_fetch_assoc($result)['count'];
+
+// 18. Users without reasons
+$stats['users_without_reasons'] = $stats['attended_any_day'] - $stats['users_with_reasons'];
+
+// 19. Peak performance users (324+ minutes)
+$result = mysqli_query($conn, "
+    SELECT COUNT(*) as count FROM (
+        SELECT user_id, SUM(total_duration) as total_duration
+        FROM tlc_join_durations
+        GROUP BY user_id
+        HAVING total_duration >= 324
+    ) as peak_users
+");
+$stats['peak_performance_users'] = mysqli_fetch_assoc($result)['count'];
+
+// 20. Low engagement users (< 100 minutes total)
+$result = mysqli_query($conn, "
+    SELECT COUNT(*) as count FROM (
+        SELECT user_id, SUM(total_duration) as total_duration
+        FROM tlc_join_durations
+        GROUP BY user_id
+        HAVING total_duration < 100
+    ) as low_engagement_users
+");
+$stats['low_engagement_users'] = mysqli_fetch_assoc($result)['count'];
+
+// 21. Registration date analysis
+$result = mysqli_query($conn, "
+    SELECT 
+        DATE(tlc_join_date) as join_date,
+        COUNT(*) as registrations
+    FROM users 
+    WHERE tlc_2025 = 1 AND tlc_join_date IS NOT NULL
+    GROUP BY DATE(tlc_join_date)
+    ORDER BY join_date DESC
+    LIMIT 7
+");
+$stats['recent_registrations'] = [];
+while ($row = mysqli_fetch_assoc($result)) {
+    $stats['recent_registrations'][] = $row;
+}
+
+// 22. Email sent status
+$result = mysqli_query($conn, "SELECT COUNT(*) as count FROM users WHERE tlc_2025 = 1 AND tlc_email_sent = 1");
+$stats['email_sent'] = mysqli_fetch_assoc($result)['count'];
+
+$result = mysqli_query($conn, "SELECT COUNT(*) as count FROM users WHERE tlc_2025 = 1 AND (tlc_email_sent = 0 OR tlc_email_sent IS NULL)");
+$stats['email_not_sent'] = mysqli_fetch_assoc($result)['count'];
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -164,6 +271,23 @@ $stats['old_engagement_rate'] = $stats['old_users'] > 0 ? round(($stats['old_att
         .wrapper { padding-top: 0 !important; }
     </style>
     <?php endif; ?>
+    <style>
+        .stat-card {
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .drill-down-btn {
+            font-size: 0.8em;
+            opacity: 0.7;
+        }
+        .stat-card:hover .drill-down-btn {
+            opacity: 1;
+        }
+    </style>
 </head>
 <body>
 <div class="wrapper">
@@ -178,36 +302,84 @@ $stats['old_engagement_rate'] = $stats['old_users'] > 0 ? round(($stats['old_att
             <!-- Overview Cards -->
             <div class="row mb-4">
                 <div class="col-md-3">
-                    <div class="card bg-primary text-white">
+                    <div class="card bg-primary text-white stat-card" onclick="showUsers('total_registrations')">
                         <div class="card-body text-center">
                             <h6 class="card-title">Total Registrations</h6>
                             <h2 class="mb-0"><?php echo number_format($stats['total_registrations']); ?></h2>
+                            <small class="drill-down-btn">Click to view users</small>
                         </div>
                     </div>
                 </div>
                 <div class="col-md-3">
-                    <div class="card bg-success text-white">
+                    <div class="card bg-success text-white stat-card" onclick="showUsers('attended_any_day')">
                         <div class="card-body text-center">
                             <h6 class="card-title">Attended Any Day</h6>
                             <h2 class="mb-0"><?php echo number_format($stats['attended_any_day']); ?></h2>
                             <small><?php echo $stats['attendance_rate']; ?>% of registrations</small>
+                            <div class="drill-down-btn">Click to view users</div>
                         </div>
                     </div>
                 </div>
                 <div class="col-md-3">
-                    <div class="card bg-info text-white">
+                    <div class="card bg-info text-white stat-card" onclick="showUsers('attended_both_days')">
                         <div class="card-body text-center">
                             <h6 class="card-title">Attended Both Days</h6>
                             <h2 class="mb-0"><?php echo number_format($stats['attended_both_days']); ?></h2>
                             <small><?php echo $stats['both_days_rate']; ?>% of registrations</small>
+                            <div class="drill-down-btn">Click to view users</div>
                         </div>
                     </div>
                 </div>
                 <div class="col-md-3">
-                    <div class="card bg-warning text-white">
+                    <div class="card bg-warning text-white stat-card" onclick="showUsers('grace_granted')">
                         <div class="card-body text-center">
                             <h6 class="card-title">Grace Granted</h6>
                             <h2 class="mb-0"><?php echo number_format($stats['grace_granted']); ?></h2>
+                            <div class="drill-down-btn">Click to view users</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Additional Overview Cards -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card bg-secondary text-white stat-card" onclick="showUsers('new_users')">
+                        <div class="card-body text-center">
+                            <h6 class="card-title">New Users</h6>
+                            <h2 class="mb-0"><?php echo number_format($stats['new_users']); ?></h2>
+                            <small><?php echo $stats['new_engagement_rate']; ?>% attended both days</small>
+                            <div class="drill-down-btn">Click to view users</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-dark text-white stat-card" onclick="showUsers('old_users')">
+                        <div class="card-body text-center">
+                            <h6 class="card-title">Existing Users</h6>
+                            <h2 class="mb-0"><?php echo number_format($stats['old_users']); ?></h2>
+                            <small><?php echo $stats['old_engagement_rate']; ?>% attended both days</small>
+                            <div class="drill-down-btn">Click to view users</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-danger text-white stat-card" onclick="showUsers('peak_performance')">
+                        <div class="card-body text-center">
+                            <h6 class="card-title">Peak Performance</h6>
+                            <h2 class="mb-0"><?php echo number_format($stats['peak_performance_users']); ?></h2>
+                            <small>324+ minutes total</small>
+                            <div class="drill-down-btn">Click to view users</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-light text-dark stat-card" onclick="showUsers('low_engagement')">
+                        <div class="card-body text-center">
+                            <h6 class="card-title">Low Engagement</h6>
+                            <h2 class="mb-0"><?php echo number_format($stats['low_engagement_users']); ?></h2>
+                            <small>< 100 minutes total</small>
+                            <div class="drill-down-btn">Click to view users</div>
                         </div>
                     </div>
                 </div>
@@ -273,33 +445,111 @@ $stats['old_engagement_rate'] = $stats['old_users'] > 0 ? round(($stats['old_att
                                             <th>New Users</th>
                                             <th>Existing Users</th>
                                             <th>Total</th>
+                                            <th>Action</th>
                                         </tr>
                                     </thead>
                                     <tbody>
+                                        <tr>
+                                            <td>< 100 minutes</td>
+                                            <td><?php echo number_format($stats['under_100_min']['new']); ?></td>
+                                            <td><?php echo number_format($stats['under_100_min']['old']); ?></td>
+                                            <td><strong><?php echo number_format($stats['under_100_min']['total']); ?></strong></td>
+                                            <td><button class="btn btn-sm btn-outline-primary" onclick="showUsers('under_100_min')">View Users</button></td>
+                                        </tr>
                                         <tr>
                                             <td>≥ 100 minutes</td>
                                             <td><?php echo number_format($stats['over_100_min']['new']); ?></td>
                                             <td><?php echo number_format($stats['over_100_min']['old']); ?></td>
                                             <td><strong><?php echo number_format($stats['over_100_min']['total']); ?></strong></td>
+                                            <td><button class="btn btn-sm btn-outline-primary" onclick="showUsers('over_100_min')">View Users</button></td>
                                         </tr>
                                         <tr>
                                             <td>≥ 200 minutes</td>
                                             <td><?php echo number_format($stats['over_200_min']['new']); ?></td>
                                             <td><?php echo number_format($stats['over_200_min']['old']); ?></td>
                                             <td><strong><?php echo number_format($stats['over_200_min']['total']); ?></strong></td>
+                                            <td><button class="btn btn-sm btn-outline-primary" onclick="showUsers('over_200_min')">View Users</button></td>
                                         </tr>
                                         <tr>
                                             <td>≥ 300 minutes</td>
                                             <td><?php echo number_format($stats['over_300_min']['new']); ?></td>
                                             <td><?php echo number_format($stats['over_300_min']['old']); ?></td>
                                             <td><strong><?php echo number_format($stats['over_300_min']['total']); ?></strong></td>
+                                            <td><button class="btn btn-sm btn-outline-primary" onclick="showUsers('over_300_min')">View Users</button></td>
                                         </tr>
                                         <tr class="table-success">
                                             <td>≥ 324 minutes (Max)</td>
                                             <td><?php echo number_format($stats['over_324_min']['new']); ?></td>
                                             <td><?php echo number_format($stats['over_324_min']['old']); ?></td>
                                             <td><strong><?php echo number_format($stats['over_324_min']['total']); ?></strong></td>
+                                            <td><button class="btn btn-sm btn-success" onclick="showUsers('over_324_min')">View Users</button></td>
                                         </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Geographic & Institute Analysis -->
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Top Cities (≥5 users)</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>City</th>
+                                            <th>Total Users</th>
+                                            <th>Attended</th>
+                                            <th>Rate</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($stats['top_cities'] as $city): ?>
+                                        <tr>
+                                            <td><?php echo htmlspecialchars($city['city']); ?></td>
+                                            <td><?php echo $city['total_users']; ?></td>
+                                            <td><?php echo $city['attended_users']; ?></td>
+                                            <td><?php echo round(($city['attended_users'] / $city['total_users']) * 100, 1); ?>%</td>
+                                        </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Top Institutes (≥3 users)</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Institute</th>
+                                            <th>Total Users</th>
+                                            <th>Attended</th>
+                                            <th>Rate</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($stats['top_institutes'] as $institute): ?>
+                                        <tr>
+                                            <td><?php echo htmlspecialchars($institute['institute_name']); ?></td>
+                                            <td><?php echo $institute['total_users']; ?></td>
+                                            <td><?php echo $institute['attended_users']; ?></td>
+                                            <td><?php echo round(($institute['attended_users'] / $institute['total_users']) * 100, 1); ?>%</td>
+                                        </tr>
+                                        <?php endforeach; ?>
                                     </tbody>
                                 </table>
                             </div>
@@ -355,13 +605,17 @@ $stats['old_engagement_rate'] = $stats['old_users'] > 0 ? round(($stats['old_att
                         </div>
                         <div class="card-body">
                             <div class="row text-center">
-                                <div class="col-6">
+                                <div class="col-4">
                                     <h4 class="text-success"><?php echo number_format($stats['grace_granted']); ?></h4>
                                     <p class="text-muted">Grace Granted</p>
                                 </div>
-                                <div class="col-6">
+                                <div class="col-4">
                                     <h4 class="text-danger"><?php echo number_format($stats['grace_not_granted']); ?></h4>
                                     <p class="text-muted">Grace Not Granted</p>
+                                </div>
+                                <div class="col-4">
+                                    <h4 class="text-info"><?php echo number_format($stats['users_with_reasons']); ?></h4>
+                                    <p class="text-muted">Applied for Grace</p>
                                 </div>
                             </div>
                         </div>
@@ -396,6 +650,12 @@ $stats['old_engagement_rate'] = $stats['old_users'] > 0 ? round(($stats['old_att
                                 <li class="list-group-item">
                                     <strong>Support Needed:</strong> <?php echo number_format($stats['grace_granted']); ?> users required grace grants
                                 </li>
+                                <li class="list-group-item">
+                                    <strong>One Day Only:</strong> <?php echo number_format($stats['attended_one_day']); ?> users attended only one day
+                                </li>
+                                <li class="list-group-item">
+                                    <strong>Email Campaign:</strong> <?php echo number_format($stats['email_sent']); ?> users received TLC emails
+                                </li>
                             </ul>
                         </div>
                     </div>
@@ -408,7 +668,64 @@ $stats['old_engagement_rate'] = $stats['old_users'] > 0 ? round(($stats['old_att
         <?php include 'includes/theme_settings.php'; ?>
     <?php endif; ?>
 </div>
+
+<!-- User List Modal -->
+<div class="modal fade" id="userListModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="userListModalTitle">User List</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="userListContent">
+                    <!-- Content will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script src="assets/js/vendor.min.js"></script>
 <script src="assets/js/app.min.js"></script>
+<script>
+function showUsers(type) {
+    const modal = new bootstrap.Modal(document.getElementById('userListModal'));
+    const title = document.getElementById('userListModalTitle');
+    const content = document.getElementById('userListContent');
+    
+    // Set title based on type
+    const titles = {
+        'total_registrations': 'All TLC 2025 Registrations',
+        'new_users': 'New Users (is_tlc_new = 1)',
+        'old_users': 'Existing Users (is_tlc_new = 0)',
+        'attended_any_day': 'Users Who Attended Any Day',
+        'attended_both_days': 'Users Who Attended Both Days',
+        'grace_granted': 'Users Granted Grace',
+        'peak_performance': 'Peak Performance Users (324+ minutes)',
+        'low_engagement': 'Low Engagement Users (< 100 minutes)',
+        'under_100_min': 'Users with < 100 minutes total',
+        'over_100_min': 'Users with ≥ 100 minutes total',
+        'over_200_min': 'Users with ≥ 200 minutes total',
+        'over_300_min': 'Users with ≥ 300 minutes total',
+        'over_324_min': 'Users with ≥ 324 minutes total'
+    };
+    
+    title.textContent = titles[type] || 'User List';
+    content.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"></div><p>Loading users...</p></div>';
+    
+    modal.show();
+    
+    // Load user data
+    fetch(`tlc_user_list.php?type=${type}&uvx=<?php echo $special_access_key; ?>`)
+        .then(response => response.text())
+        .then(data => {
+            content.innerHTML = data;
+        })
+        .catch(error => {
+            content.innerHTML = '<div class="alert alert-danger">Error loading user data.</div>';
+        });
+}
+</script>
 </body>
 </html> 
