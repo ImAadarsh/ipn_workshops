@@ -77,13 +77,13 @@ if ($max_duration !== '') {
 $having_sql = !empty($having) ? 'HAVING ' . implode(' AND ', $having) : '';
 
 // Get one row per user_id, with the latest reason, and join users for mobile/institute_name
-$sql = "SELECT t.user_id, t.name, t.email, MAX(t.reason) as reason, MAX(t.grace_grant) as grace_grant, u.mobile, u.institute_name, SUM(t.total_duration) as total_duration
+$sql = "SELECT t.user_id, t.name, t.email, MAX(t.reason) as reason, MAX(t.grace_grant) as grace_grant, u.mobile, u.institute_name, SUM(t.total_duration) as total_duration, MAX(t.updated_at) as updated_at
         FROM tlc_join_durations t
         LEFT JOIN users u ON t.user_id = u.id
         $where_sql
         GROUP BY t.user_id, t.name, t.email, u.mobile, u.institute_name
         $having_sql
-        ORDER BY t.user_id DESC";
+        ORDER BY updated_at DESC";
 $result = mysqli_query($conn, $sql);
 
 $users = [];
