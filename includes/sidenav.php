@@ -74,6 +74,13 @@
         </li>
 
         <li class="side-nav-item">
+            <a href="tlc_analytics.php" class="side-nav-link">
+                <span class="menu-icon"><i class="ti ti-chart-bar"></i></span>
+                <span class="menu-text">TLC Analytics</span>
+            </a>
+        </li>
+
+        <li class="side-nav-item">
             <a href="generate_school_links.php" class="side-nav-link">
                 <span class="menu-icon"><i class="ti ti-link"></i></span>
                 <span class="menu-text">Generate School Links</span>
