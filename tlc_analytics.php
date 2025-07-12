@@ -368,21 +368,21 @@ $stats['email_not_sent'] = mysqli_fetch_assoc($result)['count'];
             <!-- Additional Overview Cards -->
             <div class="row mb-4">
                 <div class="col-md-3">
-                    <div class="card bg-secondary text-white stat-card" onclick="showUsers('new_users')">
+                    <div class="card bg-secondary text-white stat-card" onclick="showUsers('new_attended_both_days')">
                         <div class="card-body text-center">
-                            <h6 class="card-title">New Users</h6>
-                            <h2 class="mb-0"><?php echo number_format($stats['new_users']); ?></h2>
-                            <small><?php echo $stats['new_engagement_rate']; ?>% attended both days</small>
+                            <h6 class="card-title">New Users - Both Days</h6>
+                            <h2 class="mb-0"><?php echo number_format($stats['new_attended_both_days']); ?></h2>
+                            <small><?php echo $stats['new_engagement_rate']; ?>% of new users</small>
                             <div class="drill-down-btn">Click to view users</div>
                         </div>
                     </div>
                 </div>
                 <div class="col-md-3">
-                    <div class="card bg-dark text-white stat-card" onclick="showUsers('old_users')">
+                    <div class="card bg-dark text-white stat-card" onclick="showUsers('old_attended_both_days')">
                         <div class="card-body text-center">
-                            <h6 class="card-title">Existing Users</h6>
-                            <h2 class="mb-0"><?php echo number_format($stats['old_users']); ?></h2>
-                            <small><?php echo $stats['old_engagement_rate']; ?>% attended both days</small>
+                            <h6 class="card-title">Existing Users - Both Days</h6>
+                            <h2 class="mb-0"><?php echo number_format($stats['old_attended_both_days']); ?></h2>
+                            <small><?php echo $stats['old_engagement_rate']; ?>% of existing users</small>
                             <div class="drill-down-btn">Click to view users</div>
                         </div>
                     </div>
@@ -409,9 +409,9 @@ $stats['email_not_sent'] = mysqli_fetch_assoc($result)['count'];
                 </div>
             </div>
 
-            <!-- User Type Analysis -->
+            <!-- User Type Distribution -->
             <div class="row mb-4">
-                <div class="col-md-6">
+                <div class="col-12">
                     <div class="card">
                         <div class="card-header">
                             <h5 class="mb-0">User Type Distribution</h5>
@@ -420,32 +420,13 @@ $stats['email_not_sent'] = mysqli_fetch_assoc($result)['count'];
                             <div class="row text-center">
                                 <div class="col-6">
                                     <h4 class="text-primary"><?php echo number_format($stats['new_users']); ?></h4>
-                                    <p class="text-muted">New Users</p>
+                                    <p class="text-muted">New Users (Total Registrations)</p>
                                     <small class="text-success"><?php echo $stats['new_engagement_rate']; ?>% attended both days</small>
                                 </div>
                                 <div class="col-6">
                                     <h4 class="text-success"><?php echo number_format($stats['old_users']); ?></h4>
-                                    <p class="text-muted">Existing Users</p>
+                                    <p class="text-muted">Existing Users (Total Registrations)</p>
                                     <small class="text-success"><?php echo $stats['old_engagement_rate']; ?>% attended both days</small>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="card">
-                        <div class="card-header">
-                            <h5 class="mb-0">Both Days Attendance by User Type</h5>
-                        </div>
-                        <div class="card-body">
-                            <div class="row text-center">
-                                <div class="col-6">
-                                    <h4 class="text-primary"><?php echo number_format($stats['new_attended_both_days']); ?></h4>
-                                    <p class="text-muted">New Users</p>
-                                </div>
-                                <div class="col-6">
-                                    <h4 class="text-success"><?php echo number_format($stats['old_attended_both_days']); ?></h4>
-                                    <p class="text-muted">Existing Users</p>
                                 </div>
                             </div>
                         </div>
@@ -753,6 +734,8 @@ function showUsers(type) {
         'old_users': 'Existing Users (is_tlc_new = 0)',
         'attended_any_day': 'Users Who Attended Any Day',
         'attended_both_days': 'Users Who Attended Both Days',
+        'new_attended_both_days': 'New Users Who Attended Both Days',
+        'old_attended_both_days': 'Existing Users Who Attended Both Days',
         'grace_granted': 'Users Granted Grace',
         'peak_performance': 'Peak Performance Users (648+ minutes)',
         'low_engagement': 'Low Engagement Users (< 100 minutes)',

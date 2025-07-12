@@ -57,6 +57,32 @@ switch ($type) {
                 ORDER BY u.id DESC";
         break;
         
+    case 'new_attended_both_days':
+        $sql = "SELECT u.id, u.name, u.email, u.mobile, u.institute_name, u.city, u.is_tlc_new, u.tlc_join_date, u.tlc_email_sent 
+                FROM users u
+                JOIN (
+                    SELECT user_id 
+                    FROM tlc_join_durations 
+                    GROUP BY user_id 
+                    HAVING COUNT(DISTINCT day) = 2
+                ) both_days ON u.id = both_days.user_id
+                WHERE u.is_tlc_new = 1
+                ORDER BY u.id DESC";
+        break;
+        
+    case 'old_attended_both_days':
+        $sql = "SELECT u.id, u.name, u.email, u.mobile, u.institute_name, u.city, u.is_tlc_new, u.tlc_join_date, u.tlc_email_sent 
+                FROM users u
+                JOIN (
+                    SELECT user_id 
+                    FROM tlc_join_durations 
+                    GROUP BY user_id 
+                    HAVING COUNT(DISTINCT day) = 2
+                ) both_days ON u.id = both_days.user_id
+                WHERE (u.is_tlc_new = 0 OR u.is_tlc_new IS NULL)
+                ORDER BY u.id DESC";
+        break;
+        
     case 'grace_granted':
         $sql = "SELECT DISTINCT u.id, u.name, u.email, u.mobile, u.institute_name, u.city, u.is_tlc_new, u.tlc_join_date, u.tlc_email_sent 
                 FROM users u
