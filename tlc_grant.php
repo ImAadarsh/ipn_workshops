@@ -118,42 +118,55 @@ while ($row = mysqli_fetch_assoc($result)) {
             <?php endif; ?>
             <form method="GET" class="row g-2 align-items-end mb-3">
                 <div class="col-md-2">
+                    <label class="form-label">Applied Status</label>
                     <select name="applied_filter" class="form-select">
                         <option value="">All</option>
                         <option value="applied" <?php if($applied_filter==='applied') echo 'selected'; ?>>Applied</option>
                         <option value="not_applied" <?php if($applied_filter==='not_applied') echo 'selected'; ?>>Not Applied</option>
                     </select>
                 </div>
-                <div class="col-md-3">
-                    <input type="text" name="search" class="form-control" placeholder="Search by name, email, user id, phone, or institute..." value="<?php echo htmlspecialchars($search); ?>">
-                </div>
                 <div class="col-md-2">
+                    <label class="form-label">Grant Status</label>
                     <select name="grace_filter" class="form-select">
                         <option value="">All</option>
                         <option value="1" <?php if(isset($_GET['grace_filter']) && $_GET['grace_filter']=='1') echo 'selected'; ?>>Granted</option>
                         <option value="0" <?php if(isset($_GET['grace_filter']) && $_GET['grace_filter']=='0') echo 'selected'; ?>>Not Granted</option>
                     </select>
                 </div>
+                <div class="col-md-3">
+                    <label class="form-label">Search</label>
+                    <input type="text" name="search" class="form-control" placeholder="Search by name, email, user id, phone, or institute..." value="<?php echo htmlspecialchars($search); ?>">
+                </div>
                 <div class="col-md-2">
+                    <label class="form-label">Min Duration</label>
                     <input type="number" name="min_duration" class="form-control" placeholder="Min Duration" value="<?php echo isset($_GET['min_duration']) ? (int)$_GET['min_duration'] : '' ?>">
                 </div>
                 <div class="col-md-2">
+                    <label class="form-label">Max Duration</label>
                     <input type="number" name="max_duration" class="form-control" placeholder="Max Duration" value="<?php echo isset($_GET['max_duration']) ? (int)$_GET['max_duration'] : '' ?>">
                 </div>
                 <div class="col-md-1">
+                    <label class="form-label">&nbsp;</label>
                     <button class="btn btn-primary w-100" type="submit">Filter</button>
                 </div>
             </form>
             <form method="POST">
-                <div class="mb-2 d-flex gap-2 flex-wrap">
-                    <button type="submit" name="grant_action" value="grant" class="btn btn-success" onclick="return confirm('Grant grace to selected users?')">Grant Grace to Selected</button>
-                    <button type="submit" name="grant_action" value="ungrant" class="btn btn-danger" onclick="return confirm('Ungrant grace for selected users?')">Ungrant Grace for Selected</button>
+                <div class="mb-3 d-flex gap-2 flex-wrap align-items-center">
+                    <button type="submit" name="grant_action" value="grant" class="btn btn-success" onclick="return confirm('Grant grace to selected users?')">
+                        <i class="ti ti-check"></i> Grant Grace to Selected
+                    </button>
+                    <button type="submit" name="grant_action" value="ungrant" class="btn btn-danger" onclick="return confirm('Ungrant grace for selected users?')">
+                        <i class="ti ti-x"></i> Ungrant Grace for Selected
+                    </button>
+                    <span class="text-muted ms-2">(<span id="selectedCount">0</span> users selected)</span>
                 </div>
                 <div class="table-responsive">
-                    <table class="table table-striped" id="graceGrantTable">
-                        <thead>
+                    <table class="table table-striped table-hover" id="graceGrantTable">
+                        <thead class="table-dark">
                             <tr>
-                                <th><input type="checkbox" id="selectAll"></th>
+                                <th width="50">
+                                    <input type="checkbox" id="selectAll" class="form-check-input">
+                                </th>
                                 <th>User ID</th>
                                 <th>Name</th>
                                 <th>Email</th>
@@ -162,38 +175,57 @@ while ($row = mysqli_fetch_assoc($result)) {
                                 <th>Total Duration (min)</th>
                                 <th>Reason</th>
                                 <th>Grace Granted?</th>
-                                <th>Action</th>
+                                <th width="120">Action</th>
                             </tr>
                         </thead>
                         <tbody>
-                        <?php foreach ($users as $row): ?>
+                        <?php if (count($users) == 0): ?>
                             <tr>
-                                <td><input type="checkbox" name="grant_ids[]" value="<?php echo $row['user_id']; ?>" class="row-check"></td>
-                                <td><?php echo htmlspecialchars($row['user_id']); ?></td>
-                                <td><?php echo htmlspecialchars($row['name']); ?></td>
-                                <td><?php echo htmlspecialchars($row['email']); ?></td>
-                                <td><?php echo htmlspecialchars($row['mobile']); ?></td>
-                                <td><?php echo htmlspecialchars($row['institute_name']); ?></td>
-                                <td><?php echo (int)$row['total_duration']; ?></td>
-                                <td>
-                                    <?php echo ($row['reason'] !== null && $row['reason'] !== '') ? htmlspecialchars($row['reason']) : '-'; ?>
-                                </td>
-                                <td>
-                                    <?php if ($row['grace_grant']): ?>
-                                        <span class="badge bg-success">Yes</span>
-                                    <?php else: ?>
-                                        <span class="badge bg-danger">No</span>
-                                    <?php endif; ?>
-                                </td>
-                                <td>
-                                    <?php if (!$row['grace_grant']): ?>
-                                        <button type="submit" name="single_action[<?php echo $row['user_id']; ?>]" value="grant" class="btn btn-sm btn-primary">Grant</button>
-                                    <?php else: ?>
-                                        <button type="submit" name="single_action[<?php echo $row['user_id']; ?>]" value="ungrant" class="btn btn-sm btn-danger">Ungrant</button>
-                                    <?php endif; ?>
+                                <td colspan="9" class="text-center text-muted py-4">
+                                    <i class="ti ti-users-off" style="font-size: 2rem;"></i>
+                                    <p class="mt-2">No users found matching the current filters.</p>
                                 </td>
                             </tr>
-                        <?php endforeach; ?>
+                        <?php else: ?>
+                            <?php foreach ($users as $row): ?>
+                                <tr>
+                                    <td>
+                                        <input type="checkbox" name="grant_ids[]" value="<?php echo $row['user_id']; ?>" class="row-check form-check-input">
+                                    </td>
+                                    <td><strong><?php echo htmlspecialchars($row['user_id']); ?></strong></td>
+                                    <td><?php echo htmlspecialchars($row['name']); ?></td>
+                                    <td><?php echo htmlspecialchars($row['email']); ?></td>
+                                    <td><?php echo htmlspecialchars($row['mobile'] ?: 'N/A'); ?></td>
+                                    <td><?php echo htmlspecialchars($row['institute_name'] ?: 'N/A'); ?></td>
+                                    <td><span class="badge bg-info"><?php echo (int)$row['total_duration']; ?> min</span></td>
+                                    <td>
+                                        <?php if ($row['reason'] !== null && $row['reason'] !== ''): ?>
+                                            <span class="text-muted small"><?php echo htmlspecialchars($row['reason']); ?></span>
+                                        <?php else: ?>
+                                            <span class="text-muted">-</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <?php if ($row['grace_grant']): ?>
+                                            <span class="badge bg-success">Granted</span>
+                                        <?php else: ?>
+                                            <span class="badge bg-danger">Not Granted</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <?php if (!$row['grace_grant']): ?>
+                                            <button type="submit" name="single_action[<?php echo $row['user_id']; ?>]" value="grant" class="btn btn-sm btn-primary">
+                                                <i class="ti ti-check"></i> Grant
+                                            </button>
+                                        <?php else: ?>
+                                            <button type="submit" name="single_action[<?php echo $row['user_id']; ?>]" value="ungrant" class="btn btn-sm btn-danger">
+                                                <i class="ti ti-x"></i> Ungrant
+                                            </button>
+                                        <?php endif; ?>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
                         </tbody>
                     </table>
                 </div>
@@ -207,20 +239,65 @@ while ($row = mysqli_fetch_assoc($result)) {
 </div>
 <script src="assets/js/vendor.min.js"></script>
 <script src="assets/js/app.min.js"></script>
-<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
-<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-<script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
 <script>
 $(function() {
-    var table = $('#graceGrantTable').DataTable({
-        "order": [],
-        "pageLength": 25
-    });
+    // Multi-select functionality
+    function updateSelectedCount() {
+        var checkedCount = $('.row-check:checked').length;
+        $('#selectedCount').text(checkedCount);
+        
+        // Update select all checkbox
+        var totalCheckboxes = $('.row-check').length;
+        if (checkedCount === 0) {
+            $('#selectAll').prop('indeterminate', false).prop('checked', false);
+        } else if (checkedCount === totalCheckboxes) {
+            $('#selectAll').prop('indeterminate', false).prop('checked', true);
+        } else {
+            $('#selectAll').prop('indeterminate', true);
+        }
+    }
 
-    // Header checkbox
+    // Header checkbox - select all
     $('#selectAll').on('change', function() {
         var checked = this.checked;
-        $('#graceGrantTable').find('input.row-check').prop('checked', checked);
+        $('.row-check').prop('checked', checked);
+        updateSelectedCount();
+    });
+
+    // Individual row checkboxes
+    $(document).on('change', '.row-check', function() {
+        updateSelectedCount();
+    });
+
+    // Initialize count
+    updateSelectedCount();
+
+    // Form validation
+    $('form').on('submit', function(e) {
+        var checkedBoxes = $('.row-check:checked');
+        if (checkedBoxes.length === 0) {
+            e.preventDefault();
+            alert('Please select at least one user to perform the action.');
+            return false;
+        }
+    });
+
+    // Auto-submit on single action buttons
+    $('button[name^="single_action"]').on('click', function(e) {
+        if (!confirm('Are you sure you want to perform this action?')) {
+            e.preventDefault();
+            return false;
+        }
+    });
+
+    // Add some visual feedback
+    $('.row-check').on('change', function() {
+        var row = $(this).closest('tr');
+        if (this.checked) {
+            row.addClass('table-primary');
+        } else {
+            row.removeClass('table-primary');
+        }
     });
 });
 </script>
