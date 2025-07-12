@@ -132,7 +132,7 @@ while ($row = mysqli_fetch_assoc($latest_result)) {
             
             <!-- Latest Grant Applications -->
             <?php if (!empty($latest_applications)): ?>
-            <div class="card mb-4">
+            <!-- <div class="card mb-4">
                 <div class="card-header">
                     <h5 class="mb-0">
                         <i class="ti ti-clock"></i> Latest Grant Applications
@@ -182,7 +182,7 @@ while ($row = mysqli_fetch_assoc($latest_result)) {
                         </table>
                     </div>
                 </div>
-            </div>
+            </div> -->
             <?php endif; ?>
             <form method="GET" class="row g-2 align-items-end mb-3">
                 <div class="col-md-2">
