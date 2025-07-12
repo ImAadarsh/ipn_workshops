@@ -90,6 +90,19 @@ $users = [];
 while ($row = mysqli_fetch_assoc($result)) {
     $users[] = $row;
 }
+
+// Get latest grant applications (last 10)
+$latest_sql = "SELECT t.user_id, t.name, t.email, t.reason, t.grace_grant, t.updated_at, u.mobile, u.institute_name
+               FROM tlc_join_durations t
+               LEFT JOIN users u ON t.user_id = u.id
+               WHERE t.reason IS NOT NULL AND t.reason != ''
+               ORDER BY t.updated_at DESC
+               LIMIT 10";
+$latest_result = mysqli_query($conn, $latest_sql);
+$latest_applications = [];
+while ($row = mysqli_fetch_assoc($latest_result)) {
+    $latest_applications[] = $row;
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -272,8 +285,8 @@ $(function() {
     // Initialize count
     updateSelectedCount();
 
-    // Form validation
-    $('form').on('submit', function(e) {
+    // Form validation - only for POST forms (grant actions)
+    $('form[method="POST"]').on('submit', function(e) {
         var checkedBoxes = $('.row-check:checked');
         if (checkedBoxes.length === 0) {
             e.preventDefault();
