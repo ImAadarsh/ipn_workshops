@@ -68,10 +68,10 @@ if ($grace_filter !== '' && ($grace_filter === '0' || $grace_filter === '1')) {
 $where_sql = $where ? 'WHERE ' . implode(' AND ', $where) : '';
 
 $having = [];
-if ($min_duration !== '') {
+if ($min_duration !== '' && $min_duration > 0) {
     $having[] = "SUM(t.total_duration) >= $min_duration";
 }
-if ($max_duration !== '') {
+if ($max_duration !== '' && $max_duration > 0) {
     $having[] = "SUM(t.total_duration) <= $max_duration";
 }
 $having_sql = !empty($having) ? 'HAVING ' . implode(' AND ', $having) : '';
@@ -207,11 +207,11 @@ while ($row = mysqli_fetch_assoc($latest_result)) {
                 </div>
                 <div class="col-md-2">
                     <label class="form-label">Min Duration</label>
-                    <input type="number" name="min_duration" class="form-control" placeholder="Min Duration" value="<?php echo isset($_GET['min_duration']) ? (int)$_GET['min_duration'] : '' ?>">
+                    <input type="number" name="min_duration" class="form-control" placeholder="Min Duration" value="<?php echo isset($_GET['min_duration']) && $_GET['min_duration'] > 0 ? (int)$_GET['min_duration'] : '' ?>">
                 </div>
                 <div class="col-md-2">
                     <label class="form-label">Max Duration</label>
-                    <input type="number" name="max_duration" class="form-control" placeholder="Max Duration" value="<?php echo isset($_GET['max_duration']) ? (int)$_GET['max_duration'] : '' ?>">
+                    <input type="number" name="max_duration" class="form-control" placeholder="Max Duration" value="<?php echo isset($_GET['max_duration']) && $_GET['max_duration'] > 0 ? (int)$_GET['max_duration'] : '' ?>">
                 </div>
                 <div class="col-md-1">
                     <label class="form-label">&nbsp;</label>
