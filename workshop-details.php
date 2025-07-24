@@ -380,6 +380,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                                             <a href="https://ipnacademy.in/workshop_assessment_report.php?workshop_id=<?php echo $workshop_id; ?>" class="btn btn-info" target="_blank">
                                                                 <i class="ti ti-file-report me-1"></i> Assessment Report
                                                             </a>
+                                                            <a href="https://ipnacademy.in/workshop_mcq.php?workshop_id=<?php echo $workshop_id; ?>" class="btn btn-info" target="_blank">
+                                                                <i class="ti ti-clipboard-check me-1"></i> MCQ
+                                                            </a>
+                                                            <a href="https://ipnacademy.in/workshop_mcq_report.php?workshop_id=<?php echo $workshop_id; ?>" class="btn btn-info" target="_blank">
+                                                                <i class="ti ti-file-report me-1"></i> MCQ Report
+                                                            </a>
                                                             <a href="public_workshop_links.php?workshop_id=<?php echo $workshop_id; ?>" class="btn btn-warning" target="_blank" title="View Public School Enrollment Links">
                                                                 <i class="ti ti-link me-1"></i> Public School Links
                                                             </a>

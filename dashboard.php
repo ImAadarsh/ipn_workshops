@@ -219,6 +219,12 @@ if (!empty($upcomingWorkshops)) {
                                                                         <a href="https://ipnacademy.in/workshop_assessment_report.php?workshop_id=<?php echo $workshop['id']; ?>" class="btn btn-info btn-sm" target="_blank">
                                                                             <i class="ti ti-file-report me-1"></i> Assessment Report
                                                                         </a>
+                                                                        <a href="https://ipnacademy.in/workshop_mcq.php?workshop_id=<?php echo $workshop['id']; ?>" class="btn btn-info btn-sm me-2" target="_blank">
+                                                                            <i class="ti ti-clipboard-check me-1"></i>MCQ
+                                                                        </a>
+                                                                        <a href="https://ipnacademy.in/workshop_mcq_report.php?workshop_id=<?php echo $workshop['id']; ?>" class="btn btn-info btn-sm" target="_blank">
+                                                                            <i class="ti ti-file-report me-1"></i> MCQ Report
+                                                                        </a>
                                                                     </div>
                                                                 </div>
                                                             </div>
@@ -293,6 +299,12 @@ if (!empty($upcomingWorkshops)) {
                                                                             <i class="ti ti-clipboard-check"></i>
                                                                         </a>
                                                                         <a href="https://ipnacademy.in/workshop_assessment_report.php?workshop_id=<?php echo $workshop['id']; ?>" class="btn btn-sm btn-info" target="_blank" title="Assessment Report">
+                                                                            <i class="ti ti-file-report"></i>
+                                                                        </a>
+                                                                        <a href="https://ipnacademy.in/workshop_mcq.php?workshop_id=<?php echo $workshop['id']; ?>" class="btn btn-sm btn-info me-1" target="_blank" title="MCQ">
+                                                                            <i class="ti ti-clipboard-check"></i>
+                                                                        </a>
+                                                                        <a href="https://ipnacademy.in/workshop_mcq_report.php?workshop_id=<?php echo $workshop['id']; ?>" class="btn btn-sm btn-info" target="_blank" title="MCQ Report">
                                                                             <i class="ti ti-file-report"></i>
                                                                         </a>
                                                                     </div>
@@ -395,6 +407,12 @@ if (!empty($upcomingWorkshops)) {
                                                                         <a href="https://ipnacademy.in/workshop_assessment_report.php?workshop_id=<?php echo $workshop['id']; ?>" class="btn btn-info btn-sm" target="_blank">
                                                                             <i class="ti ti-file-report me-1"></i> Assessment Report
                                                                         </a>
+                                                                        <a href="https://ipnacademy.in/workshop_mcq.php?workshop_id=<?php echo $workshop['id']; ?>" class="btn btn-info btn-sm me-2" target="_blank">
+                                                                            <i class="ti ti-clipboard-check me-1"></i> MCQ
+                                                                        </a>
+                                                                        <a href="https://ipnacademy.in/workshop_mcq_report.php?workshop_id=<?php echo $workshop['id']; ?>" class="btn btn-info btn-sm" target="_blank">
+                                                                            <i class="ti ti-file-report me-1"></i> MCQ Report
+                                                                        </a>
                                                                     </div>
                                                                 </div>
                                                             </div>
@@ -464,6 +482,12 @@ if (!empty($upcomingWorkshops)) {
                                                                             <i class="ti ti-clipboard-check"></i>
                                                                         </a>
                                                                         <a href="https://ipnacademy.in/workshop_assessment_report.php?workshop_id=<?php echo $workshop['id']; ?>" class="btn btn-sm btn-info" target="_blank" title="Assessment Report">
+                                                                            <i class="ti ti-file-report"></i>
+                                                                        </a>
+                                                                        <a href="https://ipnacademy.in/workshop_mcq.php?workshop_id=<?php echo $workshop['id']; ?>" class="btn btn-sm btn-info me-1" target="_blank" title="MCQ">
+                                                                            <i class="ti ti-clipboard-check"></i>
+                                                                        </a>
+                                                                        <a href="https://ipnacademy.in/workshop_mcq_report.php?workshop_id=<?php echo $workshop['id']; ?>" class="btn btn-sm btn-info" target="_blank" title="MCQ Report">
                                                                             <i class="ti ti-file-report"></i>
                                                                         </a>
                                                                     </div>
