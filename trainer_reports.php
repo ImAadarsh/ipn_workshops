@@ -30,8 +30,8 @@ if(isset($_GET['download']) && $_GET['download'] == 'csv') {
         SELECT 
             t.name,
             t.designation,
-            COUNT(DISTINCT f.workshop_id) as total_workshops,
-            COUNT(f.id) as total_ratings,
+            COUNT(DISTINCT w.id) as total_workshops,
+            COUNT(DISTINCT f.id) as total_ratings,
             ROUND(AVG(f.rating), 1) as avg_rating,
             COUNT(CASE WHEN f.rating = 5 THEN 1 END) as five_star,
             COUNT(CASE WHEN f.rating = 4 THEN 1 END) as four_star,
@@ -39,10 +39,12 @@ if(isset($_GET['download']) && $_GET['download'] == 'csv') {
             COUNT(CASE WHEN f.rating = 2 THEN 1 END) as two_star,
             COUNT(CASE WHEN f.rating = 1 THEN 1 END) as one_star
         FROM trainers t
+        LEFT JOIN workshops w ON t.id = w.trainer_id AND w.is_deleted = 0
         LEFT JOIN feedback f ON t.id = f.trainer_id
         WHERE t.active = 1
+        AND w.type = 1
         GROUP BY t.id, t.name, t.designation
-        ORDER BY COUNT(DISTINCT f.workshop_id) DESC, COUNT(f.id) DESC";
+        ORDER BY COUNT(DISTINCT w.id) DESC, COUNT(DISTINCT f.id) DESC";
     
     $csv_result = mysqli_query($conn, $csv_query);
     while($row = mysqli_fetch_assoc($csv_result)) {
@@ -71,8 +73,8 @@ $query = "
         t.designation,
         t.image,
         t.about,
-        COUNT(DISTINCT f.workshop_id) as total_workshops,
-        COUNT(f.id) as total_ratings,
+        COUNT(DISTINCT w.id) as total_workshops,
+        COUNT(DISTINCT f.id) as total_ratings,
         ROUND(AVG(f.rating), 1) as avg_rating,
         COUNT(CASE WHEN f.rating = 5 THEN 1 END) as five_star,
         COUNT(CASE WHEN f.rating = 4 THEN 1 END) as four_star,
@@ -80,10 +82,12 @@ $query = "
         COUNT(CASE WHEN f.rating = 2 THEN 1 END) as two_star,
         COUNT(CASE WHEN f.rating = 1 THEN 1 END) as one_star
     FROM trainers t
+    LEFT JOIN workshops w ON t.id = w.trainer_id AND w.is_deleted = 0
     LEFT JOIN feedback f ON t.id = f.trainer_id
     WHERE t.active = 1
+    AND w.type = 1
     GROUP BY t.id, t.name, t.designation, t.image, t.about
-    ORDER BY COUNT(DISTINCT f.workshop_id) DESC, COUNT(f.id) DESC"; // Sort by workshops first, then ratings
+    ORDER BY COUNT(DISTINCT w.id) DESC, COUNT(DISTINCT f.id) DESC"; // Sort by workshops first, then ratings
 
 $result = mysqli_query($conn, $query);
 $trainers = mysqli_fetch_all($result, MYSQLI_ASSOC);
