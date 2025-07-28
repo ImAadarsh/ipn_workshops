@@ -340,6 +340,13 @@
         </li> -->
 
         <li class="side-nav-item">
+            <a href="workshop_questions.php" class="side-nav-link">
+                <span class="menu-icon"><i class="ti ti-list-check"></i></span>
+                <span class="menu-text">Workshop Questions</span>
+            </a>
+        </li>
+
+        <li class="side-nav-item">
             <a href="trainer_reports.php" class="side-nav-link">
                 <span class="menu-icon"><i class="ti ti-report-analytics"></i></span>
                 <span class="menu-text">Trainer Reports</span>
