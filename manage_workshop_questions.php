@@ -1,5 +1,5 @@
 <?php
-require_once 'config/show_errors.php';
+// require_once 'config/show_errors.php';
 require_once 'config/config.php';
 require_once 'includes/head.php';
 
