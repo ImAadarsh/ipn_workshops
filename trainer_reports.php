@@ -31,20 +31,28 @@ if(isset($_GET['download']) && $_GET['download'] == 'csv') {
             t.name,
             t.designation,
             COUNT(DISTINCT w.id) as total_workshops,
-            COUNT(DISTINCT f.id) as total_ratings,
-            ROUND(AVG(f.rating), 1) as avg_rating,
-            COUNT(CASE WHEN f.rating = 5 THEN 1 END) as five_star,
-            COUNT(CASE WHEN f.rating = 4 THEN 1 END) as four_star,
-            COUNT(CASE WHEN f.rating = 3 THEN 1 END) as three_star,
-            COUNT(CASE WHEN f.rating = 2 THEN 1 END) as two_star,
-            COUNT(CASE WHEN f.rating = 1 THEN 1 END) as one_star
+            SUM(CASE 
+                WHEN f.rating >= 1 AND f.rating <= 5 
+                THEN 1 
+                ELSE 0 
+            END) as total_ratings,
+            ROUND(AVG(CASE 
+                WHEN f.rating >= 1 AND f.rating <= 5 
+                THEN f.rating 
+                ELSE NULL 
+            END), 1) as avg_rating,
+            SUM(CASE WHEN f.rating = 5 THEN 1 ELSE 0 END) as five_star,
+            SUM(CASE WHEN f.rating = 4 THEN 1 ELSE 0 END) as four_star,
+            SUM(CASE WHEN f.rating = 3 THEN 1 ELSE 0 END) as three_star,
+            SUM(CASE WHEN f.rating = 2 THEN 1 ELSE 0 END) as two_star,
+            SUM(CASE WHEN f.rating = 1 THEN 1 ELSE 0 END) as one_star
         FROM trainers t
         LEFT JOIN workshops w ON t.id = w.trainer_id AND w.is_deleted = 0
         LEFT JOIN feedback f ON t.id = f.trainer_id
         WHERE t.active = 1
         AND w.type = 1
         GROUP BY t.id, t.name, t.designation
-        ORDER BY COUNT(DISTINCT w.id) DESC, COUNT(DISTINCT f.id) DESC";
+        ORDER BY COUNT(DISTINCT w.id) DESC, total_ratings DESC";
     
     $csv_result = mysqli_query($conn, $csv_query);
     while($row = mysqli_fetch_assoc($csv_result)) {
@@ -74,20 +82,28 @@ $query = "
         t.image,
         t.about,
         COUNT(DISTINCT w.id) as total_workshops,
-        COUNT(DISTINCT f.id) as total_ratings,
-        ROUND(AVG(f.rating), 1) as avg_rating,
-        COUNT(CASE WHEN f.rating = 5 THEN 1 END) as five_star,
-        COUNT(CASE WHEN f.rating = 4 THEN 1 END) as four_star,
-        COUNT(CASE WHEN f.rating = 3 THEN 1 END) as three_star,
-        COUNT(CASE WHEN f.rating = 2 THEN 1 END) as two_star,
-        COUNT(CASE WHEN f.rating = 1 THEN 1 END) as one_star
+        SUM(CASE 
+            WHEN f.rating >= 1 AND f.rating <= 5 
+            THEN 1 
+            ELSE 0 
+        END) as total_ratings,
+        ROUND(AVG(CASE 
+            WHEN f.rating >= 1 AND f.rating <= 5 
+            THEN f.rating 
+            ELSE NULL 
+        END), 1) as avg_rating,
+        SUM(CASE WHEN f.rating = 5 THEN 1 ELSE 0 END) as five_star,
+        SUM(CASE WHEN f.rating = 4 THEN 1 ELSE 0 END) as four_star,
+        SUM(CASE WHEN f.rating = 3 THEN 1 ELSE 0 END) as three_star,
+        SUM(CASE WHEN f.rating = 2 THEN 1 ELSE 0 END) as two_star,
+        SUM(CASE WHEN f.rating = 1 THEN 1 ELSE 0 END) as one_star
     FROM trainers t
     LEFT JOIN workshops w ON t.id = w.trainer_id AND w.is_deleted = 0
     LEFT JOIN feedback f ON t.id = f.trainer_id
     WHERE t.active = 1
     AND w.type = 1
     GROUP BY t.id, t.name, t.designation, t.image, t.about
-    ORDER BY COUNT(DISTINCT w.id) DESC, COUNT(DISTINCT f.id) DESC"; // Sort by workshops first, then ratings
+    ORDER BY COUNT(DISTINCT w.id) DESC, total_ratings DESC"; // Sort by workshops first, then ratings
 
 $result = mysqli_query($conn, $query);
 $trainers = mysqli_fetch_all($result, MYSQLI_ASSOC);
@@ -238,7 +254,12 @@ $trainers = mysqli_fetch_all($result, MYSQLI_ASSOC);
                             <p class="mb-0 text-muted text-truncate">Workshops</p>
                         </div>
                         <div class="col-4">
-                            <h4><?php echo $trainer['total_ratings']; ?></h4>
+                            <?php
+                            $verified_total = $trainer['five_star'] + $trainer['four_star'] + 
+                                             $trainer['three_star'] + $trainer['two_star'] + 
+                                             $trainer['one_star'];
+                            ?>
+                            <h4><?php echo $verified_total; ?></h4>
                             <p class="mb-0 text-muted text-truncate">Ratings</p>
                         </div>
                         <div class="col-4">
