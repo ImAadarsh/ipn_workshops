@@ -346,13 +346,31 @@
             </a>
         </li>
 
+
+
         <li class="side-nav-item">
             <a href="trainer_reports.php" class="side-nav-link">
                 <span class="menu-icon"><i class="ti ti-report-analytics"></i></span>
                 <span class="menu-text">Trainer Reports</span>
             </a>
         </li>
-
+        <li class="side-nav-item">
+            <a data-bs-toggle="collapse" href="#sidebarInstructions" aria-expanded="false" aria-controls="sidebarInstructions" class="side-nav-link">
+                <span class="menu-icon"><i class="ti ti-file-text"></i></span>
+                <span class="menu-text">Instructions</span>
+                <span class="menu-arrow"></span>
+            </a>
+            <div class="collapse" id="sidebarInstructions">
+                <ul class="sub-menu">
+                    <li class="side-nav-item">
+                        <a href="instructions/MCQ_INSTRUCTIONS.pdf" target="_blank" class="side-nav-link">
+                            <span class="menu-text">MCQ Instructions</span>
+                        </a>
+                    </li>
+                    <!-- More instruction items can be added here -->
+                </ul>
+            </div>
+        </li>
         <!-- Logout -->
         <li class="side-nav-item">
             <a href="logout.php" class="side-nav-link">
