@@ -41,43 +41,45 @@
         <li class="side-nav-title">Management</li>
 
         <li class="side-nav-item">
-            <a href="tlc_2025.php" class="side-nav-link">
+            <a data-bs-toggle="collapse" href="#sidebarTLC" aria-expanded="false" aria-controls="sidebarTLC" class="side-nav-link">
                 <span class="menu-icon"><i class="ti ti-users"></i></span>
-                <span class="menu-text">TLC 2025 Users</span>
+                <span class="menu-text">TLC 2025</span>
+                <span class="menu-arrow"></span>
             </a>
-        </li>
-
-        <li class="side-nav-item">
-            <a href="tlc_feedback_day_01.php" class="side-nav-link">
-                <span class="menu-icon"><i class="ti ti-message-dots"></i></span>
-                <span class="menu-text">TLC Feedback Day 01</span>
-            </a>
-        </li>
-
-        <li class="side-nav-item">
-            <a href="tlc_feedback_day_02.php" class="side-nav-link">
-                <span class="menu-icon"><i class="ti ti-message-dots"></i></span>
-                <span class="menu-text">TLC Feedback Day 02</span>
-            </a>
-        </li>
-        <li class="side-nav-item">
-            <a href="tlc_durations.php" class="side-nav-link">
-                <span class="menu-icon"><i class="ti ti-clock"></i></span>
-                <span class="menu-text">TLC Join Durations</span>
-            </a>
-        </li>
-        <li class="side-nav-item">
-            <a href="tlc_grant.php" class="side-nav-link">
-                <span class="menu-icon"><i class="ti ti-award"></i></span>
-                <span class="menu-text">TLC Grace Grant</span>
-            </a>
-        </li>
-
-        <li class="side-nav-item">
-            <a href="tlc_analytics.php" class="side-nav-link">
-                <span class="menu-icon"><i class="ti ti-chart-bar"></i></span>
-                <span class="menu-text">TLC Analytics</span>
-            </a>
+            <div class="collapse" id="sidebarTLC">
+                <ul class="sub-menu">
+                    <li class="side-nav-item">
+                        <a href="tlc_2025.php" class="side-nav-link">
+                            <span class="menu-text">Users</span>
+                        </a>
+                    </li>
+                    <li class="side-nav-item">
+                        <a href="tlc_feedback_day_01.php" class="side-nav-link">
+                            <span class="menu-text">Feedback Day 01</span>
+                        </a>
+                    </li>
+                    <li class="side-nav-item">
+                        <a href="tlc_feedback_day_02.php" class="side-nav-link">
+                            <span class="menu-text">Feedback Day 02</span>
+                        </a>
+                    </li>
+                    <li class="side-nav-item">
+                        <a href="tlc_durations.php" class="side-nav-link">
+                            <span class="menu-text">Join Durations</span>
+                        </a>
+                    </li>
+                    <li class="side-nav-item">
+                        <a href="tlc_grant.php" class="side-nav-link">
+                            <span class="menu-text">Grace Grant</span>
+                        </a>
+                    </li>
+                    <li class="side-nav-item">
+                        <a href="tlc_analytics.php" class="side-nav-link">
+                            <span class="menu-text">Analytics</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
         </li>
 
         <li class="side-nav-item">
@@ -336,6 +338,13 @@
                 <span class="menu-text">Settings</span>
             </a>
         </li> -->
+
+        <li class="side-nav-item">
+            <a href="trainer_reports.php" class="side-nav-link">
+                <span class="menu-icon"><i class="ti ti-report-analytics"></i></span>
+                <span class="menu-text">Trainer Reports</span>
+            </a>
+        </li>
 
         <!-- Logout -->
         <li class="side-nav-item">
