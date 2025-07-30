@@ -354,6 +354,14 @@
                 <span class="menu-text">Trainer Reports</span>
             </a>
         </li>
+
+        <li class="side-nav-item">
+            <a href="schools_management.php" class="side-nav-link">
+                <span class="menu-icon"><i class="ti ti-building"></i></span>
+                <span class="menu-text">Schools Management</span>
+            </a>
+        </li>
+
         <li class="side-nav-item">
             <a data-bs-toggle="collapse" href="#sidebarInstructions" aria-expanded="false" aria-controls="sidebarInstructions" class="side-nav-link">
                 <span class="menu-icon"><i class="ti ti-file-text"></i></span>
