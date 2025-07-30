@@ -30,6 +30,40 @@ if ($workshop_id) {
 
 // Export as CSV
 if (isset($_GET['export']) && $_GET['export'] == 'csv' && $workshop_id && $school_id) {
+    // Get filter parameters for CSV export
+    $csv_search = isset($_GET['search']) ? trim($_GET['search']) : '';
+    $csv_attendance_filter = isset($_GET['attendance_filter']) ? $_GET['attendance_filter'] : '';
+    $csv_duration_filter = isset($_GET['duration_filter']) ? $_GET['duration_filter'] : '';
+    
+    // Build WHERE conditions for CSV export
+    $csv_where_conditions = [
+        "p.workshop_id = $workshop_id",
+        "p.payment_status = 1",
+        "(p.school_id = $school_id OR u.school_id = $school_id)"
+    ];
+    
+    // Add search condition
+    if (!empty($csv_search)) {
+        $csv_search_escaped = mysqli_real_escape_string($conn, $csv_search);
+        $csv_where_conditions[] = "(u.name LIKE '%$csv_search_escaped%' OR u.email LIKE '%$csv_search_escaped%' OR u.mobile LIKE '%$csv_search_escaped%')";
+    }
+    
+    // Add attendance filter
+    if ($csv_attendance_filter === 'attended') {
+        $csv_where_conditions[] = "p.is_attended = 1";
+    } elseif ($csv_attendance_filter === 'not_attended') {
+        $csv_where_conditions[] = "p.is_attended = 0";
+    }
+    
+    // Add duration filter
+    if ($csv_duration_filter === 'less_than_60') {
+        $csv_where_conditions[] = "p.attended_duration < 60 AND p.is_attended = 1";
+    } elseif ($csv_duration_filter === 'more_than_60') {
+        $csv_where_conditions[] = "p.attended_duration >= 60 AND p.is_attended = 1";
+    }
+    
+    $csv_where_clause = implode(' AND ', $csv_where_conditions);
+    
     header('Content-Type: text/csv');
     header('Content-Disposition: attachment; filename="school_teachers_' . $school_id . '_workshop_' . $workshop_id . '.csv"');
     $output = fopen('php://output', 'w');
@@ -37,8 +71,7 @@ if (isset($_GET['export']) && $_GET['export'] == 'csv' && $workshop_id && $schoo
     $sql = "SELECT u.id, u.name, u.email, u.mobile, p.is_attended, p.attended_duration
             FROM payments p
             INNER JOIN users u ON p.user_id = u.id
-            WHERE p.workshop_id = $workshop_id AND p.payment_status = 1
-            AND (p.school_id = $school_id OR u.school_id = $school_id)
+            WHERE $csv_where_clause
             GROUP BY u.id
             ORDER BY u.name";
     $result = mysqli_query($conn, $sql);
@@ -55,6 +88,11 @@ if (isset($_GET['export']) && $_GET['export'] == 'csv' && $workshop_id && $schoo
     exit();
 }
 
+// Get search and filter parameters
+$search = isset($_GET['search']) ? trim($_GET['search']) : '';
+$attendance_filter = isset($_GET['attendance_filter']) ? $_GET['attendance_filter'] : '';
+$duration_filter = isset($_GET['duration_filter']) ? $_GET['duration_filter'] : '';
+
 // Fetch teachers and attendance stats
 $teachers = [];
 $attendance_stats = [
@@ -69,20 +107,49 @@ $attendance_stats = [
         '60+' => 0
     ]
 ];
+
 if ($workshop_id && $school_id) {
+    // Build WHERE conditions for filtering
+    $where_conditions = [
+        "p.workshop_id = $workshop_id",
+        "p.payment_status = 1",
+        "(p.school_id = $school_id OR u.school_id = $school_id)"
+    ];
+    
+    // Add search condition
+    if (!empty($search)) {
+        $search_escaped = mysqli_real_escape_string($conn, $search);
+        $where_conditions[] = "(u.name LIKE '%$search_escaped%' OR u.email LIKE '%$search_escaped%' OR u.mobile LIKE '%$search_escaped%')";
+    }
+    
+    // Add attendance filter
+    if ($attendance_filter === 'attended') {
+        $where_conditions[] = "p.is_attended = 1";
+    } elseif ($attendance_filter === 'not_attended') {
+        $where_conditions[] = "p.is_attended = 0";
+    }
+    
+    // Add duration filter
+    if ($duration_filter === 'less_than_60') {
+        $where_conditions[] = "p.attended_duration < 60 AND p.is_attended = 1";
+    } elseif ($duration_filter === 'more_than_60') {
+        $where_conditions[] = "p.attended_duration >= 60 AND p.is_attended = 1";
+    }
+    
+    $where_clause = implode(' AND ', $where_conditions);
+    
     // Teachers list (unique by user)
     $sql = "SELECT u.id, u.name, u.email, u.mobile, p.is_attended, p.attended_duration
             FROM payments p
             INNER JOIN users u ON p.user_id = u.id
-            WHERE p.workshop_id = $workshop_id AND p.payment_status = 1
-            AND (p.school_id = $school_id OR u.school_id = $school_id)
+            WHERE $where_clause
             GROUP BY u.id
             ORDER BY u.name";
     $result = mysqli_query($conn, $sql);
     while ($row = mysqli_fetch_assoc($result)) {
         $teachers[] = $row;
     }
-    // Attendance stats
+    // Attendance stats (respecting filters)
     $stats_sql = "SELECT 
         COUNT(DISTINCT u.id) as total_registered,
         SUM(CASE WHEN p.is_attended = 1 THEN 1 ELSE 0 END) as total_attended,
@@ -93,8 +160,7 @@ if ($workshop_id && $school_id) {
         SUM(CASE WHEN p.is_attended = 1 AND p.attended_duration > 60 THEN 1 ELSE 0 END) as duration_60_plus
         FROM payments p
         INNER JOIN users u ON p.user_id = u.id
-        WHERE p.workshop_id = $workshop_id AND p.payment_status = 1
-        AND (p.school_id = $school_id OR u.school_id = $school_id)";
+        WHERE $where_clause";
     $stats_result = mysqli_query($conn, $stats_sql);
     if ($stats_result) {
         $stats = mysqli_fetch_assoc($stats_result);
@@ -130,7 +196,68 @@ if ($workshop_id && $school_id) {
                         <i class="ti ti-arrow-left me-1"></i> Back to Workshop Details
                     </a>
                     <h3 class="mb-3">Teachers from <span class="text-primary"><?php echo htmlspecialchars($school['name']); ?></span> in <span class="text-success"><?php echo htmlspecialchars($workshop['name']); ?></span></h3>
-                    <a href="?workshop_id=<?php echo $workshop_id; ?>&school_id=<?php echo $school_id; ?>&export=csv" class="btn btn-success mb-3">Export CSV</a>
+                    
+                    <!-- Search and Filter Form -->
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <form method="GET" action="" class="row g-3">
+                                <input type="hidden" name="workshop_id" value="<?php echo $workshop_id; ?>">
+                                <input type="hidden" name="school_id" value="<?php echo $school_id; ?>">
+                                
+                                <div class="col-md-4">
+                                    <label class="form-label">Search</label>
+                                    <input type="text" class="form-control" name="search" value="<?php echo htmlspecialchars($search); ?>" placeholder="Search by name, email, or mobile">
+                                </div>
+                                
+                                <div class="col-md-3">
+                                    <label class="form-label">Attendance Status</label>
+                                    <select class="form-select" name="attendance_filter">
+                                        <option value="">All</option>
+                                        <option value="attended" <?php echo $attendance_filter === 'attended' ? 'selected' : ''; ?>>Attended</option>
+                                        <option value="not_attended" <?php echo $attendance_filter === 'not_attended' ? 'selected' : ''; ?>>Not Attended</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="col-md-3">
+                                    <label class="form-label">Duration Filter</label>
+                                    <select class="form-select" name="duration_filter">
+                                        <option value="">All</option>
+                                        <option value="less_than_60" <?php echo $duration_filter === 'less_than_60' ? 'selected' : ''; ?>>Less than 60 min</option>
+                                        <option value="more_than_60" <?php echo $duration_filter === 'more_than_60' ? 'selected' : ''; ?>>60+ min</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="col-md-2">
+                                    <label class="form-label">&nbsp;</label>
+                                    <div class="d-flex gap-2">
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="ti ti-search me-1"></i> Filter
+                                        </button>
+                                        <a href="?workshop_id=<?php echo $workshop_id; ?>&school_id=<?php echo $school_id; ?>" class="btn btn-outline-secondary">
+                                            <i class="ti ti-refresh me-1"></i> Clear
+                                        </a>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                    
+                    <!-- Export with current filters -->
+                    <a href="?workshop_id=<?php echo $workshop_id; ?>&school_id=<?php echo $school_id; ?>&export=csv&search=<?php echo urlencode($search); ?>&attendance_filter=<?php echo urlencode($attendance_filter); ?>&duration_filter=<?php echo urlencode($duration_filter); ?>" class="btn btn-success mb-3">
+                        <i class="ti ti-download me-1"></i> Export CSV
+                    </a>
+                    
+                    <!-- Results Summary -->
+                    <?php if (!empty($search) || !empty($attendance_filter) || !empty($duration_filter)): ?>
+                    <div class="alert alert-info mb-3">
+                        <i class="ti ti-info-circle me-1"></i>
+                        <strong>Filtered Results:</strong> 
+                        <?php echo count($teachers); ?> teacher(s) found
+                        <?php if (!empty($search)): ?> • Search: "<?php echo htmlspecialchars($search); ?>"<?php endif; ?>
+                        <?php if (!empty($attendance_filter)): ?> • Attendance: <?php echo $attendance_filter === 'attended' ? 'Attended' : 'Not Attended'; ?><?php endif; ?>
+                        <?php if (!empty($duration_filter)): ?> • Duration: <?php echo $duration_filter === 'less_than_60' ? 'Less than 60 min' : '60+ min'; ?><?php endif; ?>
+                    </div>
+                    <?php endif; ?>
                 </div>
             </div>
             <!-- Attendance Panel for School -->
