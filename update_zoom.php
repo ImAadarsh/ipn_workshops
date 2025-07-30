@@ -8,17 +8,22 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
-// Include database connection
+// Include database connection and encoder functions
 $conn = require_once 'config/config.php';
+require_once 'config/encoder.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $workshop_id = (int)$_POST['workshop_id'];
     $meeting_id = mysqli_real_escape_string($conn, $_POST['meeting_id']);
     $passcode = mysqli_real_escape_string($conn, $_POST['passcode']);
     
+    // Encode the values before storing in database
+    $encoded_meeting_id = encodeMeetingId($meeting_id);
+    $encoded_passcode = encodePasscode($passcode);
+    
     $sql = "UPDATE workshops SET 
-            meeting_id = '$meeting_id',
-            passcode = '$passcode'
+            meeting_id = '$encoded_meeting_id',
+            passcode = '$encoded_passcode'
             WHERE id = $workshop_id";
             
     if (mysqli_query($conn, $sql)) {

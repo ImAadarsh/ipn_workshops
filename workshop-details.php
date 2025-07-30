@@ -8,8 +8,9 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
-// Include database connection
+// Include database connection and encoder functions
 $conn = require_once 'config/config.php';
+require_once 'config/encoder.php';
 
 // Get workshop ID from URL
 $workshop_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
@@ -484,11 +485,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                                             <input type="hidden" name="workshop_id" value="<?php echo $workshop_id; ?>">
                                                             <div class="mb-3">
                                                                 <label class="form-label">Meeting ID</label>
-                                                                <input type="text" class="form-control" name="meeting_id" value="<?php echo htmlspecialchars($workshop['meeting_id']); ?>" placeholder="Enter Zoom Meeting ID">
+                                                                <input type="text" class="form-control" name="meeting_id" value="<?php
+                                                                if (isset($workshop['meeting_id']) && !empty($workshop['meeting_id'])&& $workshop['meeting_id']!='#') {
+                                                                    echo htmlspecialchars(decodeMeetingId($workshop['meeting_id']));
+                                                                }
+                                                                ?>" placeholder="Enter Zoom Meeting ID">
                                                             </div>
                                                             <div class="mb-3">
                                                                 <label class="form-label">Passcode</label>
-                                                                <input type="text" class="form-control" name="passcode" value="<?php echo htmlspecialchars($workshop['passcode']); ?>" placeholder="Enter Zoom Passcode">
+                                                                <input type="text" class="form-control" name="passcode" value="<?php 
+                                                                if (isset($workshop['passcode']) && !empty($workshop['passcode'])&& $workshop['passcode']!='#') {
+                                                                    echo htmlspecialchars(decodePasscode($workshop['passcode']));
+                                                                }
+                                                                ?>" placeholder="Enter Zoom Passcode">
                                                             </div>
                                                             <button type="submit" class="btn btn-primary">
                                                                 <i class="ti ti-device-floppy me-1"></i> Update Zoom Details

@@ -51,32 +51,32 @@
                     <li class="side-nav-item">
                         <a href="tlc_2025.php" class="side-nav-link">
                             <span class="menu-text">Users</span>
-                        </a>
-                    </li>
-                    <li class="side-nav-item">
-                        <a href="tlc_feedback_day_01.php" class="side-nav-link">
+            </a>
+        </li>
+        <li class="side-nav-item">
+            <a href="tlc_feedback_day_01.php" class="side-nav-link">
                             <span class="menu-text">Feedback Day 01</span>
-                        </a>
-                    </li>
-                    <li class="side-nav-item">
-                        <a href="tlc_feedback_day_02.php" class="side-nav-link">
+            </a>
+        </li>
+        <li class="side-nav-item">
+            <a href="tlc_feedback_day_02.php" class="side-nav-link">
                             <span class="menu-text">Feedback Day 02</span>
-                        </a>
-                    </li>
-                    <li class="side-nav-item">
-                        <a href="tlc_durations.php" class="side-nav-link">
+            </a>
+        </li>
+        <li class="side-nav-item">
+            <a href="tlc_durations.php" class="side-nav-link">
                             <span class="menu-text">Join Durations</span>
-                        </a>
-                    </li>
-                    <li class="side-nav-item">
-                        <a href="tlc_grant.php" class="side-nav-link">
+            </a>
+        </li>
+        <li class="side-nav-item">
+            <a href="tlc_grant.php" class="side-nav-link">
                             <span class="menu-text">Grace Grant</span>
-                        </a>
-                    </li>
-                    <li class="side-nav-item">
-                        <a href="tlc_analytics.php" class="side-nav-link">
+            </a>
+        </li>
+        <li class="side-nav-item">
+            <a href="tlc_analytics.php" class="side-nav-link">
                             <span class="menu-text">Analytics</span>
-                        </a>
+            </a>
                     </li>
                 </ul>
             </div>
