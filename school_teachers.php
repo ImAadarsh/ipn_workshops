@@ -404,7 +404,7 @@ if ($workshop_id && $school_id) {
                                                     </span>
                                                 </td>
                                                 <td>
-                                                    <span class="badge <?php echo $is_eligible ? 'bg-success' : 'bg-secondary'; ?>">
+                                                    <span class="badge <?php echo $is_eligible ? 'bg-success' : 'bg-danger'; ?>">
                                                         <i class="ti ti-certificate me-1"></i>
                                                         <?php echo $is_eligible ? 'Eligible' : 'Not Eligible'; ?>
                                                     </span>
