@@ -234,19 +234,34 @@ if ($workshop_id && $school_id) {
                                             <th>Mobile</th>
                                             <th>Attended</th>
                                             <th>Duration (min)</th>
+                                            <th>Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                     <?php if (count($teachers) == 0): ?>
-                                        <tr><td colspan="5" class="text-center">No teachers found.</td></tr>
+                                        <tr><td colspan="6" class="text-center">No teachers found.</td></tr>
                                     <?php else: ?>
                                         <?php foreach ($teachers as $row): ?>
                                             <tr>
                                                 <td><?php echo htmlspecialchars($row['name']); ?></td>
                                                 <td><?php echo htmlspecialchars($row['email']); ?></td>
                                                 <td><?php echo htmlspecialchars($row['mobile']); ?></td>
-                                                <td><?php echo $row['is_attended'] ? '<span class="badge bg-success">Yes</span>' : '<span class="badge bg-danger">No</span>'; ?></td>
-                                                <td><?php echo htmlspecialchars(min($row['attended_duration'], 120)); ?></td>
+                                                <td>
+                                                    <span id="attended-badge-<?php echo $row['id']; ?>" class="badge <?php echo $row['is_attended'] ? 'bg-success' : 'bg-danger'; ?>">
+                                                        <?php echo $row['is_attended'] ? 'Yes' : 'No'; ?>
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <span id="duration-display-<?php echo $row['id']; ?>">
+                                                        <?php echo htmlspecialchars($row['attended_duration']); ?>
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <button type="button" class="btn btn-sm btn-primary" 
+                                                            onclick="editAttendance(<?php echo $row['id']; ?>, <?php echo $workshop_id; ?>, <?php echo $row['is_attended']; ?>, <?php echo $row['attended_duration']; ?>, '<?php echo htmlspecialchars($row['name']); ?>')">
+                                                        <i class="ti ti-edit me-1"></i> Edit
+                                                    </button>
+                                                </td>
                                             </tr>
                                         <?php endforeach; ?>
                                     <?php endif; ?>
@@ -262,7 +277,140 @@ if ($workshop_id && $school_id) {
     <?php include 'includes/footer.php'; ?>
     <?php include 'includes/theme_settings.php'; ?>
 </div>
+    <!-- Edit Attendance Modal -->
+    <div class="modal fade" id="editAttendanceModal" tabindex="-1" aria-labelledby="editAttendanceModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editAttendanceModalLabel">Edit Attendance</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editAttendanceForm">
+                        <input type="hidden" id="edit_user_id" name="user_id">
+                        <input type="hidden" id="edit_workshop_id" name="workshop_id">
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Teacher Name</label>
+                            <input type="text" class="form-control" id="edit_teacher_name" readonly>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Attended</label>
+                            <select class="form-select" id="edit_is_attended" name="is_attended">
+                                <option value="1">Yes</option>
+                                <option value="0">No</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Duration (minutes)</label>
+                            <input type="number" class="form-control" id="edit_attended_duration" name="attended_duration" min="0" max="120" placeholder="Enter duration in minutes">
+                            <small class="text-muted">Enter duration between 0-120 minutes</small>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="saveAttendance()">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
 <script src="assets/js/vendor.min.js"></script>
 <script src="assets/js/app.min.js"></script>
+
+<script>
+function editAttendance(userId, workshopId, isAttended, attendedDuration, teacherName) {
+    // Populate modal with current values
+    document.getElementById('edit_user_id').value = userId;
+    document.getElementById('edit_workshop_id').value = workshopId;
+    document.getElementById('edit_teacher_name').value = teacherName;
+    document.getElementById('edit_is_attended').value = isAttended;
+    document.getElementById('edit_attended_duration').value = attendedDuration;
+    
+    // Show modal
+    const modal = new bootstrap.Modal(document.getElementById('editAttendanceModal'));
+    modal.show();
+}
+
+function saveAttendance() {
+    const formData = new FormData(document.getElementById('editAttendanceForm'));
+    
+    // Show loading state
+    const saveBtn = document.querySelector('#editAttendanceModal .btn-primary');
+    const originalText = saveBtn.innerHTML;
+    saveBtn.innerHTML = '<i class="ti ti-loader ti-spin me-1"></i> Saving...';
+    saveBtn.disabled = true;
+    
+    fetch('update_attendance.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Update the display
+            const userId = document.getElementById('edit_user_id').value;
+            const isAttended = document.getElementById('edit_is_attended').value;
+            const attendedDuration = document.getElementById('edit_attended_duration').value;
+            
+            // Update attended badge
+            const attendedBadge = document.getElementById('attended-badge-' + userId);
+            attendedBadge.className = 'badge ' + (isAttended == 1 ? 'bg-success' : 'bg-danger');
+            attendedBadge.textContent = isAttended == 1 ? 'Yes' : 'No';
+            
+            // Update duration display
+            const durationDisplay = document.getElementById('duration-display-' + userId);
+            durationDisplay.textContent = attendedDuration;
+            
+            // Close modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('editAttendanceModal'));
+            modal.hide();
+            
+            // Show success message
+            showAlert('Attendance updated successfully!', 'success');
+            
+            // Reload page after 1 second to update statistics
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        } else {
+            showAlert('Error: ' + data.message, 'danger');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showAlert('Error updating attendance. Please try again.', 'danger');
+    })
+    .finally(() => {
+        // Restore button state
+        saveBtn.innerHTML = originalText;
+        saveBtn.disabled = false;
+    });
+}
+
+function showAlert(message, type) {
+    // Create alert element
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+    alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    `;
+    
+    // Add to page
+    document.body.appendChild(alertDiv);
+    
+    // Auto remove after 3 seconds
+    setTimeout(() => {
+        if (alertDiv.parentNode) {
+            alertDiv.remove();
+        }
+    }, 3000);
+}
+</script>
 </body>
 </html>
