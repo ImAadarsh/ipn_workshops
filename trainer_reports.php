@@ -315,3 +315,4 @@ $trainers = mysqli_fetch_all($result, MYSQLI_ASSOC);
 <!-- container -->
 
 <?php require_once 'includes/footer.php'; ?> 
+ 

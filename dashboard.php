@@ -40,16 +40,29 @@ if ($result) {
 $featuredStats = [
     'b2b' => 0,
     'b2c' => 0,
+    'b2c2b' => 0,
+    'platform_enrolled' => 0,
+    'total_users' => 0,
     'mail_sent' => 0
 ];
 if (!empty($upcomingWorkshops)) {
     $wid = $upcomingWorkshops[0]['id'];
-    $sql = "SELECT school_id, mail_send FROM payments WHERE workshop_id = $wid AND payment_status = 1";
+    
+    // Get all payments for the workshop
+    $sql = "SELECT p.school_id, p.mail_send, s.b2c2b 
+            FROM payments p 
+            LEFT JOIN schools s ON p.school_id = s.id 
+            WHERE p.workshop_id = $wid AND p.payment_status = 1";
     $result = mysqli_query($conn, $sql);
     if ($result) {
         while ($row = mysqli_fetch_assoc($result)) {
+            // Original B2B/B2C logic
             if (!empty($row['school_id'])) {
                 $featuredStats['b2b']++;
+                // B2C2B logic: count B2B users whose school has b2c2b = 1
+                if ($row['b2c2b'] == 1) {
+                    $featuredStats['b2c2b']++;
+                }
             } else {
                 $featuredStats['b2c']++;
             }
@@ -58,6 +71,32 @@ if (!empty($upcomingWorkshops)) {
             }
         }
     }
+    
+    // Get B2C users with valid platform enrollments (excluding certain payment types)
+    $sql = "SELECT COUNT(DISTINCT p.user_id) as platform_count 
+            FROM payments p 
+            WHERE p.workshop_id = $wid 
+            AND p.payment_status = 1 
+            AND p.school_id IS NULL 
+            AND p.payment_id NOT LIKE '%Membership Redeem%' 
+            AND p.payment_id NOT LIKE '%499%' 
+            AND p.payment_id NOT LIKE '%Google-Form-Paid%'
+            AND p.payment_id NOT LIKE '%G-FORM%' 
+            AND p.payment_id NOT LIKE '%G-FORM-PAID%' 
+            AND p.payment_id NOT LIKE '%G-Form-Paid%' 
+            AND p.payment_id NOT LIKE '%B2B-ENRL%'
+            AND p.payment_id IS NOT NULL 
+            AND p.payment_id != ''";
+    $result = mysqli_query($conn, $sql);
+    if ($result && $row = mysqli_fetch_assoc($result)) {
+        $featuredStats['platform_enrolled'] = $row['platform_count'];
+    }
+    
+    // Calculate total users (B2B + B2C)
+    $featuredStats['total_users'] = $featuredStats['b2b'] + $featuredStats['b2c'];
+    
+    // Calculate B2B Enrollment (excluding B2C2B users)
+    $featuredStats['b2b_enrollment'] = $featuredStats['b2b'] - $featuredStats['b2c2b'];
 }
 ?>
 
@@ -142,7 +181,7 @@ if (!empty($upcomingWorkshops)) {
                                                                     <img src="<?php echo $uri . $workshop['image']; ?>" class="mb-3" style="border-radius: 20px; border: solid 8px green;" width="300" alt="Trainer">
                                                                 <?php endif; ?>
                                                             </div>
-                                                            <div class="col-md-8">
+                                                            <div class="col-md-12">
                                                                 <div class="d-flex justify-content-between align-items-start">
                                                                     <h3 class="mb-2 text-primary"><?php echo $workshop['name']; ?></h3>
                                                                     <div>
@@ -183,17 +222,29 @@ if (!empty($upcomingWorkshops)) {
                                                                     </div>
                                                                 </div>
                                                                 <div class="row mt-3">
-                                                                    <div class="col-md-4">
-                                                                        <span class="fw-bold">B2B User Enrollment:</span>
-                                                                        <span class="badge bg-primary fs-5 ms-1"><?php echo $featuredStats['b2b']; ?></span>
+                                                                    <div class="col-md-2">
+                                                                        <span class="fw-bold">B2B Enrollment:</span>
+                                                                        <span class="badge bg-primary fs-5 ms-1"><?php echo $featuredStats['b2b_enrollment']; ?></span>
                                                                     </div>
-                                                                    <div class="col-md-4">
-                                                                        <span class="fw-bold">B2C User Enrollment:</span>
+                                                                    <div class="col-md-2">
+                                                                        <span class="fw-bold">B2C Enrollment:</span>
                                                                         <span class="badge bg-success fs-5 ms-1"><?php echo $featuredStats['b2c']; ?></span>
                                                                     </div>
-                                                                    <div class="col-md-4">
+                                                                    <div class="col-md-2">
+                                                                        <span class="fw-bold">B2C2B Users:</span>
+                                                                        <span class="badge bg-info fs-5 ms-1"><?php echo $featuredStats['b2c2b']; ?></span>
+                                                                    </div>
+                                                                    <div class="col-md-2">
+                                                                        <span class="fw-bold">Platform Enrolled:</span>
+                                                                        <span class="badge bg-warning text-dark fs-5 ms-1"><?php echo $featuredStats['platform_enrolled']; ?></span>
+                                                                    </div>
+                                                                    <div class="col-md-2">
+                                                                        <span class="fw-bold">Total Users:</span>
+                                                                        <span class="badge bg-dark fs-5 ms-1"><?php echo $featuredStats['total_users']; ?></span>
+                                                                    </div>
+                                                                    <div class="col-md-2">
                                                                         <span class="fw-bold">Mails Sent:</span>
-                                                                        <span class="badge bg-warning text-dark fs-5 ms-1"><?php echo $featuredStats['mail_sent']; ?></span>
+                                                                        <span class="badge bg-secondary fs-5 ms-1"><?php echo $featuredStats['mail_sent']; ?></span>
                                                                     </div>
                                                                 </div>
                                                                 <div class="mt-4">
@@ -228,6 +279,10 @@ if (!empty($upcomingWorkshops)) {
                                                                     </div>
                                                                 </div>
                                                             </div>
+                                                                                                                         <p style="color: red !important;" class="text-muted mb-0 mt-3">
+                                                                 **B2C Users (<?php echo $featuredStats['b2c']; ?>) includes Platform Enrolled Users (<?php echo $featuredStats['platform_enrolled']; ?>). 
+                                                                <br> Sum of B2B (<?php echo $featuredStats['b2b'] - $featuredStats['b2c2b']; ?>) + B2C (<?php echo $featuredStats['b2c']; ?>) + B2C2B (<?php echo $featuredStats['b2c2b']; ?>)     = Total Users (<?php echo $featuredStats['total_users']; ?>).
+                                                             </p>
                                                         </div>
                                                     <?php else: ?>
                                                         <div class="d-flex align-items-center mb-3">
@@ -349,7 +404,7 @@ if (!empty($upcomingWorkshops)) {
                                                                     <img src="<?php echo $uri . $workshop['image']; ?>" class="mb-3" style="border-radius: 20px; border: solid 8px rgb(253, 13, 13);" width="300" alt="Trainer">
                                                                 <?php endif; ?>
                                                             </div>
-                                                            <div class="col-md-8">
+                                                            <div class="col-md-12">
                                                                 <div class="d-flex justify-content-between align-items-start">
                                                                     <h3 class="mb-2 text-primary"><?php echo $workshop['name']; ?></h3>
                                                                     <div>
