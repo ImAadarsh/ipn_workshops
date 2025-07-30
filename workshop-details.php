@@ -121,10 +121,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <?php include 'includes/sidenav.php'; ?>
         <!-- Sidenav Menu End -->
 
-        <!-- Topbar Start -->
-        <?php include 'includes/topbar.php'; ?>
-        <!-- Topbar End -->
-
         <div class="page-content">
             <div class="page-container">
                 <div class="row">
@@ -233,19 +229,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         <div class="row mt-3">
                                             <div class="col-md-2">
                                                 <span class="fw-bold">B2B Enrollment:</span>
-                                                <span class="badge bg-primary fs-5 ms-1"><?php echo $workshopStats['b2b'] - $workshopStats['b2c2b']; ?></span>
+                                                <span class="badge bg-primary fs-5 ms-1" style="cursor: pointer;" onclick="showUserList('b2b', <?php echo $workshopStats['b2b'] - $workshopStats['b2c2b']; ?>)"><?php echo $workshopStats['b2b'] - $workshopStats['b2c2b']; ?></span>
                                             </div>
                                             <div class="col-md-2">
                                                 <span class="fw-bold">B2C Enrollment:</span>
-                                                <span class="badge bg-success fs-5 ms-1"><?php echo $workshopStats['b2c']; ?></span>
+                                                <span class="badge bg-success fs-5 ms-1" style="cursor: pointer;" onclick="showUserList('b2c', <?php echo $workshopStats['b2c']; ?>)"><?php echo $workshopStats['b2c']; ?></span>
                                             </div>
                                             <div class="col-md-2">
                                                 <span class="fw-bold">B2C2B Users:</span>
-                                                <span class="badge bg-info fs-5 ms-1"><?php echo $workshopStats['b2c2b']; ?></span>
+                                                <span class="badge bg-info fs-5 ms-1" style="cursor: pointer;" onclick="showUserList('b2c2b', <?php echo $workshopStats['b2c2b']; ?>)"><?php echo $workshopStats['b2c2b']; ?></span>
                                             </div>
                                             <div class="col-md-2">
                                                 <span class="fw-bold">Platform Enrolled:</span>
-                                                <span class="badge bg-warning text-dark fs-5 ms-1"><?php echo $workshopStats['platform_enrolled']; ?></span>
+                                                <span class="badge bg-warning text-dark fs-5 ms-1" style="cursor: pointer;" onclick="showUserList('platform', <?php echo $workshopStats['platform_enrolled']; ?>)"><?php echo $workshopStats['platform_enrolled']; ?></span>
                                             </div>
                                             <div class="col-md-2">
                                                 <span class="fw-bold">Total Users:</span>
@@ -676,7 +672,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <div class="row g-4">
                                 <?php
                                 // Get all schools that have at least one user registered for this workshop (via payments or users table)
-                                $schools_sql = "SELECT s.id, s.name, s.email, s.mobile
+                                $schools_sql = "SELECT s.id, s.name, s.email, s.mobile, s.b2c2b
                                     FROM schools s
                                     WHERE (
                                         EXISTS (
@@ -703,7 +699,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     <div class="col-12 col-md-6 col-lg-4">
                                         <div class="card border shadow-lg h-100" style="min-height: 180px; font-size: 1.15rem;">
                                             <div class="card-body d-flex flex-column justify-content-center align-items-start">
-                                                <h4 class="fw-bold mb-2"><?php echo htmlspecialchars($school['name']); ?></h4>
+                                                <div class="d-flex justify-content-between align-items-start w-100 mb-2">
+                                                    <h4 class="fw-bold mb-0"><?php echo htmlspecialchars($school['name']); ?></h4>
+                                                    <?php if ($school['b2c2b'] == 1): ?>
+                                                        <span class="badge bg-info fs-6">B2C2B</span>
+                                                    <?php else: ?>
+                                                        <span class="badge bg-primary fs-6">B2B</span>
+                                                    <?php endif; ?>
+                                                </div>
                                                 <div class="mb-2"><i class="ti ti-mail me-1"></i> <span class="text-muted"><?php echo htmlspecialchars($school['email']); ?></span></div>
                                                 <div class="mb-3"><i class="ti ti-phone me-1"></i> <span class="text-muted"><?php echo htmlspecialchars($school['mobile']); ?></span></div>
                                                 <div><a href="school_teachers.php?workshop_id=<?php echo $workshop_id; ?>&school_id=<?php echo $school['id']; ?>" class="badge bg-primary fs-5 px-3 py-2" style="cursor:pointer; text-decoration:none;">Teachers: <?php echo $teacher_count; ?></a></div>
@@ -762,5 +765,175 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <!-- Remove jQuery from here since it's already in head -->
     <script src="https://unpkg.com/@popperjs/core@2.11.8/dist/umd/popper.min.js"></script>
     <script src="assets/vendor/bootstrap/js/bootstrap.min.js"></script>
+
+    <!-- User List Modals -->
+    <!-- B2B Users Modal -->
+    <div class="modal fade" id="b2bUsersModal" tabindex="-1" aria-labelledby="b2bUsersModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="b2bUsersModalLabel">B2B Users (Non-B2C2B)</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="b2bUsersList" class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Mobile</th>
+                                    <th>Institute Name</th>
+                                    <th>Payment ID</th>
+                                </tr>
+                            </thead>
+                            <tbody id="b2bUsersTableBody">
+                                <!-- Data will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- B2C Users Modal -->
+    <div class="modal fade" id="b2cUsersModal" tabindex="-1" aria-labelledby="b2cUsersModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="b2cUsersModalLabel">B2C Users</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="b2cUsersList" class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Mobile</th>
+                                    <th>Institute Name</th>
+                                    <th>Payment ID</th>
+                                </tr>
+                            </thead>
+                            <tbody id="b2cUsersTableBody">
+                                <!-- Data will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- B2C2B Users Modal -->
+    <div class="modal fade" id="b2c2bUsersModal" tabindex="-1" aria-labelledby="b2c2bUsersModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="b2c2bUsersModalLabel">B2C2B Users</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="b2c2bUsersList" class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Mobile</th>
+                                    <th>Institute Name</th>
+                                    <th>Payment ID</th>
+                                </tr>
+                            </thead>
+                            <tbody id="b2c2bUsersTableBody">
+                                <!-- Data will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Platform Enrolled Users Modal -->
+    <div class="modal fade" id="platformUsersModal" tabindex="-1" aria-labelledby="platformUsersModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="platformUsersModalLabel">Platform Enrolled Users</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="platformUsersList" class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Mobile</th>
+                                    <th>Institute Name</th>
+                                    <th>Payment ID</th>
+                                </tr>
+                            </thead>
+                            <tbody id="platformUsersTableBody">
+                                <!-- Data will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showUserList(type, count) {
+            if (count === 0) {
+                alert('No users found in this category.');
+                return;
+            }
+
+            // Show loading
+            const modalId = type + 'UsersModal';
+            const modal = new bootstrap.Modal(document.getElementById(modalId));
+            modal.show();
+
+            // Load data via AJAX
+            fetch('get_workshop_users.php?workshop_id=<?php echo $workshop_id; ?>&type=' + type)
+                .then(response => response.json())
+                .then(data => {
+                    const tableBody = document.getElementById(type + 'UsersTableBody');
+                    tableBody.innerHTML = '';
+
+                    if (data.length === 0) {
+                        tableBody.innerHTML = '<tr><td colspan="6" class="text-center">No users found</td></tr>';
+                        return;
+                    }
+
+                    data.forEach(user => {
+                        const row = `
+                            <tr>
+                                <td>${user.id}</td>
+                                <td>${user.name}</td>
+                                <td>${user.email}</td>
+                                <td>${user.mobile}</td>
+                                <td>${user.institute_name || '-'}</td>
+                                <td>${user.payment_id || '-'}</td>
+                            </tr>
+                        `;
+                        tableBody.innerHTML += row;
+                    });
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error loading user data. Please try again.');
+                });
+        }
+    </script>
 </body>
 </html> 
