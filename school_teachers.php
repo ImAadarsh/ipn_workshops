@@ -60,6 +60,8 @@ if (isset($_GET['export']) && $_GET['export'] == 'csv' && $workshop_id && $schoo
         $csv_where_conditions[] = "p.attended_duration < 60 AND p.is_attended = 1";
     } elseif ($csv_duration_filter === 'more_than_60') {
         $csv_where_conditions[] = "p.attended_duration >= 60 AND p.is_attended = 1";
+    } elseif ($csv_duration_filter === 'certificate_eligible') {
+        $csv_where_conditions[] = "p.attended_duration >= 60 AND p.is_attended = 1";
     }
     
     $csv_where_clause = implode(' AND ', $csv_where_conditions);
@@ -133,6 +135,8 @@ if ($workshop_id && $school_id) {
     if ($duration_filter === 'less_than_60') {
         $where_conditions[] = "p.attended_duration < 60 AND p.is_attended = 1";
     } elseif ($duration_filter === 'more_than_60') {
+        $where_conditions[] = "p.attended_duration >= 60 AND p.is_attended = 1";
+    } elseif ($duration_filter === 'certificate_eligible') {
         $where_conditions[] = "p.attended_duration >= 60 AND p.is_attended = 1";
     }
     
@@ -224,6 +228,7 @@ if ($workshop_id && $school_id) {
                                         <option value="">All</option>
                                         <option value="less_than_60" <?php echo $duration_filter === 'less_than_60' ? 'selected' : ''; ?>>Less than 60 min</option>
                                         <option value="more_than_60" <?php echo $duration_filter === 'more_than_60' ? 'selected' : ''; ?>>60+ min</option>
+                                        <option value="certificate_eligible" <?php echo $duration_filter === 'certificate_eligible' ? 'selected' : ''; ?>>Certificate Eligible</option>
                                     </select>
                                 </div>
                                 
@@ -247,6 +252,12 @@ if ($workshop_id && $school_id) {
                         <i class="ti ti-download me-1"></i> Export CSV
                     </a>
                     
+                    <!-- Certificate Requirements Note -->
+                    <div class="alert alert-warning mb-3">
+                        <i class="ti ti-certificate me-1"></i>
+                        <strong>Certificate Requirements:</strong> To be eligible for a certificate, teachers must have <strong>Attended = Yes</strong> AND <strong>Duration ≥ 60 minutes</strong>.
+                    </div>
+                    
                     <!-- Results Summary -->
                     <?php if (!empty($search) || !empty($attendance_filter) || !empty($duration_filter)): ?>
                     <div class="alert alert-info mb-3">
@@ -255,7 +266,11 @@ if ($workshop_id && $school_id) {
                         <?php echo count($teachers); ?> teacher(s) found
                         <?php if (!empty($search)): ?> • Search: "<?php echo htmlspecialchars($search); ?>"<?php endif; ?>
                         <?php if (!empty($attendance_filter)): ?> • Attendance: <?php echo $attendance_filter === 'attended' ? 'Attended' : 'Not Attended'; ?><?php endif; ?>
-                        <?php if (!empty($duration_filter)): ?> • Duration: <?php echo $duration_filter === 'less_than_60' ? 'Less than 60 min' : '60+ min'; ?><?php endif; ?>
+                        <?php if (!empty($duration_filter)): ?> • Duration: <?php 
+                            if ($duration_filter === 'less_than_60') echo 'Less than 60 min';
+                            elseif ($duration_filter === 'more_than_60') echo '60+ min';
+                            elseif ($duration_filter === 'certificate_eligible') echo 'Certificate Eligible';
+                        ?><?php endif; ?>
                     </div>
                     <?php endif; ?>
                 </div>
@@ -361,14 +376,19 @@ if ($workshop_id && $school_id) {
                                             <th>Mobile</th>
                                             <th>Attended</th>
                                             <th>Duration (min)</th>
+                                            <th>Certificate Eligible</th>
                                             <th>Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                     <?php if (count($teachers) == 0): ?>
-                                        <tr><td colspan="6" class="text-center">No teachers found.</td></tr>
+                                        <tr><td colspan="7" class="text-center">No teachers found.</td></tr>
                                     <?php else: ?>
                                         <?php foreach ($teachers as $row): ?>
+                                            <?php 
+                                            // Check certificate eligibility
+                                            $is_eligible = ($row['is_attended'] == 1 && $row['attended_duration'] >= 60);
+                                            ?>
                                             <tr>
                                                 <td><?php echo htmlspecialchars($row['name']); ?></td>
                                                 <td><?php echo htmlspecialchars($row['email']); ?></td>
@@ -381,6 +401,12 @@ if ($workshop_id && $school_id) {
                                                 <td>
                                                     <span id="duration-display-<?php echo $row['id']; ?>">
                                                         <?php echo htmlspecialchars($row['attended_duration']); ?>
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <span class="badge <?php echo $is_eligible ? 'bg-success' : 'bg-secondary'; ?>">
+                                                        <i class="ti ti-certificate me-1"></i>
+                                                        <?php echo $is_eligible ? 'Eligible' : 'Not Eligible'; ?>
                                                     </span>
                                                 </td>
                                                 <td>
