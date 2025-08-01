@@ -23,6 +23,7 @@ if (isset($_POST['toggle_status'])) {
         $success = mysqli_stmt_execute($stmt);
         mysqli_stmt_close($stmt);
         
+        
         if ($success) {
             echo json_encode(['status' => 'success']);
             exit;
