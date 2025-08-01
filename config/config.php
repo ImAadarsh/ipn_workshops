@@ -6,6 +6,15 @@ $password = "x?OR+Q2/D";
 $dbname = "u954141192_ipnacademy";
 $URL = 'https://api.ipnacademy.in/storage/app/';
 
+$MAIL_USERNAME_1="ipnacademy2023@gmail.com";
+$MAIL_PASSWORD_1="aopkalikqhzmvpuq";
+$MAIL_USERNAME_2="ipnforum@gmail.com";
+$MAIL_PASSWORD_2="lbmsmqkmuziwxobc";
+$MAIL_USERNAME_3="ipnfoundation.tlc.02@gmail.com";
+$MAIL_PASSWORD_3="eppkbnhcovaowdfp";
+$MAIL_USERNAME_4="ipn.foundation.tlc.01@gmail.com";
+$MAIL_PASSWORD_4="bxgzrsypyaqyykem";
+
 // Create connection
 $conn = mysqli_connect($host, $user, $password, $dbname);
 

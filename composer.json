@@ -1,0 +1,19 @@
+{
+    "name": "endeavour/ipn",
+    "description": "IPN Dashboard",
+    "type": "phpmailer",
+    "require-dev": {
+        "phpmailer/phpmailer": "^6.10"
+    },
+    "autoload": {
+        "psr-4": {
+            "Endeavour\\Ipn\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "y"
+        }
+    ],
+    "require": {}
+}

@@ -1,1196 +1,819 @@
 <?php
 include 'config/show_errors.php';
-session_start();
-
-// Check if user is logged in
-if (!isset($_SESSION['user_id'])) {
-    header("Location: index.php");
-    exit();
-}
+// No session_start() - this page is independent of login/session
 
 $conn = require_once 'config/config.php';
 
-// Function to get OAuth2 access token
-function getInstamojoAccessToken($client_id, $client_secret, $oauth_url) {
-    $ch = curl_init();
-    curl_setopt($ch, CURLOPT_URL, $oauth_url);
-    curl_setopt($ch, CURLOPT_HEADER, FALSE);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
-    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, TRUE);
+// Include email helper
+include_once 'config/email_helper.php';
+
+$payment_id = $_GET['payment_id'] ?? '';
+$payment_request_id = $_GET['payment_request_id'] ?? '';
+
+$payment_details = null;
+$enrollments = [];
+$user_id = null;
+$processing_message = '';
+$already_processed = false;
+$email_resend_message = '';
+
+// Handle email resend request
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'resend_email') {
+    $resend_payment_id = $_POST['payment_id'] ?? '';
+    $resend_user_email = $_POST['user_email'] ?? '';
     
-    $payload = array(
-        'grant_type' => 'client_credentials',
-        'client_id' => $client_id,
-        'client_secret' => $client_secret
-    );
-    
-    curl_setopt($ch, CURLOPT_POST, true);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($payload));
-    
-    $response = curl_exec($ch);
-    $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
-    
-    if ($http_code === 200) {
-        $token_data = json_decode($response, true);
-        if (isset($token_data['access_token'])) {
-            return $token_data['access_token'];
+    if ($resend_payment_id && $resend_user_email) {
+        // Get payment details
+        $payment_sql = "SELECT p.*, u.name as buyer_name, u.email as buyer_email, u.mobile as buyer_phone, w.name as workshop_name, w.start_date, w.trainer_name, w.price, w.duration
+                        FROM payments p 
+                        JOIN users u ON p.user_id = u.id 
+                        JOIN workshops w ON p.workshop_id = w.id 
+                        WHERE p.payment_id = ? AND u.email = ?";
+        $payment_stmt = mysqli_prepare($conn, $payment_sql);
+        mysqli_stmt_bind_param($payment_stmt, "ss", $resend_payment_id, $resend_user_email);
+        mysqli_stmt_execute($payment_stmt);
+        $payment_result = mysqli_stmt_get_result($payment_stmt);
+        
+        if (mysqli_num_rows($payment_result) > 0) {
+            // Collect user and workshop data
+            $user_data = null;
+            $workshops_data = [];
+            $total_amount = 0;
+            
+            while ($payment = mysqli_fetch_assoc($payment_result)) {
+                if (!$user_data) {
+                    $user_data = [
+                        'name' => $payment['buyer_name'],
+                        'email' => $payment['buyer_email']
+                    ];
+                }
+                
+                $workshops_data[] = [
+                    'name' => $payment['workshop_name'],
+                    'start_date' => $payment['start_date'],
+                    'trainer_name' => $payment['trainer_name'],
+                    'duration' => $payment['duration'],
+                    'price' => $payment['price']
+                ];
+                
+                $total_amount += $payment['price'];
+            }
+            
+            // Prepare payment data for email
+            $email_payment_data = [
+                'payment_id' => $resend_payment_id,
+                'amount' => $total_amount,
+                'created_at' => date('Y-m-d H:i:s')
+            ];
+            
+            // Send email
+            $email_sent = sendPaymentConfirmationEmail($user_data, $email_payment_data, $workshops_data);
+            
+            if ($email_sent) {
+                $email_resend_message = "success:Confirmation email has been resent successfully to " . htmlspecialchars($resend_user_email);
+                error_log("Payment confirmation email resent successfully to user for payment $resend_payment_id");
+            } else {
+                $email_resend_message = "error:Failed to resend confirmation email. Please try again later.";
+                error_log("Failed to resend payment confirmation email for payment $resend_payment_id");
+            }
+        } else {
+            $email_resend_message = "error:Payment details not found. Please contact support.";
         }
+        mysqli_stmt_close($payment_stmt);
+    } else {
+        $email_resend_message = "error:Invalid request. Please try again.";
     }
-    
-    error_log("Failed to get Instamojo access token. HTTP Code: $http_code, Response: $response");
-    return false;
 }
 
-// Instamojo API credentials (you'll need to add these to your config)
-$instamojo_client_id = 'jzbKzPzBmvukguUBoo2HOQtvnKKvti9OLppTlGMt';
-$instamojo_client_secret = 'nUvHLo8RJRrvvyVKviWJ3IiJnWGZiDUy5t8JRHRoOitqwGWNp0UgS6TeLYAZT3Wyntw76bDfEUcDR85286Jcp0OB5ml9bvmqsFD8m7MN4r4rPNvzWUaaIdJfxFwdD6GZ';
-$instamojo_base_url = 'https://api.instamojo.com/v2/';
-$instamojo_oauth_url = 'https://api.instamojo.com/oauth2/token/';
+// Function to generate random alphanumeric string
+function generateRandomString($length = 15) {
+    $characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    $randomString = '';
+    for ($i = 0; $i < $length; $i++) {
+        $randomString .= $characters[rand(0, strlen($characters) - 1)];
+    }
+    return $randomString;
+}
 
-// Handle form submissions
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (isset($_POST['action'])) {
-        switch ($_POST['action']) {
-            case 'create_link':
-                $link_name = trim($_POST['link_name']);
-                $workshop_ids = implode(',', $_POST['workshop_ids']);
-                $amount = floatval($_POST['amount']);
+if ($payment_id && $payment_request_id) {
+    // First, check if this payment has already been processed
+    $check_sql = "SELECT COUNT(*) as count FROM payments WHERE payment_id = ?";
+    $check_stmt = mysqli_prepare($conn, $check_sql);
+    mysqli_stmt_bind_param($check_stmt, "s", $payment_id);
+    mysqli_stmt_execute($check_stmt);
+    $check_result = mysqli_stmt_get_result($check_stmt);
+    $check_data = mysqli_fetch_assoc($check_result);
+    mysqli_stmt_close($check_stmt);
+    
+    if ($check_data['count'] > 0) {
+        $already_processed = true;
+        $processing_message = "Payment already processed. Showing existing enrollment details.";
+        
+        // Get amount directly from instamojo_payments table
+        $instamojo_amount_sql = "SELECT amount FROM instamojo_payments WHERE payment_id COLLATE utf8mb4_unicode_ci = ? COLLATE utf8mb4_unicode_ci";
+        $instamojo_amount_stmt = mysqli_prepare($conn, $instamojo_amount_sql);
+        mysqli_stmt_bind_param($instamojo_amount_stmt, "s", $payment_id);
+        mysqli_stmt_execute($instamojo_amount_stmt);
+        $instamojo_amount_result = mysqli_stmt_get_result($instamojo_amount_stmt);
+        $instamojo_amount_data = mysqli_fetch_assoc($instamojo_amount_result);
+        mysqli_stmt_close($instamojo_amount_stmt);
+        
+        $original_payment_amount = $instamojo_amount_data ? $instamojo_amount_data['amount'] : null;
+        
+        // Get existing payment details
+        $existing_sql = "SELECT p.*, u.name as buyer_name, u.email as buyer_email, u.mobile as buyer_phone, w.name as workshop_name, w.start_date, w.trainer_name, w.price, ip.amount as instamojo_amount
+                        FROM payments p 
+                        JOIN users u ON p.user_id = u.id 
+                        JOIN workshops w ON p.workshop_id = w.id 
+                        LEFT JOIN instamojo_payments ip ON p.payment_id COLLATE utf8mb4_unicode_ci = ip.payment_id COLLATE utf8mb4_unicode_ci
+                        WHERE p.payment_id = ?";
+        $existing_stmt = mysqli_prepare($conn, $existing_sql);
+        if (!$existing_stmt) {
+            error_log("MySQL prepare error: " . mysqli_error($conn));
+            // Fallback to query without instamojo_payments join
+            $existing_sql = "SELECT p.*, u.name as buyer_name, u.email as buyer_email, u.mobile as buyer_phone, w.name as workshop_name, w.start_date, w.trainer_name, w.price
+                            FROM payments p 
+                            JOIN users u ON p.user_id = u.id 
+                            JOIN workshops w ON p.workshop_id = w.id 
+                            WHERE p.payment_id = ?";
+            $existing_stmt = mysqli_prepare($conn, $existing_sql);
+            if (!$existing_stmt) {
+                error_log("MySQL prepare error (fallback): " . mysqli_error($conn));
+                die("Database error occurred");
+            }
+        }
+        mysqli_stmt_bind_param($existing_stmt, "s", $payment_id);
+        mysqli_stmt_execute($existing_stmt);
+        $existing_result = mysqli_stmt_get_result($existing_stmt);
+        $total_amount = 0;
+        $instamojo_amount = 0;
+        while ($payment = mysqli_fetch_assoc($existing_result)) {
+            $enrollments[] = [
+                'id' => $payment['workshop_id'],
+                'name' => $payment['workshop_name'],
+                'start_date' => $payment['start_date'],
+                'trainer_name' => $payment['trainer_name']
+            ];
+            $total_amount += $payment['price'];
+            $instamojo_amount = isset($payment['instamojo_amount']) ? $payment['instamojo_amount'] : null; // Get amount from instamojo_payments if available
+            $this_is_original_payment = $original_payment_amount ? $original_payment_amount : $payment['amount'];
+            // Store payment details from first record
+            if (!$payment_details) {
+                $payment_details = [
+                    'payment_id' => $payment['payment_id'],
+                    'amount' => $instamojo_amount ? $instamojo_amount : $payment['amount'], // Use instamojo amount if available, otherwise use payment amount
+                    'status' => 'Completed',
+                    'buyer_name' => $payment['buyer_name'],
+                    'buyer_email' => $payment['buyer_email'],
+                    'buyer_phone' => $payment['buyer_phone'],
+                    'processing_message' => $processing_message
+                ];
+            }
+        }
+        mysqli_stmt_close($existing_stmt);
+    } else {
+        // Process new payment
+        // First, get payment details from Instamojo API
+        $instamojo_client_id = 'jzbKzPzBmvukguUBoo2HOQtvnKKvti9OLppTlGMt';
+        $instamojo_client_secret = 'nUvHLo8RJRrvvyVKviWJ3IiJnWGZiDUy5t8JRHRoOitqwGWNp0UgS6TeLYAZT3Wyntw76bDfEUcDR85286Jcp0OB5ml9bvmqsFD8m7MN4r4rPNvzWUaaIdJfxFwdD6GZ';
+        $instamojo_base_url = 'https://api.instamojo.com/v2/';
+        $instamojo_oauth_url = 'https://api.instamojo.com/oauth2/token/';
+        
+        // Function to get OAuth2 access token
+        function getInstamojoAccessToken($client_id, $client_secret, $oauth_url) {
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $oauth_url);
+            curl_setopt($ch, CURLOPT_HEADER, FALSE);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
+            curl_setopt($ch, CURLOPT_FOLLOWLOCATION, TRUE);
+            
+            $payload = array(
+                'grant_type' => 'client_credentials',
+                'client_id' => $client_id,
+                'client_secret' => $client_secret
+            );
+            
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($payload));
+            
+            $response = curl_exec($ch);
+            $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+            
+            if ($http_code === 200) {
+                $token_data = json_decode($response, true);
+                if (isset($token_data['access_token'])) {
+                    return $token_data['access_token'];
+                }
+            }
+            return false;
+        }
+        
+        // Get payment details from Instamojo API
+        $access_token = getInstamojoAccessToken($instamojo_client_id, $instamojo_client_secret, $instamojo_oauth_url);
+        
+        if ($access_token) {
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $instamojo_base_url . 'payments/' . $payment_id . '/');
+            curl_setopt($ch, CURLOPT_HEADER, FALSE);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
+            curl_setopt($ch, CURLOPT_FOLLOWLOCATION, TRUE);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                "Authorization: Bearer $access_token"
+            ]);
+            curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'GET');
+            
+            $response = curl_exec($ch);
+            $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+            
+            if ($http_code === 200) {
+                $payment_data = json_decode($response, true);
                 
-                if (empty($link_name) || empty($workshop_ids) || $amount <= 0) {
-                    $_SESSION['error_message'] = "Please fill all required fields correctly.";
-                } else {
-                    // Get OAuth2 access token first
-                    $access_token = getInstamojoAccessToken($instamojo_client_id, $instamojo_client_secret, $instamojo_oauth_url);
+                // Extract payment information
+                $buyer_name = $payment_data['name'] ?? '';
+                $buyer_email = $payment_data['email'] ?? '';
+                $buyer_phone = $payment_data['phone'] ?? '';
+                $amount = $payment_data['amount'] ?? 0;
+                $status = $payment_data['status'] ?? false;
+                
+                // Get payment request details to find associated workshops
+                $payment_request_url = $payment_data['payment_request'] ?? '';
+                $payment_request_id_from_api = basename(rtrim($payment_request_url, '/'));
+                
+                // Find the link in our database
+                $link_sql = "SELECT * FROM instamojo_links WHERE instamojo_link_id = ?";
+                $link_stmt = mysqli_prepare($conn, $link_sql);
+                mysqli_stmt_bind_param($link_stmt, "s", $payment_request_id_from_api);
+                mysqli_stmt_execute($link_stmt);
+                $link_result = mysqli_stmt_get_result($link_stmt);
+                $link_data = mysqli_fetch_assoc($link_result);
+                mysqli_stmt_close($link_stmt);
+                
+                if ($link_data && $status) {
+                    // User matching logic
+                    $user_id = null;
+                    $user_found = false;
                     
-                    if (!$access_token) {
-                        $_SESSION['error_message'] = "Failed to get Instamojo access token. Please check your credentials.";
-                    } else {
-                        // Create Instamojo payment request via API v2
-                        $instamojo_data = [
-                            'purpose' => $link_name,
+                    // First, check if both email and mobile match
+                    if ($buyer_email && $buyer_phone) {
+                        $user_sql = "SELECT id FROM users WHERE email = ? AND mobile = ?";
+                        $user_stmt = mysqli_prepare($conn, $user_sql);
+                        mysqli_stmt_bind_param($user_stmt, "ss", $buyer_email, $buyer_phone);
+                        mysqli_stmt_execute($user_stmt);
+                        $user_result = mysqli_stmt_get_result($user_stmt);
+                        $user = mysqli_fetch_assoc($user_result);
+                        mysqli_stmt_close($user_stmt);
+                        
+                        if ($user) {
+                            $user_id = $user['id'];
+                            $user_found = true;
+                            $processing_message = "User found with matching email and mobile.";
+                        }
+                    }
+                    
+                    // If not found, check if phone matches
+                    if (!$user_found && $buyer_phone) {
+                        $user_sql = "SELECT id FROM users WHERE mobile = ?";
+                        $user_stmt = mysqli_prepare($conn, $user_sql);
+                        mysqli_stmt_bind_param($user_stmt, "s", $buyer_phone);
+                        mysqli_stmt_execute($user_stmt);
+                        $user_result = mysqli_stmt_get_result($user_stmt);
+                        $user = mysqli_fetch_assoc($user_result);
+                        mysqli_stmt_close($user_stmt);
+                        
+                        if ($user) {
+                            $user_id = $user['id'];
+                            $user_found = true;
+                            $processing_message = "User found with matching mobile. Updating email.";
+                            
+                            // Update user's email
+                            $update_sql = "UPDATE users SET email = ? WHERE id = ?";
+                            $update_stmt = mysqli_prepare($conn, $update_sql);
+                            mysqli_stmt_bind_param($update_stmt, "si", $buyer_email, $user_id);
+                            mysqli_stmt_execute($update_stmt);
+                            mysqli_stmt_close($update_stmt);
+                        }
+                    }
+                    
+                    // If not found, check if email matches
+                    if (!$user_found && $buyer_email) {
+                        $user_sql = "SELECT id FROM users WHERE email = ?";
+                        $user_stmt = mysqli_prepare($conn, $user_sql);
+                        mysqli_stmt_bind_param($user_stmt, "s", $buyer_email);
+                        mysqli_stmt_execute($user_stmt);
+                        $user_result = mysqli_stmt_get_result($user_stmt);
+                        $user = mysqli_fetch_assoc($user_result);
+                        mysqli_stmt_close($user_stmt);
+                        
+                        if ($user) {
+                            $user_id = $user['id'];
+                            $user_found = true;
+                            $processing_message = "User found with matching email. Updating mobile.";
+                            
+                            // Update user's mobile
+                            $update_sql = "UPDATE users SET mobile = ? WHERE id = ?";
+                            $update_stmt = mysqli_prepare($conn, $update_sql);
+                            mysqli_stmt_bind_param($update_stmt, "si", $buyer_phone, $user_id);
+                            mysqli_stmt_execute($update_stmt);
+                            mysqli_stmt_close($update_stmt);
+                        }
+                    }
+                    
+                    // If no match found, create new user
+                    if (!$user_found) {
+                        $processing_message = "Creating new user.";
+                        
+                        $create_sql = "INSERT INTO users (name, email, mobile, created_at, updated_at) VALUES (?, ?, ?, NOW(), NOW())";
+                        $create_stmt = mysqli_prepare($conn, $create_sql);
+                        mysqli_stmt_bind_param($create_stmt, "sss", $buyer_name, $buyer_email, $buyer_phone);
+                        mysqli_stmt_execute($create_stmt);
+                        $user_id = mysqli_insert_id($conn);
+                        mysqli_stmt_close($create_stmt);
+                    }
+                    
+                    // Now process workshop enrollments
+                    if ($user_id) {
+                        $workshop_ids = explode(',', $link_data['workshop_ids']);
+                        
+                        // First, insert into instamojo_payments table
+                        $instamojo_payment_sql = "INSERT INTO instamojo_payments (link_id, payment_id, buyer_name, buyer_email, buyer_phone, amount, currency, status, user_id, link_name, created_at, updated_at) 
+                                                  VALUES (?, ?, ?, ?, ?, ?, 'INR', ?, ?, ?, NOW(), NOW())";
+                        $instamojo_payment_stmt = mysqli_prepare($conn, $instamojo_payment_sql);
+                        if (!$instamojo_payment_stmt) {
+                            error_log("MySQL prepare error (instamojo_payments): " . mysqli_error($conn));
+                            // Fallback to query without link_name column
+                            $instamojo_payment_sql = "INSERT INTO instamojo_payments (link_id, payment_id, buyer_name, buyer_email, buyer_phone, amount, currency, status, user_id, created_at, updated_at) 
+                                                      VALUES (?, ?, ?, ?, ?, ?, 'INR', ?, ?, NOW(), NOW())";
+                            $instamojo_payment_stmt = mysqli_prepare($conn, $instamojo_payment_sql);
+                            if (!$instamojo_payment_stmt) {
+                                error_log("MySQL prepare error (instamojo_payments fallback): " . mysqli_error($conn));
+                                die("Database error occurred");
+                            }
+                            $payment_status = $status ? 'completed' : 'pending';
+                            mysqli_stmt_bind_param($instamojo_payment_stmt, "issssssi", $link_data['id'], $payment_id, $buyer_name, $buyer_email, $buyer_phone, $amount, $payment_status, $user_id);
+                        } else {
+                            $payment_status = $status ? 'completed' : 'pending';
+                            mysqli_stmt_bind_param($instamojo_payment_stmt, "isssssssi", $link_data['id'], $payment_id, $buyer_name, $buyer_email, $buyer_phone, $amount, $payment_status, $user_id, $payment_data['title']);
+                        }
+                        mysqli_stmt_execute($instamojo_payment_stmt);
+                        mysqli_stmt_close($instamojo_payment_stmt);
+                        
+                        foreach ($workshop_ids as $workshop_id) {
+                            // Get workshop details
+                            $workshop_sql = "SELECT * FROM workshops WHERE id = ?";
+                            $workshop_stmt = mysqli_prepare($conn, $workshop_sql);
+                            mysqli_stmt_bind_param($workshop_stmt, "i", $workshop_id);
+                            mysqli_stmt_execute($workshop_stmt);
+                            $workshop_result = mysqli_stmt_get_result($workshop_stmt);
+                            $workshop = mysqli_fetch_assoc($workshop_result);
+                            mysqli_stmt_close($workshop_stmt);
+                            
+                            if ($workshop) {
+                                // Generate unique order_id and verify_token
+                                $order_id = generateRandomString(15);
+                                $verify_token = generateRandomString(15);
+                                
+                                // Insert into payments table with instamojo_upload=1
+                                $payment_insert_sql = "INSERT INTO payments (user_id, workshop_id, payment_id, amount, order_id, mail_send, verify_token, payment_status, cpd, instamojo_upload, created_at, updated_at) 
+                                                      VALUES (?, ?, ?, ?, ?, 0, ?, 1, ?, 1, NOW(), NOW())";
+                                $payment_insert_stmt = mysqli_prepare($conn, $payment_insert_sql);
+                                mysqli_stmt_bind_param($payment_insert_stmt, "iissssi", $user_id, $workshop_id, $payment_id, $workshop['price'], $order_id, $verify_token, $workshop['cpd']);
+                                mysqli_stmt_execute($payment_insert_stmt);
+                                $payment_table_id = mysqli_insert_id($conn); // Get the ID from payments table
+                                mysqli_stmt_close($payment_insert_stmt);
+                                
+                                // Insert into instamojo_workshop_enrollments table using payments table ID
+                                $enrollment_sql = "INSERT INTO instamojo_workshop_enrollments (payment_id, workshop_id, user_id, enrollment_date) 
+                                                   VALUES (?, ?, ?, NOW())";
+                                $enrollment_stmt = mysqli_prepare($conn, $enrollment_sql);
+                                mysqli_stmt_bind_param($enrollment_stmt, "iii", $payment_table_id, $workshop_id, $user_id);
+                                mysqli_stmt_execute($enrollment_stmt);
+                                mysqli_stmt_close($enrollment_stmt);
+                                
+                                // Add to enrollments array for display
+                                $enrollments[] = [
+                                    'id' => $workshop['id'],
+                                    'name' => $workshop['name'],
+                                    'start_date' => $workshop['start_date'],
+                                    'trainer_name' => $workshop['trainer_name']
+                                ];
+                            }
+                        }
+                        
+                        // Store payment details for display
+                        $payment_details = [
+                            'payment_id' => $payment_id,
                             'amount' => $amount,
-                            'redirect_url' => 'https://workshops.ipnacademy.in/instamojo_success.php',
-                            'send_email' => 'False',
-                            'webhook' => 'https://workshops.ipnacademy.in/instamojo_webhook.php',
-                            'allow_repeated_payments' => 'True'
+                            'status' => $status ? 'Completed' : 'Pending',
+                            'buyer_name' => $buyer_name,
+                            'buyer_email' => $buyer_email,
+                            'buyer_phone' => $buyer_phone,
+                            'processing_message' => $processing_message
                         ];
                         
-                        // Debug: Log the request data
-                        error_log("Instamojo API Request: " . json_encode($instamojo_data));
-                        
-                        $ch = curl_init();
-                        curl_setopt($ch, CURLOPT_URL, $instamojo_base_url . 'payment_requests/');
-                        curl_setopt($ch, CURLOPT_HEADER, FALSE);
-                        curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
-                        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, TRUE);
-                        curl_setopt($ch, CURLOPT_HTTPHEADER, [
-                            "Authorization: Bearer $access_token"
-                        ]);
-                        curl_setopt($ch, CURLOPT_POST, TRUE);
-                        curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($instamojo_data));
-                        
-                        $response = curl_exec($ch);
-                        $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-                        $curl_error = curl_error($ch);
-                        curl_close($ch);
-                        
-                        // Debug: Log the response
-                        error_log("Instamojo API Response Code: $http_code");
-                        error_log("Instamojo API Response: $response");
-                        if ($curl_error) {
-                            error_log("Instamojo API Curl Error: $curl_error");
-                        }
-                        
-                        if ($http_code === 201 || $http_code === 200) {
-                            $response_data = json_decode($response, true);
-                            if (isset($response_data['id'])) {
-                                $instamojo_link_id = $response_data['id'];
-                                $instamojo_link_url = $response_data['longurl'];
-                                
-                                // Save to database
-                                $sql = "INSERT INTO instamojo_links (link_name, workshop_ids, amount, instamojo_link_id, instamojo_link_url) VALUES (?, ?, ?, ?, ?)";
-                                $stmt = mysqli_prepare($conn, $sql);
-                                mysqli_stmt_bind_param($stmt, "ssdss", $link_name, $workshop_ids, $amount, $instamojo_link_id, $instamojo_link_url);
-                                
-                                if (mysqli_stmt_execute($stmt)) {
-                                    $_SESSION['success_message'] = "Payment link created successfully! Link ID: $instamojo_link_id";
-                                } else {
-                                    $_SESSION['error_message'] = "Error saving link to database: " . mysqli_error($conn);
+                        // Send payment confirmation email if payment is completed
+                        if ($status && !empty($enrollments)) {
+                            // Get user data for email
+                            $user_sql = "SELECT * FROM users WHERE id = ?";
+                            $user_stmt = mysqli_prepare($conn, $user_sql);
+                            mysqli_stmt_bind_param($user_stmt, "i", $user_id);
+                            mysqli_stmt_execute($user_stmt);
+                            $user_result = mysqli_stmt_get_result($user_stmt);
+                            $user_data = mysqli_fetch_assoc($user_result);
+                            mysqli_stmt_close($user_stmt);
+                            
+                            if ($user_data) {
+                                // Prepare workshop data for email
+                                $workshops_data = [];
+                                foreach ($enrollments as $enrollment) {
+                                    // Get full workshop details
+                                    $workshop_sql = "SELECT * FROM workshops WHERE id = ?";
+                                    $workshop_stmt = mysqli_prepare($conn, $workshop_sql);
+                                    mysqli_stmt_bind_param($workshop_stmt, "i", $enrollment['id']);
+                                    mysqli_stmt_execute($workshop_stmt);
+                                    $workshop_result = mysqli_stmt_get_result($workshop_stmt);
+                                    $workshop = mysqli_fetch_assoc($workshop_result);
+                                    mysqli_stmt_close($workshop_stmt);
+                                    
+                                    if ($workshop) {
+                                        $workshops_data[] = $workshop;
+                                    }
                                 }
-                                mysqli_stmt_close($stmt);
-                            } else {
-                                $_SESSION['error_message'] = "Error creating Instamojo link. Response: " . $response;
+                                
+                                // Prepare payment data for email
+                                $email_payment_data = [
+                                    'payment_id' => $payment_id,
+                                    'amount' => $amount,
+                                    'created_at' => date('Y-m-d H:i:s')
+                                ];
+                                
+                                // Send email
+                                $email_sent = sendPaymentConfirmationEmail($user_data, $email_payment_data, $workshops_data);
+                                
+                                if ($email_sent) {
+                                    error_log("Payment confirmation email sent successfully to user $user_id for payment $payment_id (success page)");
+                                } else {
+                                    error_log("Failed to send payment confirmation email to user $user_id for payment $payment_id (success page)");
+                                }
                             }
-                        } else {
-                            $_SESSION['error_message'] = "Error connecting to Instamojo API. HTTP Code: $http_code, Response: $response";
-                            if ($curl_error) {
-                                $_SESSION['error_message'] .= ", Curl Error: $curl_error";
-                            }
                         }
                     }
                 }
-                break;
-                
-            case 'test_api':
-                // Manual API test
-                $access_token = getInstamojoAccessToken($instamojo_client_id, $instamojo_client_secret, $instamojo_oauth_url);
-                
-                if (!$access_token) {
-                    $_SESSION['error_message'] = "Failed to get Instamojo access token for manual test.";
-                } else {
-                    $test_data = [
-                        'purpose' => 'Test Payment Link',
-                        'amount' => '1',
-                        'buyer_name' => 'Test User',
-                        'email' => 'test@example.com',
-                        'phone' => '9999999999',
-                        'redirect_url' => 'https://ipnacademy.in/instamojo_success.php',
-                        'send_email' => 'True',
-                        'webhook' => 'https://ipnacademy.in/instamojo_webhook.php',
-                        'allow_repeated_payments' => 'False'
-                    ];
-                    
-                    error_log("Manual API Test - Request: " . json_encode($test_data));
-                    
-                    $ch = curl_init();
-                    curl_setopt($ch, CURLOPT_URL, $instamojo_base_url . 'payment_requests/');
-                    curl_setopt($ch, CURLOPT_HEADER, FALSE);
-                    curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
-                    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, TRUE);
-                    curl_setopt($ch, CURLOPT_HTTPHEADER, [
-                        "Authorization: Bearer $access_token"
-                    ]);
-                    curl_setopt($ch, CURLOPT_POST, TRUE);
-                    curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($test_data));
-                    
-                    $response = curl_exec($ch);
-                    $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-                    $curl_error = curl_error($ch);
-                    curl_close($ch);
-                    
-                    error_log("Manual API Test - HTTP Code: $http_code, Response: $response");
-                    if ($curl_error) {
-                        error_log("Manual API Test - Curl Error: $curl_error");
-                    }
-                    
-                    if ($http_code === 201 || $http_code === 200) {
-                        $response_data = json_decode($response, true);
-                        if (isset($response_data['id'])) {
-                            $_SESSION['success_message'] = "Manual API test successful! Payment Request ID: " . $response_data['id'];
-                        } else {
-                            $_SESSION['success_message'] = "Manual API test successful! HTTP Code: $http_code";
-                        }
-                    } else {
-                        $_SESSION['error_message'] = "Manual API test failed. HTTP Code: $http_code, Response: $response";
-                        if ($curl_error) {
-                            $_SESSION['error_message'] .= ", Curl Error: $curl_error";
-                        }
-                    }
-                }
-                break;
-                
-            case 'toggle_status':
-                $link_id = intval($_POST['link_id']);
-                $new_status = $_POST['new_status'];
-                
-                $sql = "UPDATE instamojo_links SET status = ? WHERE id = ?";
-                $stmt = mysqli_prepare($conn, $sql);
-                mysqli_stmt_bind_param($stmt, "si", $new_status, $link_id);
-                
-                if (mysqli_stmt_execute($stmt)) {
-                    $_SESSION['success_message'] = "Link status updated successfully!";
-                } else {
-                    $_SESSION['error_message'] = "Error updating link status.";
-                }
-                mysqli_stmt_close($stmt);
-                break;
+            }
         }
     }
 }
 
-// Fetch existing links
-$links_sql = "SELECT * FROM instamojo_links ORDER BY created_at DESC";
-$links_result = mysqli_query($conn, $links_sql);
-$links = [];
-while ($row = mysqli_fetch_assoc($links_result)) {
-    $links[] = $row;
-}
-
-// Fetch workshops for dropdown
-$workshops_sql = "SELECT id, name, start_date, price FROM workshops WHERE is_deleted = 0 AND type=0 AND price > 0 ORDER BY start_date ASC limit 9";
-$workshops_result = mysqli_query($conn, $workshops_sql);
-$workshops = [];
-while ($row = mysqli_fetch_assoc($workshops_result)) {
-    $workshops[] = $row;
-}
-
-// Fetch recent payments
-$payments_sql = "SELECT ip.*, il.link_name 
-                 FROM instamojo_payments ip 
-                 JOIN instamojo_links il ON ip.link_id = il.id 
-                 ORDER BY ip.created_at DESC 
-                 LIMIT 10";
-$payments_result = mysqli_query($conn, $payments_sql);
-$recent_payments = [];
-while ($row = mysqli_fetch_assoc($payments_result)) {
-    $recent_payments[] = $row;
-}
-
-$page_title = "Instamojo Dashboard";
-include 'includes/head.php';
+$page_title = "Payment Successful";
 ?>
 
-<div class="page-wrapper">
-    <?php include 'includes/sidenav.php'; ?>
-    
-    <div class="page-content">
-        <?php include 'includes/topbar.php'; ?>
-        
-        <!-- Hero Section -->
-        <div class="hero-section mb-4">
-            <div class="container-fluid">
-                <div class="row align-items-center">
-                    <div class="col-lg-8">
-                        <div class="hero-content">
-                            <h1 class="hero-title">
-                                <span class="gradient-text">Instamojo</span> Payment Management
-                            </h1>
-                            <p class="hero-subtitle">
-                                Create, manage, and track payment links for your workshops with ease
-                            </p>
-                            <div class="hero-stats">
-                                <div class="stat-item">
-                                    <span class="stat-number"><?php echo count($links); ?></span>
-                                    <span class="stat-label">Active Links</span>
-                                </div>
-                                <div class="stat-item">
-                                    <span class="stat-number"><?php echo count($recent_payments); ?></span>
-                                    <span class="stat-label">Total Payments</span>
-                                </div>
-                                <div class="stat-item">
-                                    <span class="stat-number"><?php echo count(array_filter($recent_payments, function($p) { return $p['status'] === 'completed'; })); ?></span>
-                                    <span class="stat-label">Completed</span>
-                                </div>
-                            </div>
-                        </div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><?php echo $page_title; ?> - IPN Academy</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/boxicons@2.0.7/css/boxicons.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px 0;
+        }
+        .success-container {
+            max-width: 800px;
+            width: 100%;
+            margin: 0 auto;
+        }
+        .success-card {
+            background: white;
+            border-radius: 25px;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.15);
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+        }
+        .success-header {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            padding: 50px 40px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .success-header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            animation: float 6s ease-in-out infinite;
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(180deg); }
+        }
+        .success-icon {
+            font-size: 5rem;
+            margin-bottom: 25px;
+            position: relative;
+            z-index: 1;
+            animation: bounce 2s ease-in-out infinite;
+        }
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-10px); }
+            60% { transform: translateY(-5px); }
+        }
+        .success-header h2 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 15px;
+            position: relative;
+            z-index: 1;
+        }
+        .success-header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            position: relative;
+            z-index: 1;
+        }
+        .card-body {
+            padding: 40px;
+        }
+        .workshop-item {
+            border: 2px solid #e9ecef;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .workshop-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        }
+        .workshop-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.1);
+            border-color: #28a745;
+        }
+        .workshop-date {
+            color: #6c757d;
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+        .trainer-name {
+            color: #495057;
+            font-weight: 600;
+        }
+        .alert {
+            border-radius: 15px;
+            border: none;
+            padding: 20px;
+        }
+        .alert-info {
+            background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+            color: #1565c0;
+        }
+        .badge {
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+        }
+        .payment-details {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+        }
+        .contact-info {
+            background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            margin-top: 30px;
+        }
+        .contact-info a {
+            color: #856404;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .contact-info a:hover {
+            color: #533f03;
+        }
+        .processing-message {
+            background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 25px;
+            border-left: 4px solid #17a2b8;
+        }
+    </style>
+</head>
+<body>
+    <div class="success-container">
+        <div class="success-card">
+            <div class="success-header <?php echo !$payment_details ? 'error' : ''; ?>" <?php echo !$payment_details ? 'style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);"' : ''; ?>>
+                <?php if ($payment_details): ?>
+                    <div class="success-icon">
+                        <i class="bx bx-check-circle"></i>
                     </div>
-                    <div class="col-lg-4">
-                        <div class="hero-illustration">
-                            <div class="floating-card">
-                                <i class="ti ti-credit-card"></i>
-                            </div>
-                            <div class="floating-card">
-                                <i class="ti ti-link"></i>
-                            </div>
-                            <div class="floating-card">
-                                <i class="ti ti-check"></i>
-                            </div>
-                        </div>
+                    <h1 class="mb-3">Payment Successful!</h1>
+                    <p class="mb-0">Your workshop enrollment has been confirmed. Thank you for choosing IPN Academy!</p>
+                <?php else: ?>
+                    <div class="success-icon">
+                        <i class="bx bx-error-circle"></i>
                     </div>
-                </div>
+                    <h2 class="mb-3">Payment Issue</h2>
+                    <p class="mb-0">We couldn't find your payment information. Please contact our support team.</p>
+                <?php endif; ?>
             </div>
-        </div>
-
-        <div class="container-fluid">
-            <?php if (isset($_SESSION['success_message'])): ?>
-                <div class="alert alert-success alert-dismissible fade show custom-alert" role="alert">
-                    <div class="alert-content">
-                        <i class="ti ti-check-circle me-2"></i>
-                        <?php echo $_SESSION['success_message']; ?>
-                    </div>
+            
+            <!-- Email Resend Message -->
+            <?php if ($email_resend_message): ?>
+                <?php 
+                $message_parts = explode(':', $email_resend_message, 2);
+                $message_type = $message_parts[0];
+                $message_text = $message_parts[1] ?? '';
+                ?>
+                <div class="alert alert-<?php echo $message_type === 'success' ? 'success' : 'danger'; ?> alert-dismissible fade show m-3" role="alert">
+                    <i class="bx bx-<?php echo $message_type === 'success' ? 'check-circle' : 'error-circle'; ?> me-2"></i>
+                    <?php echo $message_text; ?>
                     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                 </div>
-                <?php unset($_SESSION['success_message']); ?>
             <?php endif; ?>
 
-            <?php if (isset($_SESSION['error_message'])): ?>
-                <div class="alert alert-danger alert-dismissible fade show custom-alert" role="alert">
-                    <div class="alert-content">
-                        <i class="ti ti-alert-circle me-2"></i>
-                        <?php echo $_SESSION['error_message']; ?>
-                    </div>
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                </div>
-                <?php unset($_SESSION['error_message']); ?>
-            <?php endif; ?>
-
-            <!-- Quick Actions -->
-            <div class="row mb-4">
-                <div class="col-12">
-                    <div class="quick-actions">
-                        <div class="action-card primary-gradient">
-                            <div class="action-icon">
-                                <i class="ti ti-plus"></i>
+            <div class="card-body">
+                <?php if ($payment_details): ?>
+                    <!-- Processing Message -->
+                    <?php if (!empty($processing_message)): ?>
+                    <!-- <div class="processing-message">
+                        <i class="bx bx-info-circle me-2"></i>
+                        <strong>Processing:</strong> <?php echo htmlspecialchars($processing_message); ?>
+                    </div> -->
+                    <?php endif; ?>
+                    
+                    <!-- Payment Details -->
+                    <div class="payment-details">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6 class="text-muted mb-3">
+                                    <i class="bx bx-credit-card me-2"></i>
+                                    Payment Details
+                                </h6>
+                                <p class="mb-2"><strong>Payment ID:</strong> <code class="bg-light px-2 py-1 rounded"><?php echo htmlspecialchars($payment_details['payment_id']); ?></code></p>
+                                <p class="mb-2"><strong>Amount:</strong> <span class="text-success fw-bold">₹<?php echo number_format($payment_details['amount'], 2); ?></span></p>
+                                <p class="mb-0"><strong>Status:</strong> 
+                                    <span class="badge bg-success"><?php echo ucfirst($payment_details['status']); ?></span>
+                                </p>
                             </div>
-                            <div class="action-content">
-                                <h5>Create New Link</h5>
-                                <p>Generate payment links for workshops</p>
-                                <a href="#createLinkSection" class="btn btn-light btn-sm">
-                                    <i class="ti ti-arrow-down me-1"></i> Get Started
-                                </a>
-                            </div>
-                        </div>
-                        
-                        <div class="action-card success-gradient">
-                            <div class="action-icon">
-                                <i class="ti ti-link"></i>
-                            </div>
-                            <div class="action-content">
-                                <h5>Manage Links</h5>
-                                <p>View and manage existing links</p>
-                                <a href="instamojo_links.php" class="btn btn-light btn-sm">
-                                    <i class="ti ti-arrow-right me-1"></i> View All
-                                </a>
-                            </div>
-                        </div>
-                        
-                        <div class="action-card info-gradient">
-                            <div class="action-icon">
-                                <i class="ti ti-credit-card"></i>
-                            </div>
-                            <div class="action-content">
-                                <h5>Payment History</h5>
-                                <p>Track all transactions</p>
-                                <a href="instamojo_payments.php" class="btn btn-light btn-sm">
-                                    <i class="ti ti-arrow-right me-1"></i> View Payments
-                                </a>
+                            <div class="col-md-6">
+                                <h6 class="text-muted mb-3">
+                                    <i class="bx bx-user me-2"></i>
+                                    Buyer Information
+                                </h6>
+                                <p class="mb-2"><strong>Name:</strong> <?php echo htmlspecialchars($payment_details['buyer_name']); ?></p>
+                                <p class="mb-2"><strong>Email:</strong> <?php echo htmlspecialchars($payment_details['buyer_email']); ?></p>
+                                <p class="mb-0"><strong>Phone:</strong> <?php echo htmlspecialchars($payment_details['buyer_phone']); ?></p>
                             </div>
                         </div>
                     </div>
-                </div>
-            </div>
-
-            <!-- Create New Link Section -->
-            <div class="row mb-5" id="createLinkSection">
-                <div class="col-12">
-                    <div class="card modern-card">
-                        <div class="card-header modern-header">
-                            <div class="header-content">
-                                <div class="header-icon">
-                                    <i class="ti ti-plus-circle"></i>
+                    
+                    <!-- Enrolled Workshops -->
+                    <div class="mb-4">
+                        <h6 class="text-muted mb-3">
+                            <i class="bx bx-book-open me-2"></i>
+                            Enrolled Workshops
+                        </h6>
+                        <?php if (!empty($enrollments)): ?>
+                            <?php foreach ($enrollments as $workshop): ?>
+                                <div class="workshop-item">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <h6 class="mb-2 fw-bold"><?php echo htmlspecialchars($workshop['name']); ?></h6>
+                                            <p class="workshop-date mb-2">
+                                                <i class="bx bx-calendar me-2"></i>
+                                                <?php echo date('d M Y, h:i A', strtotime($workshop['start_date'])); ?>
+                                            </p>
+                                            <p class="trainer-name mb-0">
+                                                <i class="bx bx-user me-2"></i>
+                                                <?php echo htmlspecialchars($workshop['trainer_name']); ?>
+                                            </p>
+                                        </div>
+                                        <span class="badge bg-primary">
+                                            <i class="bx bx-check me-1"></i>
+                                            Enrolled
+                                        </span>
+                                    </div>
                                 </div>
-                                <div>
-                                    <h4 class="mb-1">Create New Payment Link</h4>
-                                    <p class="text-muted mb-0">Select workshops and set payment details</p>
-                                </div>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <div class="alert alert-info">
+                                <i class="bx bx-info-circle me-2"></i>
+                                Workshop details are being processed. You will receive an email confirmation shortly.
                             </div>
-                        </div>
-                        <div class="card-body">
-                            <form method="POST" action="" class="modern-form">
-                                <input type="hidden" name="action" value="create_link">
-                                
-                                <div class="form-section">
-                                    <h5 class="section-title">
-                                        <i class="ti ti-info-circle me-2"></i>
-                                        Basic Information
-                                    </h5>
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label class="form-label">Link Name *</label>
-                                                <div class="input-group">
-                                                    <span class="input-group-text">
-                                                        <i class="ti ti-tag"></i>
-                                                    </span>
-                                                    <input type="text" class="form-control" name="link_name" required 
-                                                           placeholder="e.g., Advanced Workshop Package">
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label class="form-label">Amount (₹) *</label>
-                                                <div class="input-group">
-                                                    <span class="input-group-text">
-                                                        <i class="ti ti-currency-rupee"></i>
-                                                    </span>
-                                                    <input type="number" class="form-control" name="amount" required 
-                                                           min="1" step="0.01" placeholder="999.00">
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="form-section">
-                                    <h5 class="section-title">
-                                        <i class="ti ti-book me-2"></i>
-                                        Select Workshops
-                                    </h5>
-                                    <div class="workshop-grid">
-                                        <?php foreach ($workshops as $workshop): ?>
-                                            <div class="workshop-card">
-                                                <input type="checkbox" name="workshop_ids[]" 
-                                                       value="<?php echo $workshop['id']; ?>" 
-                                                       id="workshop_<?php echo $workshop['id']; ?>" 
-                                                       class="workshop-checkbox">
-                                                <label for="workshop_<?php echo $workshop['id']; ?>" class="workshop-label">
-                                                    <div class="workshop-content">
-                                                        <div class="workshop-header">
-                                                            <h6 class="workshop-title"><?php echo htmlspecialchars($workshop['name']); ?></h6>
-                                                            <div class="workshop-badge">
-                                                                <span class="badge bg-primary">Upcoming</span>
-                                                            </div>
-                                                        </div>
-                                                        <div class="workshop-details">
-                                                            <div class="detail-item">
-                                                                <i class="ti ti-calendar"></i>
-                                                                <span><?php echo date('d M Y, h:i A', strtotime($workshop['start_date'])); ?></span>
-                                                            </div>
-                                                            <div class="detail-item">
-                                                                <i class="ti ti-currency-rupee"></i>
-                                                                <span>₹<?php echo number_format($workshop['price'], 2); ?></span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </label>
-                                            </div>
-                                        <?php endforeach; ?>
-                                    </div>
-                                    <small class="text-muted">
-                                        <i class="ti ti-info-circle me-1"></i>
-                                        Select one or more workshops for this payment link
-                                    </small>
-                                </div>
-
-                                <div class="form-actions">
-                                    <button type="submit" class="btn btn-primary btn-lg">
-                                        <i class="ti ti-plus me-2"></i>
-                                        Create Payment Link
-                                    </button>
-                                </div>
+                        <?php endif; ?>
+                    </div>
+                    
+                    <!-- Next Steps -->
+                    <div class="alert alert-info">
+                        <h6 class="alert-heading mb-3">
+                            <i class="bx bx-info-circle me-2"></i>
+                            What's Next?
+                        </h6>
+                        <ul class="mb-0">
+                            <li>You will receive a confirmation email with workshop details</li>
+                            <li>Workshop links and meeting details will be shared before the session</li>
+                            <li>Please check your email regularly for updates</li>
+                        </ul>
+                    </div>
+                    
+                    <!-- Email Resend Section -->
+                    <?php if (!empty($payment_details) && !empty($enrollments)): ?>
+                        <div class="alert alert-warning">
+                            <h6 class="alert-heading mb-3">
+                                <i class="bx bx-envelope me-2"></i>
+                                Didn't receive the confirmation email?
+                            </h6>
+                            <p class="mb-3">If you haven't received the payment confirmation email, you can request a resend:</p>
+                            <form method="POST" action="" id="resendEmailForm">
+                                <input type="hidden" name="action" value="resend_email">
+                                <input type="hidden" name="payment_id" value="<?php echo htmlspecialchars($payment_details['payment_id']); ?>">
+                                <input type="hidden" name="user_email" value="<?php echo htmlspecialchars($payment_details['buyer_email']); ?>">
+                                <button type="submit" class="btn btn-warning btn-sm">
+                                    <i class="bx bx-refresh me-1"></i>
+                                    Resend Confirmation Email
+                                </button>
                             </form>
                         </div>
+                    <?php endif; ?>
+                    
+                    <!-- More Workshops Link -->
+                    <div class="text-center mt-4">
+                        <a href="https://ipnacademy.in/" target="_blank" class="btn btn-primary btn-lg">
+                            <i class="bx bx-book-open me-2"></i>
+                            Explore More Workshops
+                        </a>
+                        <p class="text-muted mt-2">
+                            <small>Visit IPN Academy to discover more educational workshops and training programs</small>
+                        </p>
                     </div>
-                </div>
-            </div>
-
-            <!-- Recent Activity -->
-            <div class="row">
-                <div class="col-lg-8">
-                    <div class="card modern-card">
-                        <div class="card-header modern-header">
-                            <div class="header-content">
-                                <div class="header-icon">
-                                    <i class="ti ti-activity"></i>
-                                </div>
-                                <div>
-                                    <h4 class="mb-1">Recent Payments</h4>
-                                    <p class="text-muted mb-0">Latest payment transactions</p>
+                    
+                <?php else: ?>
+                    <!-- Payment not found - just show contact support -->
+                    <div class="text-center py-5">
+                        <div class="contact-info">
+                            <h5 class="mb-3">Need Help?</h5>
+                            <p class="text-muted mb-4">
+                                If you're experiencing issues with your payment, please contact our support team.
+                            </p>
+                            <div class="row justify-content-center">
+                                <div class="col-md-6">
+                                    <p class="mb-2">
+                                        <i class="bx bx-envelope me-2"></i>
+                                        <a href="mailto:ipnacademy@ipnindia.in">ipnacademy@ipnindia.in</a>
+                                    </p>
+                                    <p class="mb-0">
+                                        <i class="bx bx-phone me-2"></i>
+                                        <a href="tel:+917697001231">+91 7697001231</a>
+                                    </p>
                                 </div>
                             </div>
                         </div>
-                        <div class="card-body">
-                            <?php if (empty($recent_payments)): ?>
-                                <div class="empty-state">
-                                    <div class="empty-icon">
-                                        <i class="ti ti-credit-card"></i>
-                                    </div>
-                                    <h5>No payments yet</h5>
-                                    <p>Payments will appear here once they are processed</p>
-                                </div>
-                            <?php else: ?>
-                                <div class="payment-list">
-                                    <?php foreach (array_slice($recent_payments, 0, 5) as $payment): ?>
-                                        <div class="payment-item">
-                                            <div class="payment-icon">
-                                                <i class="ti ti-<?php echo $payment['status'] === 'completed' ? 'check' : 'clock'; ?>"></i>
-                                            </div>
-                                            <div class="payment-details">
-                                                <h6 class="payment-title"><?php echo htmlspecialchars($payment['link_name']); ?></h6>
-                                                <p class="payment-info">
-                                                    ₹<?php echo number_format($payment['amount'], 2); ?> • 
-                                                    <?php echo date('d M Y, h:i A', strtotime($payment['created_at'])); ?>
-                                                </p>
-                                            </div>
-                                            <div class="payment-status">
-                                                <span class="status-badge <?php echo $payment['status'] === 'completed' ? 'success' : 'warning'; ?>">
-                                                    <?php echo ucfirst($payment['status']); ?>
-                                                </span>
-                                            </div>
-                                        </div>
-                                    <?php endforeach; ?>
-                                </div>
-                            <?php endif; ?>
-                        </div>
                     </div>
-                </div>
+                <?php endif; ?>
                 
-                <div class="col-lg-4">
-                    <div class="card modern-card">
-                        <div class="card-header modern-header">
-                            <div class="header-content">
-                                <div class="header-icon">
-                                    <i class="ti ti-chart-pie"></i>
-                                </div>
-                                <div>
-                                    <h4 class="mb-1">Quick Stats</h4>
-                                    <p class="text-muted mb-0">Payment overview</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="card-body">
-                            <div class="stats-grid">
-                                <div class="stat-card">
-                                    <div class="stat-icon primary">
-                                        <i class="ti ti-link"></i>
-                                    </div>
-                                    <div class="stat-info">
-                                        <h3><?php echo count($links); ?></h3>
-                                        <p>Total Links</p>
-                                    </div>
-                                </div>
-                                
-                                <div class="stat-card">
-                                    <div class="stat-icon success">
-                                        <i class="ti ti-credit-card"></i>
-                                    </div>
-                                    <div class="stat-info">
-                                        <h3><?php echo count($recent_payments); ?></h3>
-                                        <p>Total Payments</p>
-                                    </div>
-                                </div>
-                                
-                                <div class="stat-card">
-                                    <div class="stat-icon warning">
-                                        <i class="ti ti-check"></i>
-                                    </div>
-                                    <div class="stat-info">
-                                        <h3><?php echo count(array_filter($recent_payments, function($p) { return $p['status'] === 'completed'; })); ?></h3>
-                                        <p>Completed</p>
-                                    </div>
-                                </div>
-                                
-                                <div class="stat-card">
-                                    <div class="stat-icon info">
-                                        <i class="ti ti-clock"></i>
-                                    </div>
-                                    <div class="stat-info">
-                                        <h3><?php echo count(array_filter($recent_payments, function($p) { return $p['status'] === 'pending'; })); ?></h3>
-                                        <p>Pending</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                <!-- Contact Information -->
+                <div class="contact-info">
+                    <p class="text-muted mb-2">Need help? Contact us:</p>
+                    <p class="mb-0">
+                        <i class="bx bx-envelope me-2"></i>
+                        <a href="mailto:ipnacademy@ipnindia.in">ipnacademy@ipnindia.in</a>
+                        <span class="mx-2">|</span>
+                        <i class="bx bx-phone me-2"></i>
+                        <a href="tel:+917697001231">+91 7697001231</a>
+                        <span class="mx-2">|</span>
+                        <a href="tel:+918400700199">+91 8400700199</a>
+                    </p>
                 </div>
             </div>
         </div>
     </div>
-</div>
-
-<?php include 'includes/footer.php'; ?>
-
-<script>
-// Workshop selection functionality
-$(document).ready(function() {
-    // Handle workshop card selection
-    $('.workshop-checkbox').change(function() {
-        const card = $(this).closest('.workshop-card');
-        if (this.checked) {
-            card.addClass('selected');
-        } else {
-            card.removeClass('selected');
-        }
-    });
     
-    // Handle workshop label click
-    $('.workshop-label').click(function(e) {
-        e.preventDefault();
-        const checkbox = $(this).siblings('.workshop-checkbox');
-        checkbox.prop('checked', !checkbox.prop('checked')).trigger('change');
-    });
-
-    // Smooth scroll to create link section
-    $('a[href="#createLinkSection"]').click(function(e) {
-        e.preventDefault();
-        $('html, body').animate({
-            scrollTop: $('#createLinkSection').offset().top - 100
-        }, 800);
-    });
-});
-</script>
-
-<style>
-/* Hero Section */
-.hero-section {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    padding: 3rem 0;
-    border-radius: 0 0 2rem 2rem;
-    margin: -1rem -1rem 2rem -1rem;
-    position: relative;
-    overflow: hidden;
-}
-
-.hero-section::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="white" opacity="0.1"/><circle cx="75" cy="75" r="1" fill="white" opacity="0.1"/><circle cx="50" cy="10" r="0.5" fill="white" opacity="0.1"/><circle cx="10" cy="60" r="0.5" fill="white" opacity="0.1"/><circle cx="90" cy="40" r="0.5" fill="white" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
-    opacity: 0.3;
-}
-
-.hero-content {
-    position: relative;
-    z-index: 2;
-}
-
-.hero-title {
-    font-size: 3rem;
-    font-weight: 700;
-    margin-bottom: 1rem;
-}
-
-.gradient-text {
-    background: linear-gradient(45deg, #ffd700, #ffed4e);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-}
-
-.hero-subtitle {
-    font-size: 1.2rem;
-    opacity: 0.9;
-    margin-bottom: 2rem;
-}
-
-.hero-stats {
-    display: flex;
-    gap: 2rem;
-    margin-top: 2rem;
-}
-
-.stat-item {
-    text-align: center;
-}
-
-.stat-number {
-    display: block;
-    font-size: 2rem;
-    font-weight: 700;
-    color: #ffd700;
-}
-
-.stat-label {
-    font-size: 0.9rem;
-    opacity: 0.8;
-}
-
-.hero-illustration {
-    position: relative;
-    height: 200px;
-}
-
-.floating-card {
-    position: absolute;
-    width: 60px;
-    height: 60px;
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: 15px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.5rem;
-    color: white;
-    animation: float 3s ease-in-out infinite;
-}
-
-.floating-card:nth-child(1) {
-    top: 20px;
-    left: 20px;
-    animation-delay: 0s;
-}
-
-.floating-card:nth-child(2) {
-    top: 80px;
-    right: 40px;
-    animation-delay: 1s;
-}
-
-.floating-card:nth-child(3) {
-    bottom: 20px;
-    left: 50px;
-    animation-delay: 2s;
-}
-
-@keyframes float {
-    0%, 100% { transform: translateY(0px); }
-    50% { transform: translateY(-20px); }
-}
-
-/* Quick Actions */
-.quick-actions {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 1.5rem;
-    margin-bottom: 2rem;
-}
-
-.action-card {
-    padding: 2rem;
-    border-radius: 1rem;
-    color: white;
-    position: relative;
-    overflow: hidden;
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-
-.action-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-}
-
-.primary-gradient {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-}
-
-.success-gradient {
-    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
-}
-
-.info-gradient {
-    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-}
-
-.action-icon {
-    font-size: 2.5rem;
-    margin-bottom: 1rem;
-    opacity: 0.9;
-}
-
-.action-content h5 {
-    font-size: 1.3rem;
-    margin-bottom: 0.5rem;
-}
-
-.action-content p {
-    opacity: 0.9;
-    margin-bottom: 1.5rem;
-}
-
-/* Modern Cards */
-.modern-card {
-    border: none;
-    border-radius: 1rem;
-    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-    overflow: hidden;
-}
-
-.modern-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
-}
-
-.modern-header {
-    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-    border-bottom: 1px solid #dee2e6;
-    padding: 1.5rem;
-}
-
-.header-content {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-}
-
-.header-icon {
-    width: 50px;
-    height: 50px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-size: 1.5rem;
-}
-
-/* Form Styling */
-.modern-form {
-    padding: 0;
-}
-
-.form-section {
-    margin-bottom: 2rem;
-    padding: 1.5rem;
-    background: #f8f9fa;
-    border-radius: 0.75rem;
-}
-
-.section-title {
-    color: #495057;
-    font-weight: 600;
-    margin-bottom: 1.5rem;
-    display: flex;
-    align-items: center;
-}
-
-.form-group {
-    margin-bottom: 1.5rem;
-}
-
-.form-label {
-    font-weight: 600;
-    color: #495057;
-    margin-bottom: 0.5rem;
-}
-
-.input-group-text {
-    background: #e9ecef;
-    border: 1px solid #ced4da;
-    color: #6c757d;
-}
-
-.form-control {
-    border: 1px solid #ced4da;
-    border-radius: 0.5rem;
-    padding: 0.75rem 1rem;
-    transition: border-color 0.3s ease, box-shadow 0.3s ease;
-}
-
-.form-control:focus {
-    border-color: #667eea;
-    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
-}
-
-.form-actions {
-    text-align: center;
-    padding: 2rem 0;
-}
-
-/* Workshop Grid */
-.workshop-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 1rem;
-    margin-top: 1rem;
-}
-
-.workshop-card {
-    position: relative;
-    border: 2px solid #e9ecef;
-    border-radius: 1rem;
-    transition: all 0.3s ease;
-    cursor: pointer;
-    background: white;
-    overflow: hidden;
-}
-
-.workshop-card:hover {
-    border-color: #667eea;
-    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.2);
-    transform: translateY(-2px);
-}
-
-.workshop-card.selected {
-    border-color: #667eea;
-    background: linear-gradient(135deg, #f8f9ff 0%, #e8f0ff 100%);
-    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
-}
-
-.workshop-checkbox {
-    position: absolute;
-    opacity: 0;
-    pointer-events: none;
-}
-
-.workshop-label {
-    display: block;
-    padding: 1.5rem;
-    margin: 0;
-    cursor: pointer;
-    height: 100%;
-}
-
-.workshop-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 1rem;
-}
-
-.workshop-title {
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: #333;
-    margin: 0;
-    line-height: 1.3;
-}
-
-.workshop-badge {
-    flex-shrink: 0;
-}
-
-.workshop-details {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-}
-
-.detail-item {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    color: #6c757d;
-    font-size: 0.9rem;
-}
-
-.detail-item i {
-    color: #667eea;
-    width: 16px;
-}
-
-.workshop-card.selected .workshop-title {
-    color: #667eea;
-}
-
-.workshop-card.selected::before {
-    content: '✓';
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    background: #667eea;
-    color: white;
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 12px;
-    font-weight: bold;
-    z-index: 2;
-}
-
-/* Payment List */
-.payment-list {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-}
-
-.payment-item {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    padding: 1rem;
-    background: #f8f9fa;
-    border-radius: 0.75rem;
-    transition: background-color 0.3s ease;
-}
-
-.payment-item:hover {
-    background: #e9ecef;
-}
-
-.payment-icon {
-    width: 40px;
-    height: 40px;
-    background: #667eea;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-size: 1.1rem;
-}
-
-.payment-details {
-    flex: 1;
-}
-
-.payment-title {
-    font-weight: 600;
-    margin: 0 0 0.25rem 0;
-    color: #333;
-}
-
-.payment-info {
-    margin: 0;
-    color: #6c757d;
-    font-size: 0.9rem;
-}
-
-.payment-status {
-    flex-shrink: 0;
-}
-
-.status-badge {
-    padding: 0.25rem 0.75rem;
-    border-radius: 1rem;
-    font-size: 0.8rem;
-    font-weight: 600;
-}
-
-.status-badge.success {
-    background: #d4edda;
-    color: #155724;
-}
-
-.status-badge.warning {
-    background: #fff3cd;
-    color: #856404;
-}
-
-/* Stats Grid */
-.stats-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1rem;
-}
-
-.stat-card {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    padding: 1rem;
-    background: #f8f9fa;
-    border-radius: 0.75rem;
-    transition: background-color 0.3s ease;
-}
-
-.stat-card:hover {
-    background: #e9ecef;
-}
-
-.stat-icon {
-    width: 50px;
-    height: 50px;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.5rem;
-    color: white;
-}
-
-.stat-icon.primary {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-}
-
-.stat-icon.success {
-    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
-}
-
-.stat-icon.warning {
-    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-}
-
-.stat-icon.info {
-    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-}
-
-.stat-info h3 {
-    margin: 0;
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: #333;
-}
-
-.stat-info p {
-    margin: 0;
-    color: #6c757d;
-    font-size: 0.9rem;
-}
-
-/* Empty State */
-.empty-state {
-    text-align: center;
-    padding: 3rem 1rem;
-}
-
-.empty-icon {
-    font-size: 3rem;
-    color: #dee2e6;
-    margin-bottom: 1rem;
-}
-
-.empty-state h5 {
-    color: #6c757d;
-    margin-bottom: 0.5rem;
-}
-
-.empty-state p {
-    color: #adb5bd;
-    margin: 0;
-}
-
-/* Custom Alerts */
-.custom-alert {
-    border: none;
-    border-radius: 0.75rem;
-    padding: 1rem 1.5rem;
-    margin-bottom: 2rem;
-}
-
-.alert-content {
-    display: flex;
-    align-items: center;
-}
-
-/* Responsive Design */
-@media (max-width: 768px) {
-    .hero-title {
-        font-size: 2rem;
-    }
-    
-    .hero-stats {
-        flex-direction: column;
-        gap: 1rem;
-    }
-    
-    .quick-actions {
-        grid-template-columns: 1fr;
-    }
-    
-    .workshop-grid {
-        grid-template-columns: 1fr;
-    }
-    
-    .stats-grid {
-        grid-template-columns: 1fr;
-    }
-    
-    .header-content {
-        flex-direction: column;
-        text-align: center;
-    }
-}
-
-/* Animations */
-@keyframes fadeInUp {
-    from {
-        opacity: 0;
-        transform: translateY(30px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.modern-card {
-    animation: fadeInUp 0.6s ease-out;
-}
-
-.action-card {
-    animation: fadeInUp 0.6s ease-out;
-}
-
-.action-card:nth-child(2) {
-    animation-delay: 0.1s;
-}
-
-.action-card:nth-child(3) {
-    animation-delay: 0.2s;
-}
-</style>
-
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
-</html>
+</html> 

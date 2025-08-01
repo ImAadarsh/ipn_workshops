@@ -1,6 +1,9 @@
 <?php
 include 'config/show_errors.php';
 
+// Include email helper
+include_once 'config/email_helper.php';
+
 // Log webhook data for debugging
 $webhook_data = file_get_contents('php://input');
 $log_file = 'instamojo_webhook.log';
@@ -202,6 +205,9 @@ function processEnrollment($conn, $payment_db_id, $link_data, $payment_id, $user
     // Get workshop IDs from link
     $workshop_ids = explode(',', $link_data['workshop_ids']);
     
+    // Collect workshop data for email
+    $workshops_data = [];
+    
     // Enroll user in each workshop
     foreach ($workshop_ids as $workshop_id) {
         $workshop_id = trim($workshop_id);
@@ -217,6 +223,9 @@ function processEnrollment($conn, $payment_db_id, $link_data, $payment_id, $user
         mysqli_stmt_close($workshop_stmt);
         
         if ($workshop) {
+            // Add to workshops data for email
+            $workshops_data[] = $workshop;
+            
             // Generate unique order_id and verify_token
             $order_id = generateRandomString(15);
             $verify_token = generateRandomString(15);
@@ -237,6 +246,36 @@ function processEnrollment($conn, $payment_db_id, $link_data, $payment_id, $user
             mysqli_stmt_bind_param($enrollment_stmt, "iii", $payment_table_id, $workshop_id, $user_id);
             mysqli_stmt_execute($enrollment_stmt);
             mysqli_stmt_close($enrollment_stmt);
+        }
+    }
+    
+    // Send payment confirmation email
+    if (!empty($workshops_data)) {
+        // Get user data
+        $user_sql = "SELECT * FROM users WHERE id = ?";
+        $user_stmt = mysqli_prepare($conn, $user_sql);
+        mysqli_stmt_bind_param($user_stmt, "i", $user_id);
+        mysqli_stmt_execute($user_stmt);
+        $user_result = mysqli_stmt_get_result($user_stmt);
+        $user_data = mysqli_fetch_assoc($user_result);
+        mysqli_stmt_close($user_stmt);
+        
+        if ($user_data) {
+            // Prepare payment data for email
+            $payment_data = [
+                'payment_id' => $payment_id,
+                'amount' => $amount,
+                'created_at' => date('Y-m-d H:i:s')
+            ];
+            
+            // Send email
+            $email_sent = sendPaymentConfirmationEmail($user_data, $payment_data, $workshops_data);
+            
+            if ($email_sent) {
+                error_log("Payment confirmation email sent successfully to user $user_id for payment $payment_id");
+            } else {
+                error_log("Failed to send payment confirmation email to user $user_id for payment $payment_id");
+            }
         }
     }
     
