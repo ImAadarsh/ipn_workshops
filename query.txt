@@ -1,0 +1,28 @@
+`users`(`id`, `name`, `email`, `mobile`, `profile`, `oauth_uid`, `designation`, `institute_name`, `city`, `user_type`, `email_verified_at`, `country_code`, `token`, `otp`, `password`, `remember_token`, `membership`, `school_id`, `tlc_2025`, `is_tlc_new`, `tlc_join_date`, `tlc_email_sent`, `created_at`, `updated_at`)
+`payments`(`id`, `user_id`, `workshop_id`, `payment_id`, `amount`, `order_id`, `mail_send`, `last_mail`, `verify_token`, `url`, `payment_status`, `cpd`, `coupon_code`, `review`, `school_id`, `report_id`, `duration`, `is_school`, `instamojo_upload`, `is_attended`, `attended_duration`, `created_at`, `updated_at`)
+`workshops`(`id`, `name`, `trainer_id`, `trainer_name`, `trainer_image`, `trainer_description`, `image`, `info`, `duration`, `start_date`, `price`, `price_2`, `cut_price`, `description`, `link`, `rlink`, `category_id`, `type`, `skills`, `video_banner`, `video_link`, `status`, `notify`, `w_status`, `meeting_id`, `passcode`, `cpd`, `is_premium`, `is_deleted`, `is_2024`, `report_generated`, `created_at`, `updated_at`)
+
+I want to create a dashboard (Instamojo using API).
+
+From Dashboard You can select One or More than one workshop.
+And Name of the link
+Amount you want to take from user
+
+this link will be shared to all.
+
+Anyone can add there name, email, mobile and make the payemnt.
+
+If payment is sucessfully we need to check two thing
+
+Is user exsit in our DB
+if exist we'll enroll the workshop to that user.
+
+If User is not enrolled to DB we can enroll the user and leave other fields null as we are taking just name,emailand mobile
+and then enroll that user into the workshop.
+
+Can we do it
+
+First provide the sql tables required additional so I can make in db and then create
+
+instamojo_dashboard.php
+

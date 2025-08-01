@@ -363,6 +363,33 @@
         </li>
 
         <li class="side-nav-item">
+            <a data-bs-toggle="collapse" href="#sidebarInstamojo" aria-expanded="false" aria-controls="sidebarInstamojo" class="side-nav-link">
+                <span class="menu-icon"><i class="ti ti-credit-card"></i></span>
+                <span class="menu-text">Instamojo</span>
+                <span class="menu-arrow"></span>
+            </a>
+            <div class="collapse" id="sidebarInstamojo">
+                <ul class="sub-menu">
+                    <li class="side-nav-item">
+                        <a href="instamojo_dashboard.php" class="side-nav-link">
+                            <span class="menu-text">Dashboard</span>
+                        </a>
+                    </li>
+                    <li class="side-nav-item">
+                        <a href="instamojo_links.php" class="side-nav-link">
+                            <span class="menu-text">Payment Links</span>
+                        </a>
+                    </li>
+                    <li class="side-nav-item">
+                        <a href="instamojo_payments.php" class="side-nav-link">
+                            <span class="menu-text">Payment History</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </li>
+
+        <li class="side-nav-item">
             <a data-bs-toggle="collapse" href="#sidebarInstructions" aria-expanded="false" aria-controls="sidebarInstructions" class="side-nav-link">
                 <span class="menu-icon"><i class="ti ti-file-text"></i></span>
                 <span class="menu-text">Instructions</span>
