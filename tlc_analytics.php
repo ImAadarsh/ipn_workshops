@@ -393,7 +393,7 @@ $stats['email_not_sent'] = mysqli_fetch_assoc($result)['count'];
                             <h6 class="card-title">Peak Performance</h6>
                             <h2 class="mb-0"><?php echo number_format($stats['peak_performance_users']); ?></h2>
                             <small>648+ minutes total (2 days max)</small>
-                            <div class="drill-down-btn">Click to view users</div>
+                            <div class="drill-down-btn">Click to view top 25 users</div>
                         </div>
                     </div>
                 </div>
@@ -737,7 +737,7 @@ function showUsers(type) {
         'new_attended_both_days': 'New Users Who Attended Both Days',
         'old_attended_both_days': 'Existing Users Who Attended Both Days',
         'grace_granted': 'Users Granted Grace',
-        'peak_performance': 'Peak Performance Users (648+ minutes)',
+        'peak_performance': 'Top 25 Peak Performance Users (648+ minutes)',
         'low_engagement': 'Low Engagement Users (< 100 minutes)',
         'under_100_min': 'Users with < 100 minutes total',
         'over_100_min': 'Users with ≥ 100 minutes total',

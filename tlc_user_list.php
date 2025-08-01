@@ -98,7 +98,8 @@ switch ($type) {
                 JOIN tlc_join_durations t ON u.id = t.user_id
                 GROUP BY u.id, u.name, u.email, u.mobile, u.institute_name, u.city, u.is_tlc_new, u.tlc_join_date, u.tlc_email_sent
                 HAVING SUM(t.total_duration) >= 648
-                ORDER BY total_duration DESC";
+                ORDER BY total_duration DESC
+                LIMIT 25";
         break;
         
     case 'low_engagement':
