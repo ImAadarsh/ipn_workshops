@@ -42,6 +42,7 @@ $featuredStats = [
     'b2c' => 0,
     'b2c2b' => 0,
     'platform_enrolled' => 0,
+    'instamojo_payments' => 0,
     'total_users' => 0,
     'mail_sent' => 0
 ];
@@ -72,7 +73,7 @@ if (!empty($upcomingWorkshops)) {
         }
     }
     
-    // Get B2C users with valid platform enrollments (excluding certain payment types)
+    // Get B2C users with valid platform enrollments (excluding certain payment types and Instamojo)
     $sql = "SELECT COUNT(DISTINCT p.user_id) as platform_count 
             FROM payments p 
             WHERE p.workshop_id = $wid 
@@ -86,10 +87,23 @@ if (!empty($upcomingWorkshops)) {
             AND p.payment_id NOT LIKE '%G-Form-Paid%' 
             AND p.payment_id NOT LIKE '%B2B-ENRL%'
             AND p.payment_id IS NOT NULL 
-            AND p.payment_id != ''";
+            AND p.payment_id != ''
+            AND p.instamojo_upload != 1";
     $result = mysqli_query($conn, $sql);
     if ($result && $row = mysqli_fetch_assoc($result)) {
         $featuredStats['platform_enrolled'] = $row['platform_count'];
+    }
+    
+    // Get Instamojo payments count
+    $sql = "SELECT COUNT(DISTINCT p.user_id) as instamojo_count 
+            FROM payments p 
+            WHERE p.workshop_id = $wid 
+            AND p.payment_status = 1 
+            AND p.school_id IS NULL 
+            AND p.instamojo_upload = 1";
+    $result = mysqli_query($conn, $sql);
+    if ($result && $row = mysqli_fetch_assoc($result)) {
+        $featuredStats['instamojo_payments'] = $row['instamojo_count'];
     }
     
     // Calculate total users (B2B + B2C)
@@ -107,6 +121,32 @@ if (!empty($upcomingWorkshops)) {
     <meta charset="utf-8" />
     <title>Dashboard | IPN Academy</title>
     <?php include 'includes/head.php'; ?>
+    
+    <!-- Custom CSS for enhanced statistics design -->
+    <style>
+        .stat-card {
+            transition: all 0.3s ease;
+            min-height: 80px;
+        }
+        .stat-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.12) !important;
+        }
+        .stat-number {
+            line-height: 1.2;
+        }
+        .stat-label {
+            margin-top: 4px;
+        }
+        @media (max-width: 768px) {
+            .stat-card {
+                min-height: 70px;
+            }
+            .stat-number {
+                font-size: 1.5rem !important;
+            }
+        }
+    </style>
 </head>
 
 <body>
@@ -163,7 +203,9 @@ if (!empty($upcomingWorkshops)) {
                         <div class="card">
                             <div class="card-header d-flex justify-content-between align-items-center">
                                 <h4 class="header-title">Upcoming Workshops</h4>
-                                <a href="workshops.php" class="btn btn-sm btn-primary">View All</a>
+                                <a href="workshops.php" class="btn btn-primary">
+                                    <i class="ti ti-arrow-right me-1"></i>View All
+                                </a>
                             </div>
                             <div class="card-body">
                                 <div class="row">
@@ -221,30 +263,65 @@ if (!empty($upcomingWorkshops)) {
                                                                         <?php endif; ?>
                                                                     </div>
                                                                 </div>
-                                                                <div class="row mt-3">
-                                                                    <div class="col-md-2">
-                                                                        <span class="fw-bold">B2B Enrollment:</span>
-                                                                        <span class="badge bg-primary fs-5 ms-1"><?php echo $featuredStats['b2b_enrollment']; ?></span>
+                                                                <!-- Workshop Stats -->
+                                                                <div class="mt-4">
+                                                                    <h6 class="text-primary mb-3">
+                                                                        <i class="ti ti-chart-pie me-2"></i>Enrollment Statistics
+                                                                    </h6>
+                                                                    <div class="row g-3">
+                                                                        <div class="col-6 col-md-3">
+                                                                            <div class="stat-card bg-primary-subtle border border-primary rounded-3 p-3 text-center">
+                                                                                <div class="stat-number text-primary fw-bold fs-4"><?php echo $featuredStats['b2b_enrollment']; ?></div>
+                                                                                <div class="stat-label text-muted small">B2B Users</div>
+                                                                            </div>
+                                                                        </div>
+                                                                        <div class="col-6 col-md-3">
+                                                                            <div class="stat-card bg-success-subtle border border-success rounded-3 p-3 text-center">
+                                                                                <div class="stat-number text-success fw-bold fs-4"><?php echo $featuredStats['b2c']; ?></div>
+                                                                                <div class="stat-label text-muted small">B2C Users</div>
+                                                                            </div>
+                                                                        </div>
+                                                                        <div class="col-6 col-md-3">
+                                                                            <div class="stat-card bg-info-subtle border border-info rounded-3 p-3 text-center">
+                                                                                <div class="stat-number text-info fw-bold fs-4"><?php echo $featuredStats['b2c2b']; ?></div>
+                                                                                <div class="stat-label text-muted small">B2C2B Users</div>
+                                                                            </div>
+                                                                        </div>
+                                                                        <div class="col-6 col-md-3">
+                                                                            <div class="stat-card bg-warning-subtle border border-warning rounded-3 p-3 text-center">
+                                                                                <div class="stat-number text-warning fw-bold fs-4"><?php echo $featuredStats['platform_enrolled']; ?></div>
+                                                                                <div class="stat-label text-muted small">Platform</div>
+                                                                            </div>
+                                                                        </div>
+                                                                        <div class="col-6 col-md-3">
+                                                                            <div class="stat-card bg-danger-subtle border border-danger rounded-3 p-3 text-center">
+                                                                                <div class="stat-number text-danger fw-bold fs-4"><?php echo $featuredStats['instamojo_payments']; ?></div>
+                                                                                <div class="stat-label text-muted small">Instamojo</div>
+                                                                            </div>
+                                                                        </div>
+                                                                        <div class="col-6 col-md-3">
+                                                                            <div class="stat-card bg-dark-subtle border border-dark rounded-3 p-3 text-center">
+                                                                                <div class="stat-number text-dark fw-bold fs-4"><?php echo $featuredStats['total_users']; ?></div>
+                                                                                <div class="stat-label text-muted small">Total Users</div>
+                                                                            </div>
+                                                                        </div>
+                                                                        <div class="col-6 col-md-3">
+                                                                            <div class="stat-card bg-secondary-subtle border border-secondary rounded-3 p-3 text-center">
+                                                                                <div class="stat-number text-secondary fw-bold fs-4"><?php echo $featuredStats['mail_sent']; ?></div>
+                                                                                <div class="stat-label text-muted small">Mails Sent</div>
+                                                                            </div>
+                                                                        </div>
                                                                     </div>
-                                                                    <div class="col-md-2">
-                                                                        <span class="fw-bold">B2C Enrollment:</span>
-                                                                        <span class="badge bg-success fs-5 ms-1"><?php echo $featuredStats['b2c']; ?></span>
-                                                                    </div>
-                                                                    <div class="col-md-2">
-                                                                        <span class="fw-bold">B2C2B Users:</span>
-                                                                        <span class="badge bg-info fs-5 ms-1"><?php echo $featuredStats['b2c2b']; ?></span>
-                                                                    </div>
-                                                                    <div class="col-md-2">
-                                                                        <span class="fw-bold">Platform Enrolled:</span>
-                                                                        <span class="badge bg-warning text-dark fs-5 ms-1"><?php echo $featuredStats['platform_enrolled']; ?></span>
-                                                                    </div>
-                                                                    <div class="col-md-2">
-                                                                        <span class="fw-bold">Total Users:</span>
-                                                                        <span class="badge bg-dark fs-5 ms-1"><?php echo $featuredStats['total_users']; ?></span>
-                                                                    </div>
-                                                                    <div class="col-md-2">
-                                                                        <span class="fw-bold">Mails Sent:</span>
-                                                                        <span class="badge bg-secondary fs-5 ms-1"><?php echo $featuredStats['mail_sent']; ?></span>
+                                                                </div>
+                                                                <div class="mt-3">
+                                                                    <div class="alert alert-info border-0 bg-info-subtle">
+                                                                        <div class="d-flex align-items-start">
+                                                                            <i class="ti ti-info-circle text-info me-2 mt-1"></i>
+                                                                            <div class="small">
+                                                                                <strong>Note:</strong> B2C Users (<?php echo $featuredStats['b2c']; ?>) includes Platform Enrolled (<?php echo $featuredStats['platform_enrolled']; ?>) + Instamojo (<?php echo $featuredStats['instamojo_payments']; ?>). 
+                                                                                <br>Total calculation: B2B (<?php echo $featuredStats['b2b'] - $featuredStats['b2c2b']; ?>) + B2C (<?php echo $featuredStats['b2c']; ?>) + B2C2B (<?php echo $featuredStats['b2c2b']; ?>) = <?php echo $featuredStats['total_users']; ?> users.
+                                                                            </div>
+                                                                        </div>
                                                                     </div>
                                                                 </div>
                                                                 <div class="mt-4">
@@ -279,10 +356,6 @@ if (!empty($upcomingWorkshops)) {
                                                                     </div>
                                                                 </div>
                                                             </div>
-                                                                                                                         <p style="color: red !important;" class="text-muted mb-0 mt-3">
-                                                                 **B2C Users (<?php echo $featuredStats['b2c']; ?>) includes Platform Enrolled Users (<?php echo $featuredStats['platform_enrolled']; ?>). 
-                                                                <br> Sum of B2B (<?php echo $featuredStats['b2b'] - $featuredStats['b2c2b']; ?>) + B2C (<?php echo $featuredStats['b2c']; ?>) + B2C2B (<?php echo $featuredStats['b2c2b']; ?>)     = Total Users (<?php echo $featuredStats['total_users']; ?>).
-                                                             </p>
                                                         </div>
                                                     <?php else: ?>
                                                         <div class="d-flex align-items-center mb-3">
@@ -386,7 +459,9 @@ if (!empty($upcomingWorkshops)) {
                         <div class="card">
                             <div class="card-header d-flex justify-content-between align-items-center">
                                 <h4 class="header-title">Completed Workshops</h4>
-                                <a href="workshops.php?type=completed" class="btn btn-sm btn-primary">View All</a>
+                                <a href="workshops.php?type=completed" class="btn btn-primary">
+                                    <i class="ti ti-arrow-right me-1"></i>View All
+                                </a>
                             </div>
                             <div class="card-body">
                                 <div class="row">

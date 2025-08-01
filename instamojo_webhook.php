@@ -61,14 +61,17 @@ try {
     
     if ($existing_payment) {
         // Update existing payment status
+        if ($status === 'Credit') {
+            $status_Completed = 'completed';
+        }
         $update_sql = "UPDATE instamojo_payments SET status = ?, updated_at = NOW() WHERE payment_id = ?";
         $update_stmt = mysqli_prepare($conn, $update_sql);
-        mysqli_stmt_bind_param($update_stmt, "ss", $status, $payment_id);
+        mysqli_stmt_bind_param($update_stmt, "ss", $status_Completed, $payment_id);
         mysqli_stmt_execute($update_stmt);
         mysqli_stmt_close($update_stmt);
         
         // If payment is now completed and wasn't before, process enrollment
-        if ($status === 'Credit' && $existing_payment['status'] !== 'Credit') {
+        if ($status === 'Credit' && $existing_payment['status'] !== 'completed') {
             processEnrollment($conn, $existing_payment['id'], $link_data, $payment_id, $existing_payment['user_id'], $existing_payment['amount']);
         }
     } else {
@@ -154,6 +157,9 @@ try {
             mysqli_stmt_close($create_stmt);
         }
         
+        if ($status === 'Credit') {
+            $status_Completed = 'completed';
+        }
         // Create new payment record in instamojo_payments table
         $insert_sql = "INSERT INTO instamojo_payments (link_id, payment_id, buyer_name, buyer_email, buyer_phone, amount, currency, status, user_id, link_name, created_at, updated_at) 
                        VALUES (?, ?, ?, ?, ?, ?, 'INR', ?, ?, ?, NOW(), NOW())";
@@ -169,9 +175,9 @@ try {
                 http_response_code(500);
                 exit('Database error');
             }
-            mysqli_stmt_bind_param($insert_stmt, "issssssi", $link_data['id'], $payment_id, $buyer_name, $buyer_email, $buyer_phone, $amount, $status, $user_id);
+            mysqli_stmt_bind_param($insert_stmt, "issssssi", $link_data['id'], $payment_id, $buyer_name, $buyer_email, $buyer_phone, $amount, $status_Completed, $user_id);
         } else {
-            mysqli_stmt_bind_param($insert_stmt, "isssssssi", $link_data['id'], $payment_id, $buyer_name, $buyer_email, $buyer_phone, $amount, $status, $user_id, $purpose);
+            mysqli_stmt_bind_param($insert_stmt, "isssssssi", $link_data['id'], $payment_id, $buyer_name, $buyer_email, $buyer_phone, $amount, $status_Completed, $user_id, $purpose);
         }
         mysqli_stmt_execute($insert_stmt);
         $payment_db_id = mysqli_insert_id($conn);

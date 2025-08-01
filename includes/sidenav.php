@@ -37,6 +37,12 @@
                 <span class="menu-text">Dashboard</span>
             </a>
         </li>
+        <li class="side-nav-item">
+            <a href="workshops.php" class="side-nav-link">
+                <span class="menu-icon"><i class="ti ti-calendar-event"></i></span>
+                <span class="menu-text">All Workshops</span>
+            </a>
+        </li>
 
         <li class="side-nav-title">Management</li>
 
@@ -90,22 +96,22 @@
         </li>
 
         <!-- Users Management -->
-        <!-- <li class="side-nav-item">
+        <li class="side-nav-item">
             <a data-bs-toggle="collapse" href="#sidebarUsers" aria-expanded="false" aria-controls="sidebarUsers" class="side-nav-link">
                 <span class="menu-icon"><i class="ti ti-users"></i></span>
-                <span class="menu-text">Users</span>
+                <span class="menu-text">User Management</span>
                 <span class="menu-arrow"></span>
             </a>
             <div class="collapse" id="sidebarUsers">
                 <ul class="sub-menu">
                     <li class="side-nav-item">
-                        <a href="users.php" class="side-nav-link">
+                        <a href="user_management.php" class="side-nav-link">
                             <span class="menu-text">All Users</span>
                         </a>
                     </li>
                     <li class="side-nav-item">
-                        <a href="admin_view.php" class="side-nav-link">
-                            <span class="menu-text">All Admins</span>
+                        <a href="bad_users.php" class="side-nav-link">
+                            <span class="menu-text">Bad Users</span>
                         </a>
                     </li>
                     <li class="side-nav-item">
@@ -115,7 +121,7 @@
                     </li>
                 </ul>
             </div>
-        </li> -->
+        </li>
 
         <!-- Trainers Management -->
         <!-- <li class="side-nav-item">
@@ -342,7 +348,7 @@
         <li class="side-nav-item">
             <a href="workshop_questions.php" class="side-nav-link">
                 <span class="menu-icon"><i class="ti ti-list-check"></i></span>
-                <span class="menu-text">Workshop Questions</span>
+                <span class="menu-text">Ai MCQ Panel</span>
             </a>
         </li>
 

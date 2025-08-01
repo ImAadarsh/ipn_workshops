@@ -26,13 +26,14 @@ $params = [];
 $param_types = '';
 
 if (!empty($search)) {
-    $where_conditions[] = "(ip.buyer_name LIKE ? OR ip.buyer_email LIKE ? OR ip.buyer_phone LIKE ? OR ip.payment_id LIKE ?)";
+    $where_conditions[] = "(ip.buyer_name LIKE ? OR ip.buyer_email LIKE ? OR ip.buyer_phone LIKE ? OR ip.payment_id LIKE ? OR ip.link_name LIKE ?)";
     $search_param = "%$search%";
     $params[] = $search_param;
     $params[] = $search_param;
     $params[] = $search_param;
     $params[] = $search_param;
-    $param_types .= 'ssss';
+    $params[] = $search_param;
+    $param_types .= 'sssss';
 }
 
 if (!empty($status_filter)) {
@@ -42,7 +43,7 @@ if (!empty($status_filter)) {
 }
 
 if (!empty($date_filter)) {
-    $where_conditions[] = "DATE(ip.created_at) = ?";
+    $where_conditions[] = "DATE(CONVERT_TZ(ip.created_at, '+00:00', '+05:30')) = ?";
     $params[] = $date_filter;
     $param_types .= 's';
 }
@@ -67,12 +68,11 @@ $total_pages = ceil($total_count / $per_page);
 
 // Fetch payments
 $payments_sql = "SELECT ip.*, il.link_name, il.workshop_ids,
-                 GROUP_CONCAT(w.name ORDER BY w.start_date ASC SEPARATOR '|') as workshop_names
+                 CONVERT_TZ(ip.created_at, '+00:00', '+05:30') as created_at_ist,
+                 CONVERT_TZ(ip.updated_at, '+00:00', '+05:30') as updated_at_ist
                  FROM instamojo_payments ip 
                  LEFT JOIN instamojo_links il ON ip.link_id = il.id 
-                 LEFT JOIN workshops w ON FIND_IN_SET(w.id, il.workshop_ids)
                  $where_clause
-                 GROUP BY ip.id
                  ORDER BY ip.created_at DESC 
                  LIMIT ? OFFSET ?";
 
@@ -131,7 +131,7 @@ include 'includes/head.php';
                                     <label class="form-label">Search</label>
                                     <input type="text" class="form-control" name="search" 
                                            value="<?php echo htmlspecialchars($search); ?>" 
-                                           placeholder="Search by name, email, phone, or payment ID">
+                                           placeholder="Search by name, email, phone, payment ID, or link name">
                                 </div>
                                 <div class="col-md-3">
                                     <label class="form-label">Status</label>
@@ -143,7 +143,7 @@ include 'includes/head.php';
                                     </select>
                                 </div>
                                 <div class="col-md-3">
-                                    <label class="form-label">Date</label>
+                                    <label class="form-label">Date (IST)</label>
                                     <input type="date" class="form-control" name="date" 
                                            value="<?php echo htmlspecialchars($date_filter); ?>">
                                 </div>
@@ -172,7 +172,7 @@ include 'includes/head.php';
                 <?php echo $total_count; ?> payment(s) found
                 <?php if (!empty($search)): ?> • Search: "<?php echo htmlspecialchars($search); ?>"<?php endif; ?>
                 <?php if (!empty($status_filter)): ?> • Status: <?php echo ucfirst($status_filter); ?><?php endif; ?>
-                <?php if (!empty($date_filter)): ?> • Date: <?php echo $date_filter; ?><?php endif; ?>
+                <?php if (!empty($date_filter)): ?> • Date: <?php echo $date_filter; ?> (IST)<?php endif; ?>
             </div>
             <?php endif; ?>
 
@@ -191,15 +191,15 @@ include 'includes/head.php';
                                 </div>
                             <?php else: ?>
                                 <div class="table-responsive">
-                                    <table class="table table-bordered table-hover">
+                                    <table class="table table-bordered table-hover" id="paymentsTable">
                                         <thead class="table-light">
                                             <tr>
                                                 <th>Payment ID</th>
                                                 <th>Buyer Information</th>
-                                                <th>Link & Workshops</th>
+                                                <th>Link Name</th>
                                                 <th>Amount</th>
                                                 <th>Status</th>
-                                                <th>Date</th>
+                                                <th>Date (IST)</th>
                                                 <th>Actions</th>
                                             </tr>
                                         </thead>
@@ -223,16 +223,12 @@ include 'includes/head.php';
                                                     </td>
                                                     <td>
                                                         <div>
-                                                            <strong><?php echo htmlspecialchars($payment['link_name']); ?></strong>
-                                                            <?php if (!empty($workshop_names)): ?>
-                                                                <div class="mt-1">
-                                                                    <?php foreach ($workshop_names as $workshop_name): ?>
-                                                                        <?php if (!empty($workshop_name)): ?>
-                                                                            <span class="badge bg-primary me-1"><?php echo htmlspecialchars($workshop_name); ?></span>
-                                                                        <?php endif; ?>
-                                                                    <?php endforeach; ?>
-                                                                </div>
-                                                            <?php endif; ?>
+                                                            <a href="#" class="text-primary fw-bold" 
+                                                               onclick="viewLinkWorkshops(<?php echo $payment['link_id']; ?>, '<?php echo htmlspecialchars($payment['workshop_ids']); ?>')"
+                                                               title="View Workshops">
+                                                                <?php echo htmlspecialchars($payment['link_name']); ?>
+                                                                <i class="ti ti-external-link ms-1"></i>
+                                                            </a>
                                                         </div>
                                                     </td>
                                                     <td>
@@ -248,8 +244,8 @@ include 'includes/head.php';
                                                     </td>
                                                     <td>
                                                         <div>
-                                                            <div><?php echo date('d M Y', strtotime($payment['created_at'])); ?></div>
-                                                            <small class="text-muted"><?php echo date('h:i A', strtotime($payment['created_at'])); ?></small>
+                                                            <div><?php echo date('d M Y', strtotime($payment['created_at_ist'])); ?></div>
+                                                            <small class="text-muted"><?php echo date('h:i A', strtotime($payment['created_at_ist'])); ?></small>
                                                         </div>
                                                     </td>
                                                     <td>
@@ -328,9 +324,54 @@ include 'includes/head.php';
     </div>
 </div>
 
+<!-- Link Workshops Modal -->
+<div class="modal fade" id="linkWorkshopsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Workshops in Link</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="linkWorkshopsContent">
+                <!-- Content will be loaded here -->
+            </div>
+        </div>
+    </div>
+</div>
+
 <?php include 'includes/footer.php'; ?>
 
+<!-- DataTables CSS and JS -->
+<link rel="stylesheet" type="text/css" href="assets/vendor/datatables.net-bs5/css/dataTables.bootstrap5.min.css">
+<script type="text/javascript" src="assets/vendor/datatables.net/js/dataTables.min.js"></script>
+<script type="text/javascript" src="assets/vendor/datatables.net-bs5/js/dataTables.bootstrap5.min.js"></script>
+
 <script>
+$(document).ready(function() {
+    // Initialize DataTable
+    $('#paymentsTable').DataTable({
+        "pageLength": 20,
+        "order": [[5, "desc"]], // Sort by date column (index 5) in descending order
+        "language": {
+            "search": "Search:",
+            "lengthMenu": "Show _MENU_ entries per page",
+            "info": "Showing _START_ to _END_ of _TOTAL_ entries",
+            "infoEmpty": "Showing 0 to 0 of 0 entries",
+            "infoFiltered": "(filtered from _MAX_ total entries)",
+            "paginate": {
+                "first": "First",
+                "last": "Last",
+                "next": "Next",
+                "previous": "Previous"
+            }
+        },
+        "dom": '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>' +
+               '<"row"<"col-sm-12"tr>>' +
+               '<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
+        "responsive": true
+    });
+});
+
 function viewPaymentDetails(paymentId) {
     const modal = new bootstrap.Modal(document.getElementById('paymentDetailsModal'));
     const content = document.getElementById('paymentDetailsContent');
@@ -348,6 +389,24 @@ function viewPaymentDetails(paymentId) {
             content.innerHTML = '<div class="alert alert-danger">Error loading payment details.</div>';
         });
 }
+
+function viewLinkWorkshops(linkId, workshopIds) {
+    const modal = new bootstrap.Modal(document.getElementById('linkWorkshopsModal'));
+    const content = document.getElementById('linkWorkshopsContent');
+    
+    content.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"></div><p>Loading workshops...</p></div>';
+    modal.show();
+    
+    // Load workshop details via AJAX
+    fetch(`get_link_workshops.php?workshop_ids=${encodeURIComponent(workshopIds)}&link_id=${linkId}`)
+        .then(response => response.text())
+        .then(data => {
+            content.innerHTML = data;
+        })
+        .catch(error => {
+            content.innerHTML = '<div class="alert alert-danger">Error loading workshop details.</div>';
+        });
+}
 </script>
 
 <style>
@@ -363,6 +422,38 @@ function viewPaymentDetails(paymentId) {
 
 .badge {
     font-size: 0.75rem;
+}
+
+/* DataTables customization */
+.dataTables_wrapper .dataTables_length select {
+    min-width: 80px;
+}
+
+.dataTables_wrapper .dataTables_filter input {
+    min-width: 200px;
+}
+
+.dataTables_wrapper .dataTables_info {
+    padding-top: 10px;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button {
+    padding: 5px 10px;
+    margin: 0 2px;
+    border: 1px solid #dee2e6;
+    background-color: #fff;
+    color: #007bff;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+    background-color: #e9ecef;
+    border-color: #007bff;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button.current {
+    background-color: #007bff;
+    border-color: #007bff;
+    color: #fff;
 }
 </style>
 

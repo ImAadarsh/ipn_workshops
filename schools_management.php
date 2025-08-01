@@ -72,6 +72,84 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 header("Location: schools_management.php");
                 exit();
                 break;
+
+            case 'create_school':
+                $school_name = trim($_POST['school_name']);
+                $school_email = trim($_POST['school_email']);
+                $school_mobile = trim($_POST['school_mobile']);
+                $school_password = trim($_POST['school_password']);
+                $b2c2b_status = intval($_POST['b2c2b_status']);
+                $is_active = intval($_POST['is_active']);
+                
+                // Validate required fields
+                if (empty($school_name) || empty($school_email) || empty($school_mobile) || empty($school_password)) {
+                    $_SESSION['error_message'] = "All fields are required!";
+                    header("Location: schools_management.php");
+                    exit();
+                }
+                
+                // Validate email format
+                if (!filter_var($school_email, FILTER_VALIDATE_EMAIL)) {
+                    $_SESSION['error_message'] = "Invalid email format!";
+                    header("Location: schools_management.php");
+                    exit();
+                }
+                
+                // Validate mobile number (basic validation)
+                if (!preg_match('/^[0-9]{10}$/', $school_mobile)) {
+                    $_SESSION['error_message'] = "Mobile number must be 10 digits!";
+                    header("Location: schools_management.php");
+                    exit();
+                }
+                
+                // Check if email already exists
+                $check_query = "SELECT id FROM schools WHERE email = ?";
+                $stmt = mysqli_prepare($conn, $check_query);
+                mysqli_stmt_bind_param($stmt, "s", $school_email);
+                mysqli_stmt_execute($stmt);
+                $result = mysqli_stmt_get_result($stmt);
+                
+                if (mysqli_num_rows($result) > 0) {
+                    $_SESSION['error_message'] = "Email already exists for another school!";
+                    header("Location: schools_management.php");
+                    exit();
+                }
+                
+                // Check if mobile already exists
+                $check_mobile_query = "SELECT id FROM schools WHERE mobile = ?";
+                $stmt = mysqli_prepare($conn, $check_mobile_query);
+                mysqli_stmt_bind_param($stmt, "s", $school_mobile);
+                mysqli_stmt_execute($stmt);
+                $result = mysqli_stmt_get_result($stmt);
+                
+                if (mysqli_num_rows($result) > 0) {
+                    $_SESSION['error_message'] = "Mobile number already exists for another school!";
+                    header("Location: schools_management.php");
+                    exit();
+                }
+                
+                // Hash the password
+                $hashed_password = password_hash($school_password, PASSWORD_DEFAULT);
+                
+                // Generate unique token and coupon prefix
+                $token = bin2hex(random_bytes(16));
+                $coupon_prefix = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $school_name), 0, 3)) . rand(100, 999);
+                
+                // Insert new school
+                $insert_query = "INSERT INTO schools (name, email, password, mobile, is_active, token, coupon_prefix, b2c2b, created_at, updated_at) 
+                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())";
+                $stmt = mysqli_prepare($conn, $insert_query);
+                mysqli_stmt_bind_param($stmt, "ssssisss", $school_name, $school_email, $hashed_password, $school_mobile, $is_active, $token, $coupon_prefix, $b2c2b_status);
+                
+                if (mysqli_stmt_execute($stmt)) {
+                    $_SESSION['success_message'] = "School created successfully! School ID: " . mysqli_insert_id($conn);
+                } else {
+                    $_SESSION['error_message'] = "Error creating school: " . mysqli_error($conn);
+                }
+                
+                header("Location: schools_management.php");
+                exit();
+                break;
         }
     }
 }
@@ -163,6 +241,9 @@ $schools = mysqli_fetch_all($result, MYSQLI_ASSOC);
                     <a href="https://schools.ipnacademy.in/" target="_blank" class="btn btn-info btn-sm ms-3">
                         <i class="ti ti-external-link me-1"></i>School Portal
                     </a>
+                    <button type="button" class="btn btn-success btn-sm ms-2" data-bs-toggle="modal" data-bs-target="#createSchoolModal">
+                        <i class="ti ti-plus me-1"></i>Create New School
+                    </button>
                 </h4>
             </div>
         </div>
@@ -482,6 +563,102 @@ $schools = mysqli_fetch_all($result, MYSQLI_ASSOC);
         </div>
     </div>
 </div>
+
+<!-- Create New School Modal -->
+<div class="modal fade" id="createSchoolModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form method="POST" id="createSchoolForm">
+                <input type="hidden" name="action" value="create_school">
+                <div class="modal-header">
+                    <h5 class="modal-title">Create New School</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">School Name *</label>
+                                <input type="text" name="school_name" class="form-control" required 
+                                       placeholder="Enter school name">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Email Address *</label>
+                                <input type="email" name="school_email" class="form-control" required 
+                                       placeholder="school@example.com">
+                                <small class="text-muted">This will be used as the username for login</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Mobile Number *</label>
+                                <input type="text" name="school_mobile" class="form-control" required 
+                                       placeholder="10 digit mobile number" maxlength="10" pattern="[0-9]{10}">
+                                <small class="text-muted">Must be 10 digits</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Password *</label>
+                                <div class="input-group">
+                                    <input type="text" name="school_password" id="school_password" class="form-control" required 
+                                           value="1@IPNACADEMY" placeholder="Enter password">
+                                    <button type="button" class="btn btn-outline-secondary" onclick="generatePassword()">
+                                        <i class="ti ti-refresh"></i>
+                                    </button>
+                                </div>
+                                <small class="text-muted">Default: 1@IPNACADEMY</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">B2C2B Status</label>
+                                <select name="b2c2b_status" class="form-control">
+                                    <option value="0">No (B2B Only)</option>
+                                    <option value="1">Yes (B2C2B Enabled)</option>
+                                </select>
+                                <small class="text-muted">B2C2B allows schools to enroll individual students</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Status</label>
+                                <select name="is_active" class="form-control">
+                                    <option value="1">Active</option>
+                                    <option value="0">Inactive</option>
+                                </select>
+                                <small class="text-muted">Active schools can access the portal</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="alert alert-info">
+                        <h6 class="alert-heading">
+                            <i class="ti ti-info-circle me-2"></i>
+                            Auto-Generated Fields
+                        </h6>
+                        <ul class="mb-0">
+                            <li><strong>Token:</strong> Unique authentication token</li>
+                            <li><strong>Coupon Prefix:</strong> Based on school name (e.g., ABC123)</li>
+                            <li><strong>Created/Updated:</strong> Automatic timestamps</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="ti ti-plus me-1"></i>Create School
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 </div>
 
 <!-- DataTables js -->
@@ -524,6 +701,45 @@ function editPassword(schoolId, schoolName) {
     $('#password_school_name').text(schoolName);
     $('#editPasswordModal').modal('show');
 }
+
+// Function to generate random password
+function generatePassword() {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@#$%^&*';
+    let password = '';
+    for (let i = 0; i < 12; i++) {
+        password += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    document.getElementById('school_password').value = password;
+}
+
+// Form validation for create school
+$(document).ready(function() {
+    $('#createSchoolForm').on('submit', function(e) {
+        const mobile = $('input[name="school_mobile"]').val();
+        const email = $('input[name="school_email"]').val();
+        
+        // Validate mobile number
+        if (!/^[0-9]{10}$/.test(mobile)) {
+            alert('Mobile number must be exactly 10 digits!');
+            e.preventDefault();
+            return false;
+        }
+        
+        // Validate email format
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            alert('Please enter a valid email address!');
+            e.preventDefault();
+            return false;
+        }
+        
+        // Confirm creation
+        if (!confirm('Are you sure you want to create this school?')) {
+            e.preventDefault();
+            return false;
+        }
+    });
+});
 </script>
 
 <?php require_once 'includes/footer.php'; ?> 

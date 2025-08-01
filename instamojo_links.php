@@ -233,12 +233,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     exit();
 }
 
-// Handle delete payment link
+// Handle soft delete payment link (disable on Instamojo)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'delete_link') {
     $link_id = intval($_POST['link_id']);
     
     // Get the payment request details from our database
-    $get_link_sql = "SELECT instamojo_link_id FROM instamojo_links WHERE id = ?";
+    $get_link_sql = "SELECT instamojo_link_id FROM instamojo_links WHERE id = ? AND is_deleted = 0";
     $get_link_stmt = mysqli_prepare($conn, $get_link_sql);
     mysqli_stmt_bind_param($get_link_stmt, "i", $link_id);
     mysqli_stmt_execute($get_link_stmt);
@@ -251,30 +251,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $access_token = getInstamojoAccessToken($instamojo_client_id, $instamojo_client_secret, $instamojo_oauth_url);
         
         if ($access_token) {
-            // Delete the payment request on Instamojo
-            $instamojo_result = deleteInstamojoPaymentRequest(
+            // Disable the payment request on Instamojo instead of deleting
+            $instamojo_result = updateInstamojoPaymentRequest(
                 $link_data['instamojo_link_id'], 
+                'inactive', 
                 $access_token, 
                 $instamojo_base_url
             );
             
             if ($instamojo_result['success']) {
-                // Delete from our database
-                $sql = "DELETE FROM instamojo_links WHERE id = ?";
+                // Soft delete from our database (set is_deleted = 1)
+                $sql = "UPDATE instamojo_links SET is_deleted = 1, updated_at = NOW() WHERE id = ?";
                 $stmt = mysqli_prepare($conn, $sql);
                 mysqli_stmt_bind_param($stmt, "i", $link_id);
                 
                 if (mysqli_stmt_execute($stmt)) {
-                    $_SESSION['success_message'] = "Payment link deleted successfully from both Instamojo and database!";
+                    $_SESSION['success_message'] = "Payment link disabled on Instamojo and removed from database!";
                 } else {
-                    $_SESSION['error_message'] = "Link deleted from Instamojo but failed to delete from database.";
+                    $_SESSION['error_message'] = "Link disabled on Instamojo but failed to update database.";
                 }
                 mysqli_stmt_close($stmt);
             } else {
-                $_SESSION['error_message'] = "Failed to delete link on Instamojo. HTTP Code: " . $instamojo_result['http_code'];
+                $_SESSION['error_message'] = "Failed to disable link on Instamojo. HTTP Code: " . $instamojo_result['http_code'];
                 if ($instamojo_result['curl_error']) {
                     $_SESSION['error_message'] .= ", Error: " . $instamojo_result['curl_error'];
                 }
+                $_SESSION['error_message'] .= "<br><strong>Payment Request ID:</strong> " . $link_data['instamojo_link_id'];
+                $_SESSION['error_message'] .= "<br><strong>Response:</strong> " . $instamojo_result['response'];
             }
         } else {
             $_SESSION['error_message'] = "Failed to get Instamojo access token. Please check your API credentials.";
@@ -284,19 +287,100 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
 }
 
-// Fetch existing links with workshop details
-$links_sql = "SELECT il.*, 
-              GROUP_CONCAT(w.name ORDER BY w.start_date ASC SEPARATOR '|') as workshop_names,
-              GROUP_CONCAT(w.start_date ORDER BY w.start_date ASC SEPARATOR '|') as workshop_dates
+// Pagination
+$page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
+$per_page = 20;
+$offset = ($page - 1) * $per_page;
+
+// Search and filters
+$search = isset($_GET['search']) ? trim($_GET['search']) : '';
+$status_filter = isset($_GET['status']) ? $_GET['status'] : '';
+$date_filter = isset($_GET['date']) ? $_GET['date'] : '';
+$amount_filter = isset($_GET['amount']) ? $_GET['amount'] : '';
+
+// Build query
+$where_conditions = ["il.is_deleted = 0"]; // Only show non-deleted links
+$params = [];
+$param_types = '';
+
+if (!empty($search)) {
+    $where_conditions[] = "(il.link_name LIKE ? OR il.instamojo_link_id LIKE ?)";
+    $search_param = "%$search%";
+    $params[] = $search_param;
+    $params[] = $search_param;
+    $param_types .= 'ss';
+}
+
+if (!empty($status_filter)) {
+    $where_conditions[] = "il.status = ?";
+    $params[] = $status_filter;
+    $param_types .= 's';
+}
+
+if (!empty($date_filter)) {
+    $where_conditions[] = "DATE(il.created_at) = ?";
+    $params[] = $date_filter;
+    $param_types .= 's';
+}
+
+if (!empty($amount_filter)) {
+    switch ($amount_filter) {
+        case '0-100':
+            $where_conditions[] = "il.amount BETWEEN 0 AND 100";
+            break;
+        case '100-500':
+            $where_conditions[] = "il.amount BETWEEN 100 AND 500";
+            break;
+        case '500-1000':
+            $where_conditions[] = "il.amount BETWEEN 500 AND 1000";
+            break;
+        case '1000+':
+            $where_conditions[] = "il.amount >= 1000";
+            break;
+    }
+}
+
+$where_clause = 'WHERE ' . implode(' AND ', $where_conditions);
+
+// Get total count
+$count_sql = "SELECT COUNT(*) as total FROM instamojo_links il $where_clause";
+if (!empty($params)) {
+    $count_stmt = mysqli_prepare($conn, $count_sql);
+    mysqli_stmt_bind_param($count_stmt, $param_types, ...$params);
+    mysqli_stmt_execute($count_stmt);
+    $count_result = mysqli_stmt_get_result($count_stmt);
+    $total_count = mysqli_fetch_assoc($count_result)['total'];
+    mysqli_stmt_close($count_stmt);
+} else {
+    $count_result = mysqli_query($conn, $count_sql);
+    $total_count = mysqli_fetch_assoc($count_result)['total'];
+}
+
+$total_pages = ceil($total_count / $per_page);
+
+// Fetch existing links
+$links_sql = "SELECT il.*, il.workshop_ids
               FROM instamojo_links il
-              LEFT JOIN workshops w ON FIND_IN_SET(w.id, il.workshop_ids)
-              GROUP BY il.id
-              ORDER BY il.created_at DESC";
-$links_result = mysqli_query($conn, $links_sql);
+              $where_clause
+              ORDER BY il.created_at DESC 
+              LIMIT ? OFFSET ?";
+$links_stmt = mysqli_prepare($conn, $links_sql);
+if (!empty($params)) {
+    $params[] = $per_page;
+    $params[] = $offset;
+    $param_types .= 'ii';
+    mysqli_stmt_bind_param($links_stmt, $param_types, ...$params);
+} else {
+    mysqli_stmt_bind_param($links_stmt, 'ii', $per_page, $offset);
+}
+
+mysqli_stmt_execute($links_stmt);
+$links_result = mysqli_stmt_get_result($links_stmt);
 $links = [];
 while ($row = mysqli_fetch_assoc($links_result)) {
     $links[] = $row;
 }
+mysqli_stmt_close($links_stmt);
 
 $page_title = "Payment Links";
 include 'includes/head.php';
@@ -338,7 +422,70 @@ include 'includes/head.php';
                 <?php unset($_SESSION['error_message']); ?>
             <?php endif; ?>
 
+            <!-- Filters -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-body">
+                            <form method="GET" action="" class="row g-3">
+                                <div class="col-md-3">
+                                    <label class="form-label">Search</label>
+                                    <input type="text" class="form-control" name="search" 
+                                           value="<?php echo htmlspecialchars($search); ?>" 
+                                           placeholder="Search by link name or Instamojo ID">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">Status</label>
+                                    <select class="form-select" name="status">
+                                        <option value="">All Status</option>
+                                        <option value="active" <?php echo $status_filter === 'active' ? 'selected' : ''; ?>>Active</option>
+                                        <option value="inactive" <?php echo $status_filter === 'inactive' ? 'selected' : ''; ?>>Inactive</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">Date</label>
+                                    <input type="date" class="form-control" name="date" 
+                                           value="<?php echo htmlspecialchars($date_filter); ?>">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">Amount Range</label>
+                                    <select class="form-select" name="amount">
+                                        <option value="">All Amounts</option>
+                                        <option value="0-100" <?php echo $amount_filter === '0-100' ? 'selected' : ''; ?>>₹0 - ₹100</option>
+                                        <option value="100-500" <?php echo $amount_filter === '100-500' ? 'selected' : ''; ?>>₹100 - ₹500</option>
+                                        <option value="500-1000" <?php echo $amount_filter === '500-1000' ? 'selected' : ''; ?>>₹500 - ₹1000</option>
+                                        <option value="1000+" <?php echo $amount_filter === '1000+' ? 'selected' : ''; ?>>₹1000+</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">&nbsp;</label>
+                                    <div class="d-flex gap-2">
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="ti ti-search me-1"></i> Filter
+                                        </button>
+                                        <a href="instamojo_links.php" class="btn btn-outline-secondary">
+                                            <i class="ti ti-refresh me-1"></i> Clear
+                                        </a>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
+            <!-- Results Summary -->
+            <?php if (!empty($search) || !empty($status_filter) || !empty($date_filter) || !empty($amount_filter)): ?>
+            <div class="alert alert-info mb-3">
+                <i class="ti ti-info-circle me-1"></i>
+                <strong>Filtered Results:</strong> 
+                <?php echo $total_count; ?> link(s) found
+                <?php if (!empty($search)): ?> • Search: "<?php echo htmlspecialchars($search); ?>"<?php endif; ?>
+                <?php if (!empty($status_filter)): ?> • Status: <?php echo ucfirst($status_filter); ?><?php endif; ?>
+                <?php if (!empty($date_filter)): ?> • Date: <?php echo $date_filter; ?><?php endif; ?>
+                <?php if (!empty($amount_filter)): ?> • Amount: <?php echo $amount_filter; ?><?php endif; ?>
+            </div>
+            <?php endif; ?>
 
             <!-- Payment Links -->
             <div class="row">
@@ -362,7 +509,6 @@ include 'includes/head.php';
                                         <thead class="table-light">
                                             <tr>
                                                 <th>Link Name</th>
-                                                <th>Workshops</th>
                                                 <th>Amount</th>
                                                 <th>Status</th>
                                                 <th>Created</th>
@@ -371,29 +517,18 @@ include 'includes/head.php';
                                         </thead>
                                         <tbody>
                                             <?php foreach ($links as $link): ?>
-                                                <?php 
-                                                $workshop_names = explode('|', $link['workshop_names']);
-                                                $workshop_dates = explode('|', $link['workshop_dates']);
-                                                ?>
                                                 <tr>
                                                     <td>
                                                         <div>
-                                                            <strong><?php echo htmlspecialchars($link['link_name']); ?></strong>
+                                                            <a href="#" class="text-primary fw-bold" 
+                                                               onclick="viewLinkWorkshops(<?php echo $link['id']; ?>, '<?php echo htmlspecialchars($link['workshop_ids']); ?>')"
+                                                               title="View Workshops">
+                                                                <?php echo htmlspecialchars($link['link_name']); ?>
+                                                                <i class="ti ti-external-link ms-1"></i>
+                                                            </a>
                                                             <?php if ($link['instamojo_link_id']): ?>
-                                                                <!-- <br><small class="text-muted">Instamojo ID: <?php echo htmlspecialchars($link['instamojo_link_id']); ?></small> -->
+                                                                <br><small class="text-muted">ID: <?php echo htmlspecialchars($link['instamojo_link_id']); ?></small>
                                                             <?php endif; ?>
-                                                        </div>
-                                                    </td>
-                                                    <td>
-                                                        <div class="workshop-list">
-                                                            <?php for ($i = 0; $i < count($workshop_names); $i++): ?>
-                                                                <?php if (!empty($workshop_names[$i])): ?>
-                                                                    <div class="workshop-item mb-1">
-                                                                        <span class="badge bg-primary me-1"><?php echo htmlspecialchars($workshop_names[$i]); ?></span>
-                                                                        <small class="text-muted"><?php echo date('d M Y', strtotime($workshop_dates[$i])); ?></small>
-                                                                    </div>
-                                                                <?php endif; ?>
-                                                            <?php endfor; ?>
                                                         </div>
                                                     </td>
                                                     <td>
@@ -461,10 +596,58 @@ include 'includes/head.php';
                                         </tbody>
                                     </table>
                                 </div>
+
+                                <!-- Pagination -->
+                                <?php if ($total_pages > 1): ?>
+                                <div class="d-flex justify-content-center mt-4">
+                                    <nav>
+                                        <ul class="pagination">
+                                            <?php if ($page > 1): ?>
+                                                <li class="page-item">
+                                                    <a class="page-link" href="?page=<?php echo $page - 1; ?>&search=<?php echo urlencode($search); ?>&status=<?php echo urlencode($status_filter); ?>&date=<?php echo urlencode($date_filter); ?>&amount=<?php echo urlencode($amount_filter); ?>">
+                                                        Previous
+                                                    </a>
+                                                </li>
+                                            <?php endif; ?>
+                                            
+                                            <?php for ($i = max(1, $page - 2); $i <= min($total_pages, $page + 2); $i++): ?>
+                                                <li class="page-item <?php echo $i === $page ? 'active' : ''; ?>">
+                                                    <a class="page-link" href="?page=<?php echo $i; ?>&search=<?php echo urlencode($search); ?>&status=<?php echo urlencode($status_filter); ?>&date=<?php echo urlencode($date_filter); ?>&amount=<?php echo urlencode($amount_filter); ?>">
+                                                        <?php echo $i; ?>
+                                                    </a>
+                                                </li>
+                                            <?php endfor; ?>
+                                            
+                                            <?php if ($page < $total_pages): ?>
+                                                <li class="page-item">
+                                                    <a class="page-link" href="?page=<?php echo $page + 1; ?>&search=<?php echo urlencode($search); ?>&status=<?php echo urlencode($status_filter); ?>&date=<?php echo urlencode($date_filter); ?>&amount=<?php echo urlencode($amount_filter); ?>">
+                                                        Next
+                                                    </a>
+                                                </li>
+                                            <?php endif; ?>
+                                        </ul>
+                                    </nav>
+                                </div>
+                                <?php endif; ?>
                             <?php endif; ?>
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Link Workshops Modal -->
+<div class="modal fade" id="linkWorkshopsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Workshops in Link</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="linkWorkshopsContent">
+                <!-- Content will be loaded here -->
             </div>
         </div>
     </div>
@@ -500,7 +683,7 @@ function copyToClipboard(text) {
 }
 
 function deletePaymentLink(linkId, linkName) {
-    if (confirm(`Are you sure you want to delete the payment link "${linkName}"?\n\nThis action will:\n• Delete the link from Instamojo\n• Remove it from your database\n• This action cannot be undone!`)) {
+    if (confirm(`Are you sure you want to delete the payment link "${linkName}"?\n\nThis action will:\n• Disable the link on Instamojo\n• Mark it as deleted in your database (soft delete)\n• This action cannot be undone!`)) {
         // Create a form and submit it
         const form = document.createElement('form');
         form.method = 'POST';
@@ -551,6 +734,24 @@ function updateLocalOnly(linkId, newStatus) {
         document.body.appendChild(form);
         form.submit();
     }
+}
+
+function viewLinkWorkshops(linkId, workshopIds) {
+    const modal = new bootstrap.Modal(document.getElementById('linkWorkshopsModal'));
+    const content = document.getElementById('linkWorkshopsContent');
+    
+    content.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"></div><p>Loading workshops...</p></div>';
+    modal.show();
+    
+    // Load workshop details via AJAX
+    fetch(`get_link_workshops.php?workshop_ids=${encodeURIComponent(workshopIds)}&link_id=${linkId}`)
+        .then(response => response.text())
+        .then(data => {
+            content.innerHTML = data;
+        })
+        .catch(error => {
+            content.innerHTML = '<div class="alert alert-danger">Error loading workshop details.</div>';
+        });
 }
 </script>
 

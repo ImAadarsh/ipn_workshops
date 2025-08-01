@@ -63,7 +63,7 @@ switch ($type) {
         break;
         
     case 'platform':
-        // Platform enrolled users (B2C users with valid payments)
+        // Platform enrolled users (B2C users with valid payments, excluding Instamojo)
         $sql = "SELECT DISTINCT u.id, u.name, u.email, u.mobile, u.institute_name, p.payment_id
                 FROM payments p
                 INNER JOIN users u ON p.user_id = u.id
@@ -79,6 +79,19 @@ switch ($type) {
                 AND p.payment_id NOT LIKE '%B2B-ENRL%'
                 AND p.payment_id IS NOT NULL 
                 AND p.payment_id != ''
+                AND p.instamojo_upload != 1
+                ORDER BY u.name ASC";
+        break;
+        
+    case 'instamojo':
+        // Instamojo payment users
+        $sql = "SELECT DISTINCT u.id, u.name, u.email, u.mobile, u.institute_name, p.payment_id
+                FROM payments p
+                INNER JOIN users u ON p.user_id = u.id
+                WHERE p.workshop_id = ? 
+                AND p.payment_status = 1 
+                AND p.school_id IS NULL 
+                AND p.instamojo_upload = 1
                 ORDER BY u.name ASC";
         break;
         

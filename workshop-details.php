@@ -29,6 +29,7 @@ $workshopStats = [
     'b2c' => 0,
     'b2c2b' => 0,
     'platform_enrolled' => 0,
+    'instamojo_payments' => 0,
     'total_users' => 0,
     'mail_sent' => 0
 ];
@@ -58,7 +59,7 @@ if ($workshop) {
         }
     }
     
-    // Get B2C users with valid platform enrollments (excluding certain payment types)
+    // Get B2C users with valid platform enrollments (excluding certain payment types and Instamojo)
     $sql = "SELECT COUNT(DISTINCT p.user_id) as platform_count 
             FROM payments p 
             WHERE p.workshop_id = $workshop_id 
@@ -72,10 +73,23 @@ if ($workshop) {
             AND p.payment_id NOT LIKE '%G-Form-Paid%' 
             AND p.payment_id NOT LIKE '%B2B-ENRL%'
             AND p.payment_id IS NOT NULL 
-            AND p.payment_id != ''";
+            AND p.payment_id != ''
+            AND p.instamojo_upload != 1";
     $result = mysqli_query($conn, $sql);
     if ($result && $row = mysqli_fetch_assoc($result)) {
         $workshopStats['platform_enrolled'] = $row['platform_count'];
+    }
+    
+    // Get Instamojo payments count
+    $sql = "SELECT COUNT(DISTINCT p.user_id) as instamojo_count 
+            FROM payments p 
+            WHERE p.workshop_id = $workshop_id 
+            AND p.payment_status = 1 
+            AND p.school_id IS NULL 
+            AND p.instamojo_upload = 1";
+    $result = mysqli_query($conn, $sql);
+    if ($result && $row = mysqli_fetch_assoc($result)) {
+        $workshopStats['instamojo_payments'] = $row['instamojo_count'];
     }
     
     // Calculate total users (B2B + B2C)
@@ -115,6 +129,64 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <?php include 'includes/head.php'; ?>
     <!-- jQuery must be loaded before other scripts -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    
+    <!-- Custom CSS for enhanced design -->
+    <style>
+        .bg-gradient-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .bg-gradient-success {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        }
+        .hover-shadow:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important;
+        }
+        .card {
+            border-radius: 12px;
+        }
+        .card-header {
+            border-radius: 12px 12px 0 0 !important;
+        }
+        .btn {
+            border-radius: 8px;
+            font-weight: 500;
+        }
+        .badge {
+            border-radius: 6px;
+        }
+        .text-truncate {
+            max-width: 200px;
+        }
+        .stat-card {
+            transition: all 0.3s ease;
+            min-height: 80px;
+        }
+        .stat-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.12) !important;
+        }
+        .stat-card[style*="cursor: pointer"]:hover {
+            background-color: rgba(0,0,0,0.05) !important;
+        }
+        .stat-number {
+            line-height: 1.2;
+        }
+        .stat-label {
+            margin-top: 4px;
+        }
+        @media (max-width: 768px) {
+            .text-truncate {
+                max-width: 150px;
+            }
+            .stat-card {
+                min-height: 70px;
+            }
+            .stat-number {
+                font-size: 1.5rem !important;
+            }
+        }
+    </style>
 </head>
 <body>
     <div class="wrapper">
@@ -227,38 +299,64 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         </div>
 
                                         <!-- Workshop Stats -->
-                                        <div class="row mt-3">
-                                            <div class="col-md-2">
-                                                <span class="fw-bold">B2B Enrollment:</span>
-                                                <span class="badge bg-primary fs-5 ms-1" style="cursor: pointer;" onclick="showUserList('b2b', <?php echo $workshopStats['b2b'] - $workshopStats['b2c2b']; ?>)"><?php echo $workshopStats['b2b'] - $workshopStats['b2c2b']; ?></span>
-                                            </div>
-                                            <div class="col-md-2">
-                                                <span class="fw-bold">B2C Enrollment:</span>
-                                                <span class="badge bg-success fs-5 ms-1" style="cursor: pointer;" onclick="showUserList('b2c', <?php echo $workshopStats['b2c']; ?>)"><?php echo $workshopStats['b2c']; ?></span>
-                                            </div>
-                                            <div class="col-md-2">
-                                                <span class="fw-bold">B2C2B Users:</span>
-                                                <span class="badge bg-info fs-5 ms-1" style="cursor: pointer;" onclick="showUserList('b2c2b', <?php echo $workshopStats['b2c2b']; ?>)"><?php echo $workshopStats['b2c2b']; ?></span>
-                                            </div>
-                                            <div class="col-md-2">
-                                                <span class="fw-bold">Platform Enrolled:</span>
-                                                <span class="badge bg-warning text-dark fs-5 ms-1" style="cursor: pointer;" onclick="showUserList('platform', <?php echo $workshopStats['platform_enrolled']; ?>)"><?php echo $workshopStats['platform_enrolled']; ?></span>
-                                            </div>
-                                            <div class="col-md-2">
-                                                <span class="fw-bold">Total Users:</span>
-                                                <span class="badge bg-dark fs-5 ms-1"><?php echo $workshopStats['total_users']; ?></span>
-                                            </div>
-                                            <div class="col-md-2">
-                                                <span class="fw-bold">Mails Sent:</span>
-                                                <span class="badge bg-secondary fs-5 ms-1"><?php echo $workshopStats['mail_sent']; ?></span>
+                                        <div class="mt-4">
+                                            <h6 class="text-primary mb-3">
+                                                <i class="ti ti-chart-pie me-2"></i>Enrollment Statistics
+                                            </h6>
+                                            <div class="row g-3">
+                                                <div class="col-6 col-md-3">
+                                                    <div class="stat-card bg-primary-subtle border border-primary rounded-3 p-3 text-center" style="cursor: pointer;" onclick="showUserList('b2b', <?php echo $workshopStats['b2b'] - $workshopStats['b2c2b']; ?>)">
+                                                        <div class="stat-number text-primary fw-bold fs-4"><?php echo $workshopStats['b2b'] - $workshopStats['b2c2b']; ?></div>
+                                                        <div class="stat-label text-muted small">B2B Users</div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-6 col-md-3">
+                                                    <div class="stat-card bg-success-subtle border border-success rounded-3 p-3 text-center" style="cursor: pointer;" onclick="showUserList('b2c', <?php echo $workshopStats['b2c']; ?>)">
+                                                        <div class="stat-number text-success fw-bold fs-4"><?php echo $workshopStats['b2c']; ?></div>
+                                                        <div class="stat-label text-muted small">B2C Users</div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-6 col-md-3">
+                                                    <div class="stat-card bg-info-subtle border border-info rounded-3 p-3 text-center" style="cursor: pointer;" onclick="showUserList('b2c2b', <?php echo $workshopStats['b2c2b']; ?>)">
+                                                        <div class="stat-number text-info fw-bold fs-4"><?php echo $workshopStats['b2c2b']; ?></div>
+                                                        <div class="stat-label text-muted small">B2C2B Users</div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-6 col-md-3">
+                                                    <div class="stat-card bg-warning-subtle border border-warning rounded-3 p-3 text-center" style="cursor: pointer;" onclick="showUserList('platform', <?php echo $workshopStats['platform_enrolled']; ?>)">
+                                                        <div class="stat-number text-warning fw-bold fs-4"><?php echo $workshopStats['platform_enrolled']; ?></div>
+                                                        <div class="stat-label text-muted small">Platform</div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-6 col-md-3">
+                                                    <div class="stat-card bg-danger-subtle border border-danger rounded-3 p-3 text-center" style="cursor: pointer;" onclick="showUserList('instamojo', <?php echo $workshopStats['instamojo_payments']; ?>)">
+                                                        <div class="stat-number text-danger fw-bold fs-4"><?php echo $workshopStats['instamojo_payments']; ?></div>
+                                                        <div class="stat-label text-muted small">Instamojo</div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-6 col-md-3">
+                                                    <div class="stat-card bg-dark-subtle border border-dark rounded-3 p-3 text-center">
+                                                        <div class="stat-number text-dark fw-bold fs-4"><?php echo $workshopStats['total_users']; ?></div>
+                                                        <div class="stat-label text-muted small">Total Users</div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-6 col-md-3">
+                                                    <div class="stat-card bg-secondary-subtle border border-secondary rounded-3 p-3 text-center">
+                                                        <div class="stat-number text-secondary fw-bold fs-4"><?php echo $workshopStats['mail_sent']; ?></div>
+                                                        <div class="stat-label text-muted small">Mails Sent</div>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
-                                        <div class="row mt-2">
-                                            <div class="col-12">
-                                                <p style="color: red !important;" class="text-muted mb-0">
-                                                    **B2C Users (<?php echo $workshopStats['b2c']; ?>) includes Platform Enrolled Users (<?php echo $workshopStats['platform_enrolled']; ?>). 
-                                                    <br> Sum of B2B (<?php echo $workshopStats['b2b'] - $workshopStats['b2c2b']; ?>) + B2C (<?php echo $workshopStats['b2c']; ?>) + B2C2B (<?php echo $workshopStats['b2c2b']; ?>) = Total Users (<?php echo $workshopStats['total_users']; ?>).
-                                                </p>
+                                        <div class="mt-3">
+                                            <div class="alert alert-info border-0 bg-info-subtle">
+                                                <div class="d-flex align-items-start">
+                                                    <i class="ti ti-info-circle text-info me-2 mt-1"></i>
+                                                    <div class="small">
+                                                        <strong>Note:</strong> B2C Users (<?php echo $workshopStats['b2c']; ?>) includes Platform Enrolled (<?php echo $workshopStats['platform_enrolled']; ?>) + Instamojo (<?php echo $workshopStats['instamojo_payments']; ?>). 
+                                                        <br>Total calculation: B2B (<?php echo $workshopStats['b2b'] - $workshopStats['b2c2b']; ?>) + B2C (<?php echo $workshopStats['b2c']; ?>) + B2C2B (<?php echo $workshopStats['b2c2b']; ?>) = <?php echo $workshopStats['total_users']; ?> users.
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
 
@@ -669,15 +767,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 <!-- User Search and Enrollment Section -->
                 <div class="row mt-4">
-                    <!-- Schools Registered Panel (moved here, full width, bigger cards) -->
+                    <!-- Schools Registered Panel -->
                     <div class="col-12 mb-4">
-                        <div class="card">
-                            <div class="card-header">
+                        <div class="card shadow-sm border-0">
+                            <div class="card-header bg-gradient-primary text-white">
                                 <h5 class="card-title mb-0">
-                                    <i class="ti ti-building me-1"></i> Schools & Teacher Count
+                                    <i class="ti ti-building me-2"></i> Registered Schools
                                 </h5>
                             </div>
-                            <div class="card-body">
+                            <div class="card-body p-4">
                                 <div class="row g-4">
                                 <?php
                                 // Get all schools that have at least one user registered for this workshop (via payments or users table)
@@ -706,25 +804,66 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     }
                                 ?>
                                     <div class="col-12 col-md-6 col-lg-4">
-                                        <div class="card border shadow-lg h-100" style="min-height: 180px; font-size: 1.15rem;">
-                                            <div class="card-body d-flex flex-column justify-content-center align-items-start">
-                                                <div class="d-flex justify-content-between align-items-start w-100 mb-2">
-                                                    <h4 class="fw-bold mb-0"><?php echo htmlspecialchars($school['name']); ?></h4>
+                                        <div class="card h-100 border-0 shadow-sm hover-shadow" style="transition: all 0.3s ease; min-height: 200px;">
+                                            <div class="card-header bg-light border-0 py-3">
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <h6 class="fw-bold text-primary mb-0 text-truncate" title="<?php echo htmlspecialchars($school['name']); ?>">
+                                                        <?php echo htmlspecialchars($school['name']); ?>
+                                                    </h6>
                                                     <?php if ($school['b2c2b'] == 1): ?>
-                                                        <span class="badge bg-info fs-6">B2C2B</span>
+                                                        <span class="badge bg-info-subtle text-info border border-info">B2C2B</span>
                                                     <?php else: ?>
-                                                        <span class="badge bg-primary fs-6">B2B</span>
+                                                        <span class="badge bg-primary-subtle text-primary border border-primary">B2B</span>
                                                     <?php endif; ?>
                                                 </div>
-                                                <div class="mb-2"><i class="ti ti-mail me-1"></i> <span class="text-muted"><?php echo htmlspecialchars($school['email']); ?></span></div>
-                                                <div class="mb-3"><i class="ti ti-phone me-1"></i> <span class="text-muted"><?php echo htmlspecialchars($school['mobile']); ?></span></div>
-                                                <div><a href="school_teachers.php?workshop_id=<?php echo $workshop_id; ?>&school_id=<?php echo $school['id']; ?>" class="badge bg-primary fs-5 px-3 py-2" style="cursor:pointer; text-decoration:none;">Teachers: <?php echo $teacher_count; ?></a></div>
+                                            </div>
+                                            <div class="card-body d-flex flex-column justify-content-between">
+                                                <div class="mb-3">
+                                                    <div class="d-flex align-items-center mb-2">
+                                                        <i class="ti ti-mail text-muted me-2"></i>
+                                                        <small class="text-muted text-truncate" title="<?php echo htmlspecialchars($school['email']); ?>">
+                                                            <?php echo htmlspecialchars($school['email']); ?>
+                                                        </small>
+                                                    </div>
+                                                    <div class="d-flex align-items-center mb-2">
+                                                        <i class="ti ti-phone text-muted me-2"></i>
+                                                        <small class="text-muted">
+                                                            <?php echo htmlspecialchars($school['mobile']); ?>
+                                                        </small>
+                                                    </div>
+                                                    <div class="d-flex align-items-center">
+                                                        <i class="ti ti-users text-muted me-2"></i>
+                                                        <small class="text-muted">
+                                                            <strong><?php echo $teacher_count; ?></strong> teachers enrolled
+                                                        </small>
+                                                    </div>
+                                                </div>
+                                                <div class="d-flex gap-2 flex-wrap">
+                                                    <a href="school_teachers.php?workshop_id=<?php echo $workshop_id; ?>&school_id=<?php echo $school['id']; ?>" 
+                                                       class="btn btn-outline-primary btn-sm flex-fill" 
+                                                       title="View attendance sheet">
+                                                        <i class="ti ti-clipboard-check me-1"></i>
+                                                        Attendance
+                                                    </a>
+                                                    <a href="school_bulk_enroll.php?workshop_id=<?php echo $workshop_id; ?>&school_id=<?php echo $school['id']; ?>&email=<?php echo $school['email']; ?>" 
+                                                       class="btn btn-outline-success btn-sm flex-fill"
+                                                       title="Enroll new teachers">
+                                                        <i class="ti ti-user-plus me-1"></i>
+                                                        Enroll
+                                                    </a>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
                                 <?php }
                                 if (!$hasSchools): ?>
-                                    <div class="col-12 text-center text-muted">No schools with registered teachers for this workshop.</div>
+                                    <div class="col-12">
+                                        <div class="text-center py-5">
+                                            <i class="ti ti-building-off text-muted" style="font-size: 3rem;"></i>
+                                            <h6 class="text-muted mt-3">No schools registered for this workshop</h6>
+                                            <p class="text-muted mb-0">Schools will appear here once teachers are enrolled.</p>
+                                        </div>
+                                    </div>
                                 <?php endif; ?>
                                 </div>
                             </div>
@@ -732,16 +871,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                 <!-- End Schools Registered Panel -->
 
-                <!-- Link to B2C Bulk Enrollment Page -->
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <h5 class="mb-0">B2C Bulk Enrollment</h5>
-                    </div>
-                    <div class="card-body">
-                        <p class="text-muted">Enroll individual users (not associated with a specific school) into this workshop by searching for them in the system.</p>
-                        <a href="b2c_bulk_enrollment.php?workshop_id=<?php echo $workshop_id; ?>" class="btn btn-primary">
-                            <i class="ti ti-user-plus me-1"></i> Go to B2C Enrollment Page
-                        </a>
+                <!-- B2C Bulk Enrollment Section -->
+                <div class="col-12 mb-4">
+                    <div class="card shadow-sm border-0">
+                        <div class="card-header bg-gradient-success text-white">
+                            <h5 class="card-title mb-0">
+                                <i class="ti ti-user-plus me-2"></i> Individual User Enrollment
+                            </h5>
+                        </div>
+                        <div class="card-body p-4">
+                            <div class="row align-items-center">
+                                <div class="col-md-8">
+                                    <h6 class="text-primary mb-2">B2C Bulk Enrollment</h6>
+                                    <p class="text-muted mb-0">Enroll individual users (not associated with a specific school) into this workshop by searching for them in the system.</p>
+                                </div>
+                                <div class="col-md-4 text-md-end">
+                                    <a href="b2c_bulk_enrollment.php?workshop_id=<?php echo $workshop_id; ?>" class="btn btn-success btn-lg">
+                                        <i class="ti ti-user-plus me-2"></i>
+                                        Go to B2C Enrollment
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -891,6 +1042,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 </tr>
                             </thead>
                             <tbody id="platformUsersTableBody">
+                                <!-- Data will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Instamojo Users Modal -->
+    <div class="modal fade" id="instamojoUsersModal" tabindex="-1" aria-labelledby="instamojoUsersModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="instamojoUsersModalLabel">Instamojo Payment Users</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="instamojoUsersList" class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Mobile</th>
+                                    <th>Institute Name</th>
+                                    <th>Payment ID</th>
+                                </tr>
+                            </thead>
+                            <tbody id="instamojoUsersTableBody">
                                 <!-- Data will be loaded here -->
                             </tbody>
                         </table>
