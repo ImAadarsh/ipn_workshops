@@ -38,7 +38,7 @@ if ($payment_id && $payment_request_id) {
         $processing_message = "Payment already processed. Showing existing enrollment details.";
         
         // Get amount directly from instamojo_payments table
-        $instamojo_amount_sql = "SELECT amount FROM instamojo_payments WHERE payment_id = ?";
+        $instamojo_amount_sql = "SELECT amount FROM instamojo_payments WHERE payment_id COLLATE utf8mb4_unicode_ci = ? COLLATE utf8mb4_unicode_ci";
         $instamojo_amount_stmt = mysqli_prepare($conn, $instamojo_amount_sql);
         mysqli_stmt_bind_param($instamojo_amount_stmt, "s", $payment_id);
         mysqli_stmt_execute($instamojo_amount_stmt);
@@ -53,7 +53,7 @@ if ($payment_id && $payment_request_id) {
                         FROM payments p 
                         JOIN users u ON p.user_id = u.id 
                         JOIN workshops w ON p.workshop_id = w.id 
-                        LEFT JOIN instamojo_payments ip ON p.payment_id = ip.payment_id
+                        LEFT JOIN instamojo_payments ip ON p.payment_id COLLATE utf8mb4_unicode_ci = ip.payment_id COLLATE utf8mb4_unicode_ci
                         WHERE p.payment_id = ?";
         $existing_stmt = mysqli_prepare($conn, $existing_sql);
         if (!$existing_stmt) {
