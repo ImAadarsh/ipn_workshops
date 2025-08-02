@@ -703,7 +703,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_existing_user']))
                                             $workshop['meeting_id'] !== '#' &&
                                             strtolower($workshop['meeting_id']) !== 'null'
                                         ): ?>
-                                            <a href="https://meet.ipnacademy.in/?display_name=<?php echo $user['id'].'_'.urlencode($user['name']); ?>&mn=<?php echo urlencode($workshop['meeting_id']); ?>&pwd=<?php echo urlencode($workshop['passcode']); ?>&meeting_email=<?php echo urlencode($user['email']); ?>" target="_blank" class="btn btn-sm btn-info">Unique Joining Link</a>
+                                            <div class="d-flex gap-1">
+                                                <a href="https://meet.ipnacademy.in/?display_name=<?php echo $user['id'].'_'.urlencode($user['name']); ?>&mn=<?php echo urlencode($workshop['meeting_id']); ?>&pwd=<?php echo urlencode($workshop['passcode']); ?>&meeting_email=<?php echo urlencode($user['email']); ?>" target="_blank" class="btn btn-sm btn-info">Unique Joining Link</a>
+                                                <button type="button" class="btn btn-sm btn-outline-secondary copy-link-btn" 
+                                                        data-link="https://meet.ipnacademy.in/?display_name=<?php echo $user['id'].'_'.urlencode($user['name']); ?>&mn=<?php echo urlencode($workshop['meeting_id']); ?>&pwd=<?php echo urlencode($workshop['passcode']); ?>&meeting_email=<?php echo urlencode($user['email']); ?>"
+                                                        title="Copy joining link">
+                                                    <i class="ti ti-copy"></i>
+                                                </button>
+                                            </div>
                                         <?php else: ?>
                                             Available Soon
                                         <?php endif; ?>
@@ -1056,6 +1063,54 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+    // Copy Link Functionality
+    document.querySelectorAll('.copy-link-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var link = this.getAttribute('data-link');
+            var originalText = this.innerHTML;
+            
+            // Copy to clipboard
+            navigator.clipboard.writeText(link).then(function() {
+                // Show success feedback
+                btn.innerHTML = '<i class="ti ti-check"></i>';
+                btn.classList.remove('btn-outline-secondary');
+                btn.classList.add('btn-success');
+                btn.title = 'Link copied!';
+                
+                // Reset after 2 seconds
+                setTimeout(function() {
+                    btn.innerHTML = originalText;
+                    btn.classList.remove('btn-success');
+                    btn.classList.add('btn-outline-secondary');
+                    btn.title = 'Copy joining link';
+                }, 2000);
+            }).catch(function(err) {
+                // Fallback for older browsers
+                var textArea = document.createElement('textarea');
+                textArea.value = link;
+                document.body.appendChild(textArea);
+                textArea.select();
+                try {
+                    document.execCommand('copy');
+                    btn.innerHTML = '<i class="ti ti-check"></i>';
+                    btn.classList.remove('btn-outline-secondary');
+                    btn.classList.add('btn-success');
+                    btn.title = 'Link copied!';
+                    
+                    setTimeout(function() {
+                        btn.innerHTML = originalText;
+                        btn.classList.remove('btn-success');
+                        btn.classList.add('btn-outline-secondary');
+                        btn.title = 'Copy joining link';
+                    }, 2000);
+                } catch (err) {
+                    alert('Failed to copy link. Please copy manually.');
+                }
+                document.body.removeChild(textArea);
+            });
+        });
+    });
+
     // Countdown Timer Logic
     (function() {
         var lockTimeIST = <?php echo $lock_time_ist ? ('"' . $lock_time_ist->format('Y-m-d H:i:s') . '"') : 'null'; ?>;
