@@ -143,7 +143,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         'purpose' => 'Test Payment Link',
                         'amount' => '1',
                         'buyer_name' => 'Test User',
-                        'email' => 'test@example.com',
+                        'email' => 'aadarshkavita@gmail.com',
                         'phone' => '9999999999',
                         'redirect_url' => 'https://ipnacademy.in/instamojo_success.php',
                         'send_email' => 'True',

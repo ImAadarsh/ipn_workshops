@@ -778,12 +778,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <div class="card-body p-4">
                                 <div class="row g-4">
                                 <?php
-                                // Get all schools that have at least one user registered for this workshop (via payments or users table)
-                                $schools_sql = "SELECT s.id, s.name, s.email, s.mobile, s.b2c2b
+                                // Get all schools that have at least one user registered for this workshop OR have a school link generated
+                                $schools_sql = "SELECT DISTINCT s.id, s.name, s.email, s.mobile, s.b2c2b
                                     FROM schools s
                                     WHERE (
                                         EXISTS (
                                             SELECT 1 FROM payments p WHERE p.workshop_id = $workshop_id AND p.payment_status = 1 AND p.school_id = s.id
+                                        )
+                                        OR EXISTS (
+                                            SELECT 1 FROM school_links sl WHERE sl.workshop_id = $workshop_id AND sl.school_id = s.id
                                         )
                                     )
                                     ORDER BY s.name ASC";
@@ -791,30 +794,53 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 $hasSchools = false;
                                 while ($school = mysqli_fetch_assoc($schools_result)) {
                                     $hasSchools = true;
-                                    // Count unique users for this school for this workshop
-                                    $count_sql = "SELECT COUNT(DISTINCT u.id) as teacher_count
+                                    
+                                    // Check if school has enrollments
+                                    $enrollment_sql = "SELECT COUNT(DISTINCT u.id) as teacher_count
                                         FROM payments p
                                         INNER JOIN users u ON p.user_id = u.id
                                         WHERE p.workshop_id = $workshop_id AND p.payment_status = 1
                                         AND (p.school_id = {$school['id']} OR u.school_id = {$school['id']})";
-                                    $count_result = mysqli_query($conn, $count_sql);
+                                    $enrollment_result = mysqli_query($conn, $enrollment_sql);
                                     $teacher_count = 0;
-                                    if ($count_result) {
-                                        $teacher_count = (int)mysqli_fetch_assoc($count_result)['teacher_count'];
+                                    $has_enrollments = false;
+                                    if ($enrollment_result) {
+                                        $teacher_count = (int)mysqli_fetch_assoc($enrollment_result)['teacher_count'];
+                                        $has_enrollments = ($teacher_count > 0);
+                                    }
+                                    
+                                    // Check if school has a link generated
+                                    $link_sql = "SELECT id, link FROM school_links WHERE workshop_id = $workshop_id AND school_id = {$school['id']}";
+                                    $link_result = mysqli_query($conn, $link_sql);
+                                    $has_link = false;
+                                    $school_link = '';
+                                    if ($link_result && mysqli_num_rows($link_result) > 0) {
+                                        $has_link = true;
+                                        $link_data = mysqli_fetch_assoc($link_result);
+                                        $school_link = $link_data['link'];
                                     }
                                 ?>
                                     <div class="col-12 col-md-6 col-lg-4">
-                                        <div class="card h-100 border-0 shadow-sm hover-shadow" style="transition: all 0.3s ease; min-height: 200px;">
-                                            <div class="card-header bg-light border-0 py-3">
+                                        <div class="card h-100 border-0 shadow-sm hover-shadow <?php echo !$has_enrollments ? 'border-warning' : ''; ?>" 
+                                             style="transition: all 0.3s ease; min-height: 200px; <?php echo !$has_enrollments ? 'border-left: 4px solid #ffc107;' : ''; ?>">
+                                            <div class="card-header <?php echo !$has_enrollments ? 'bg-warning-subtle' : 'bg-light'; ?> border-0 py-3">
                                                 <div class="d-flex justify-content-between align-items-center">
                                                     <h6 class="fw-bold text-primary mb-0 text-truncate" title="<?php echo htmlspecialchars($school['name']); ?>">
                                                         <?php echo htmlspecialchars($school['name']); ?>
+                                                        <?php if (!$has_enrollments && $has_link): ?>
+                                                            <i class="ti ti-clock text-warning ms-1" title="Link generated, waiting for enrollments"></i>
+                                                        <?php endif; ?>
                                                     </h6>
-                                                    <?php if ($school['b2c2b'] == 1): ?>
-                                                        <span class="badge bg-info-subtle text-info border border-info">B2C2B</span>
-                                                    <?php else: ?>
-                                                        <span class="badge bg-primary-subtle text-primary border border-primary">B2B</span>
-                                                    <?php endif; ?>
+                                                    <div class="d-flex gap-1">
+                                                        <?php if ($school['b2c2b'] == 1): ?>
+                                                            <span class="badge bg-info-subtle text-info border border-info">B2C2B</span>
+                                                        <?php else: ?>
+                                                            <span class="badge bg-primary-subtle text-primary border border-primary">B2B</span>
+                                                        <?php endif; ?>
+                                                        <?php if (!$has_enrollments && $has_link): ?>
+                                                            <span class="badge bg-warning-subtle text-warning border border-warning">Link Ready</span>
+                                                        <?php endif; ?>
+                                                    </div>
                                                 </div>
                                             </div>
                                             <div class="card-body d-flex flex-column justify-content-between">
@@ -834,23 +860,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                                     <div class="d-flex align-items-center">
                                                         <i class="ti ti-users text-muted me-2"></i>
                                                         <small class="text-muted">
-                                                            <strong><?php echo $teacher_count; ?></strong> teachers enrolled
+                                                            <?php if ($has_enrollments): ?>
+                                                                <strong><?php echo $teacher_count; ?></strong> teachers enrolled
+                                                            <?php else: ?>
+                                                                <span class="text-warning">No enrollments yet</span>
+                                                            <?php endif; ?>
                                                         </small>
                                                     </div>
+                                                    <?php if ($has_link): ?>
+                                                    <div class="d-flex align-items-center mt-1">
+                                                        <i class="ti ti-link text-muted me-2"></i>
+                                                        <small class="text-success">
+                                                            <strong>Link Generated</strong>
+                                                        </small>
+                                                    </div>
+                                                    <?php endif; ?>
                                                 </div>
                                                 <div class="d-flex gap-2 flex-wrap">
+                                                    <?php if ($has_enrollments): ?>
                                                     <a href="school_teachers.php?workshop_id=<?php echo $workshop_id; ?>&school_id=<?php echo $school['id']; ?>" 
                                                        class="btn btn-outline-primary btn-sm flex-fill" 
                                                        title="View attendance sheet">
                                                         <i class="ti ti-clipboard-check me-1"></i>
                                                         Attendance
                                                     </a>
+                                                    <?php endif; ?>
                                                     <a href="school_bulk_enroll.php?workshop_id=<?php echo $workshop_id; ?>&school_id=<?php echo $school['id']; ?>&email=<?php echo $school['email']; ?>" 
                                                        class="btn btn-outline-success btn-sm flex-fill"
                                                        title="Enroll new teachers">
                                                         <i class="ti ti-user-plus me-1"></i>
                                                         Enroll
                                                     </a>
+                                                    <?php if ($has_link): ?>
+                                                    <a href="<?php echo $school_link; ?>" 
+                                                       class="btn btn-outline-info btn-sm flex-fill"
+                                                       target="_blank"
+                                                       title="View enrollment link">
+                                                        <i class="ti ti-external-link me-1"></i>
+                                                        View Link
+                                                    </a>
+                                                    <?php endif; ?>
                                                 </div>
                                             </div>
                                         </div>

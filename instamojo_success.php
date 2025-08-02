@@ -2,6 +2,11 @@
 include 'config/show_errors.php';
 // No session_start() - this page is independent of login/session
 
+// Include Composer autoloader for PHPMailer
+if (file_exists('vendor/autoload.php')) {
+    require_once 'vendor/autoload.php';
+}
+
 $conn = require_once 'config/config.php';
 
 // Include email helper
@@ -66,7 +71,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 'created_at' => date('Y-m-d H:i:s')
             ];
             
-            // Send email
+            // Send email with debugging
+            error_log("Attempting to resend payment confirmation email for payment $resend_payment_id to " . $resend_user_email);
+            error_log("User data for resend: " . json_encode($user_data));
+            error_log("Payment data for resend: " . json_encode($email_payment_data));
+            error_log("Workshops data count for resend: " . count($workshops_data));
+            
             $email_sent = sendPaymentConfirmationEmail($user_data, $email_payment_data, $workshops_data);
             
             if ($email_sent) {
@@ -448,7 +458,12 @@ if ($payment_id && $payment_request_id) {
                                     'created_at' => date('Y-m-d H:i:s')
                                 ];
                                 
-                                // Send email
+                                // Send email with debugging
+                                error_log("Attempting to send payment confirmation email to user $user_id for payment $payment_id");
+                                error_log("User data: " . json_encode($user_data));
+                                error_log("Payment data: " . json_encode($email_payment_data));
+                                error_log("Workshops data count: " . count($workshops_data));
+                                
                                 $email_sent = sendPaymentConfirmationEmail($user_data, $email_payment_data, $workshops_data);
                                 
                                 if ($email_sent) {
