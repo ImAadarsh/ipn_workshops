@@ -1,4 +1,5 @@
 <?php
+session_start();
 // Standalone school bulk enroll page
 // No session or admin login required
 
@@ -58,6 +59,15 @@ if (!$access_granted) {
 $feedback_message = $_SESSION['feedback_message'] ?? '';
 $feedback_error = $_SESSION['feedback_error'] ?? '';
 unset($_SESSION['feedback_message'], $_SESSION['feedback_error']);
+
+// --- Clear session data if requested ---
+if (isset($_GET['clear_session']) && $_GET['clear_session'] == '1') {
+    unset($_SESSION['existing_users_data'], $_SESSION['show_user_selection']);
+    if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest') {
+        // AJAX request - return empty response
+        exit();
+    }
+}
 
 // --- ENROLLMENT LOGIC (same as bulk_enroll.php, but only for this school) ---
 function enrollUser($conn, $user_id, $workshop_id, $amount, $cpd_hrs, $school_id, &$errors) {
@@ -214,15 +224,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['manual_add_user'])) {
     $institute_name = mysqli_real_escape_string($conn, trim($_POST['new_institute_name'] ?? ''));
     $city = mysqli_real_escape_string($conn, trim($_POST['new_city'] ?? ''));
     $errors = [];
+    
     if (empty($name) || empty($email_new) || empty($mobile)) {
         $_SESSION['feedback_error'] = "Name, Email, and Mobile are required.";
     } else {
-        // Check if user exists
-        $user_check_sql = "SELECT id FROM users WHERE email = '$email_new' OR mobile = '$mobile' limit 1";
-        $user_check_result = mysqli_query($conn, $user_check_sql);
-        if ($user_row = mysqli_fetch_assoc($user_check_result)) {
-            $_SESSION['feedback_error'] = "A user with this email or mobile already exists.";
-        } else {
+        // Check for existing users by email and/or mobile
+        $existing_users_sql = "SELECT id, name, email, mobile, designation, institute_name, city, school_id FROM users WHERE email = '$email_new' OR mobile = '$mobile' ORDER BY name";
+        $existing_users_result = mysqli_query($conn, $existing_users_sql);
+        $existing_users = [];
+        while ($row = mysqli_fetch_assoc($existing_users_result)) {
+            $existing_users[] = $row;
+        }
+        
+        if (empty($existing_users)) {
+            // No existing user found, create new user
             $insert_sql = "INSERT INTO users (name, email, mobile, designation, institute_name, city, school_id, user_type, created_at, updated_at) 
                            VALUES ('$name', '$email_new', '$mobile', '$designation', '$institute_name', '$city', $school_id, 'user', NOW(), NOW())";
             if(mysqli_query($conn, $insert_sql)) {
@@ -236,8 +251,78 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['manual_add_user'])) {
             } else {
                 $_SESSION['feedback_error'] = "Failed to add user: " . mysqli_error($conn);
             }
+        } else {
+            // Store existing users data in session for popup selection
+            $_SESSION['existing_users_data'] = [
+                'users' => $existing_users,
+                'new_user_data' => [
+                    'name' => $name,
+                    'email' => $email_new,
+                    'mobile' => $mobile,
+                    'designation' => $designation,
+                    'institute_name' => $institute_name,
+                    'city' => $city
+                ],
+                'workshop_id' => $workshop_id,
+                'school_id' => $school_id
+            ];
+            $_SESSION['show_user_selection'] = true;
         }
     }
+    header("Location: school_bulk_enroll.php?workshop_id=$workshop_id&school_id=$school_id&email=" . urlencode($email));
+    exit();
+}
+
+// --- Handle user selection from popup ---
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['select_existing_user'])) {
+    $selected_user_id = intval($_POST['selected_user_id']);
+    $action = $_POST['action'] ?? 'enroll'; // 'enroll' or 'create_new'
+    
+    if ($action === 'enroll' && $selected_user_id > 0) {
+        // Enroll existing user and update school_id
+        $errors = [];
+        
+        // First, update the user's school_id
+        $update_sql = "UPDATE users SET school_id = $school_id, updated_at = NOW() WHERE id = $selected_user_id";
+        if (!mysqli_query($conn, $update_sql)) {
+            $errors[] = "Failed to update user's school association: " . mysqli_error($conn);
+        }
+        
+        // Then enroll in workshop
+        if (enrollUser($conn, $selected_user_id, $workshop_id, $workshop['price'], $workshop['cpd'], $school_id, $errors)) {
+            $_SESSION['feedback_message'] = "Existing user enrolled successfully and assigned to school.";
+        } else {
+            $_SESSION['feedback_error'] = "Failed to enroll user: " . implode(', ', $errors);
+        }
+    } elseif ($action === 'create_new') {
+        // Create new user with the data from session
+        $user_data = $_SESSION['existing_users_data']['new_user_data'] ?? null;
+        if ($user_data) {
+            $insert_sql = "INSERT INTO users (name, email, mobile, designation, institute_name, city, school_id, user_type, created_at, updated_at) 
+                           VALUES ('" . mysqli_real_escape_string($conn, $user_data['name']) . "', 
+                                   '" . mysqli_real_escape_string($conn, $user_data['email']) . "', 
+                                   '" . mysqli_real_escape_string($conn, $user_data['mobile']) . "', 
+                                   '" . mysqli_real_escape_string($conn, $user_data['designation']) . "', 
+                                   '" . mysqli_real_escape_string($conn, $user_data['institute_name']) . "', 
+                                   '" . mysqli_real_escape_string($conn, $user_data['city']) . "', 
+                                   $school_id, 'user', NOW(), NOW())";
+            if(mysqli_query($conn, $insert_sql)) {
+                $user_id = mysqli_insert_id($conn);
+                $errors = [];
+                if (enrollUser($conn, $user_id, $workshop_id, $workshop['price'], $workshop['cpd'], $school_id, $errors)) {
+                    $_SESSION['feedback_message'] = "New user created and enrolled successfully.";
+                } else {
+                    $_SESSION['feedback_message'] = "New user created, but failed to enroll.";
+                }
+            } else {
+                $_SESSION['feedback_error'] = "Failed to create new user: " . mysqli_error($conn);
+            }
+        }
+    }
+    
+    // Clear session data
+    unset($_SESSION['existing_users_data'], $_SESSION['show_user_selection']);
+    
     header("Location: school_bulk_enroll.php?workshop_id=$workshop_id&school_id=$school_id&email=" . urlencode($email));
     exit();
 }
@@ -425,7 +510,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_existing_user']))
         $errors[] = "User is already enrolled in this workshop for this school.";
     } else if (empty($errors)) {
         $amount = $workshop['price'];
-        $cpd_hrs = $workshop['cpd_hours'];
+        $cpd_hrs = $workshop['cpd'];
         $insert_sql = "INSERT INTO payments (user_id, workshop_id, school_id, payment_status, amount, cpd, created_at) VALUES ($existing_user_id, $workshop_id, $school_id, 1, $amount, $cpd_hrs, NOW())";
         if (!mysqli_query($conn, $insert_sql)) {
             $errors[] = "Failed to enroll user: " . mysqli_error($conn);
@@ -618,7 +703,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_existing_user']))
         </div>
     </div>
     <div class="d-flex justify-content-end mb-2">
-        <button class="btn btn-primary me-2" data-bs-toggle="modal" data-bs-target="#addExistingUserModal">+ Add Existing User</button>
+        <!-- <button class="btn btn-primary me-2" data-bs-toggle="modal" data-bs-target="#addExistingUserModal">+ Add Existing User</button> -->
         <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addUserModal">+ Add New User</button>
     </div>
     <div class="modal fade" id="addUserModal" tabindex="-1" aria-labelledby="addUserModalLabel" aria-hidden="true">
@@ -984,6 +1069,73 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_existing_user']))
     </div>
   </div>
 </div>
+<div class="modal fade" id="userSelectionModal" tabindex="-1" aria-labelledby="userSelectionModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="userSelectionModalLabel">Existing Users Found</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-info">
+          <i class="ti ti-info-circle me-2"></i>
+          We found existing users with the same email or mobile number. Please select an option:
+        </div>
+        
+        <div id="singleUserSection" style="display: none;">
+          <div class="card mb-3">
+            <div class="card-header">
+              <h6 class="mb-0">Existing User Found</h6>
+            </div>
+            <div class="card-body">
+              <div id="singleUserDetails"></div>
+              <div class="mt-3">
+                <button type="button" class="btn btn-success me-2" onclick="enrollSingleUser()">
+                  <i class="ti ti-user-check me-1"></i>Enroll This User
+                </button>
+                <button type="button" class="btn btn-primary" onclick="createNewUser()">
+                  <i class="ti ti-user-plus me-1"></i>Create New User Instead
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div id="multipleUsersSection" style="display: none;">
+          <div class="card mb-3">
+            <div class="card-header">
+              <h6 class="mb-0">Multiple Users Found</h6>
+            </div>
+            <div class="card-body">
+              <p class="text-muted mb-3">Please select which user you want to enroll:</p>
+              <div id="multipleUsersList"></div>
+              <div class="mt-3">
+                <button type="button" class="btn btn-primary" onclick="createNewUser()">
+                  <i class="ti ti-user-plus me-1"></i>Create New User Instead
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div id="newUserPreview" style="display: none;">
+          <div class="card">
+            <div class="card-header">
+              <h6 class="mb-0">New User Details</h6>
+            </div>
+            <div class="card-body">
+              <div id="newUserDetails"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="modal fade" id="helpModal" tabindex="-1" aria-labelledby="helpModalLabel" aria-hidden="true">
   <div class="modal-dialog">
     <div class="modal-content">
@@ -1151,6 +1303,192 @@ document.addEventListener('DOMContentLoaded', function() {
             if (csvForm) csvForm.style.display = 'none';
         }
     })();
+
+    // User Selection Modal Logic
+    <?php if (isset($_SESSION['show_user_selection']) && $_SESSION['show_user_selection']): ?>
+    (function() {
+        var existingUsers = <?php echo json_encode($_SESSION['existing_users_data']['users'] ?? []); ?>;
+        var newUserData = <?php echo json_encode($_SESSION['existing_users_data']['new_user_data'] ?? []); ?>;
+        
+        function showUserSelectionModal() {
+            var modal = new bootstrap.Modal(document.getElementById('userSelectionModal'));
+            
+            if (existingUsers.length === 1) {
+                // Single user found
+                showSingleUserSection(existingUsers[0]);
+            } else {
+                // Multiple users found
+                showMultipleUsersSection(existingUsers);
+            }
+            
+            modal.show();
+        }
+        
+        function showSingleUserSection(user) {
+            document.getElementById('singleUserSection').style.display = 'block';
+            document.getElementById('multipleUsersSection').style.display = 'none';
+            document.getElementById('newUserPreview').style.display = 'none';
+            
+            var details = document.getElementById('singleUserDetails');
+            details.innerHTML = `
+                <div class="row">
+                    <div class="col-md-6">
+                        <strong>Name:</strong> ${user.name}<br>
+                        <strong>Email:</strong> ${user.email}<br>
+                        <strong>Mobile:</strong> ${user.mobile}
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Designation:</strong> ${user.designation || 'N/A'}<br>
+                        <strong>Institute:</strong> ${user.institute_name || 'N/A'}<br>
+                        <strong>City:</strong> ${user.city || 'N/A'}
+                    </div>
+                </div>
+                <div class="mt-2">
+                    <small class="text-muted">
+                        <i class="ti ti-info-circle me-1"></i>
+                        ${user.email === newUserData.email && user.mobile === newUserData.mobile ? 
+                          'Both email and mobile match exactly.' : 
+                          'Email or mobile matches with existing user.'}
+                    </small>
+                </div>
+            `;
+            
+            // Store user ID for enrollment
+            window.selectedUserId = user.id;
+        }
+        
+        function showMultipleUsersSection(users) {
+            document.getElementById('singleUserSection').style.display = 'none';
+            document.getElementById('multipleUsersSection').style.display = 'block';
+            document.getElementById('newUserPreview').style.display = 'none';
+            
+            var list = document.getElementById('multipleUsersList');
+            list.innerHTML = '';
+            
+            users.forEach(function(user, index) {
+                var userCard = document.createElement('div');
+                userCard.className = 'card mb-2';
+                userCard.innerHTML = `
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <strong>${user.name}</strong><br>
+                                <small class="text-muted">
+                                    Email: ${user.email} | Mobile: ${user.mobile}<br>
+                                    ${user.designation ? 'Designation: ' + user.designation + '<br>' : ''}
+                                    ${user.institute_name ? 'Institute: ' + user.institute_name : ''}
+                                </small>
+                            </div>
+                            <div class="col-md-4 text-end">
+                                <button type="button" class="btn btn-success btn-sm" onclick="enrollSpecificUser(${user.id})">
+                                    <i class="ti ti-user-check me-1"></i>Enroll This User
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                list.appendChild(userCard);
+            });
+        }
+        
+        function showNewUserPreview() {
+            document.getElementById('singleUserSection').style.display = 'none';
+            document.getElementById('multipleUsersSection').style.display = 'none';
+            document.getElementById('newUserPreview').style.display = 'block';
+            
+            var details = document.getElementById('newUserDetails');
+            details.innerHTML = `
+                <div class="row">
+                    <div class="col-md-6">
+                        <strong>Name:</strong> ${newUserData.name}<br>
+                        <strong>Email:</strong> ${newUserData.email}<br>
+                        <strong>Mobile:</strong> ${newUserData.mobile}
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Designation:</strong> ${newUserData.designation || 'N/A'}<br>
+                        <strong>Institute:</strong> ${newUserData.institute_name || 'N/A'}<br>
+                        <strong>City:</strong> ${newUserData.city || 'N/A'}
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <button type="button" class="btn btn-success" onclick="submitNewUser()">
+                        <i class="ti ti-user-plus me-1"></i>Create & Enroll New User
+                    </button>
+                </div>
+            `;
+        }
+        
+        // Global functions for button clicks
+        window.enrollSingleUser = function() {
+            submitUserSelection(window.selectedUserId, 'enroll');
+        };
+        
+        window.enrollSpecificUser = function(userId) {
+            submitUserSelection(userId, 'enroll');
+        };
+        
+        window.createNewUser = function() {
+            showNewUserPreview();
+        };
+        
+        window.submitNewUser = function() {
+            submitUserSelection(0, 'create_new');
+        };
+        
+        function submitUserSelection(userId, action) {
+            var form = document.createElement('form');
+            form.method = 'POST';
+            form.action = window.location.href;
+            
+            var userIdInput = document.createElement('input');
+            userIdInput.type = 'hidden';
+            userIdInput.name = 'selected_user_id';
+            userIdInput.value = userId;
+            form.appendChild(userIdInput);
+            
+            var actionInput = document.createElement('input');
+            actionInput.type = 'hidden';
+            actionInput.name = 'action';
+            actionInput.value = action;
+            form.appendChild(actionInput);
+            
+            var selectInput = document.createElement('input');
+            selectInput.type = 'hidden';
+            selectInput.name = 'select_existing_user';
+            selectInput.value = '1';
+            form.appendChild(selectInput);
+            
+            document.body.appendChild(form);
+            form.submit();
+        }
+        
+        // Show modal on page load
+        showUserSelectionModal();
+        
+        // Clear session data when modal is closed
+        document.getElementById('userSelectionModal').addEventListener('hidden.bs.modal', function() {
+            // Send AJAX request to clear session data
+            fetch(window.location.href + '&clear_session=1', {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            }).catch(function(error) {
+                console.log('Session cleared');
+            });
+        });
+        
+        // Also clear session data when page is refreshed or navigated away
+        window.addEventListener('beforeunload', function() {
+            fetch(window.location.href + '&clear_session=1', {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+        });
+    })();
+    <?php endif; ?>
 });
 </script>
 </body>
