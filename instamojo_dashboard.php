@@ -218,7 +218,7 @@ while ($row = mysqli_fetch_assoc($links_result)) {
 }
 
 // Fetch workshops for dropdown
-$workshops_sql = "SELECT id, name, start_date, price FROM workshops WHERE is_deleted = 0 AND type=0 ORDER BY start_date ASC limit 9";
+$workshops_sql = "SELECT id, name, start_date, price FROM workshops WHERE is_deleted = 0 AND type=0 ORDER BY start_date ASC limit 15";
 $workshops_result = mysqli_query($conn, $workshops_sql);
 $workshops = [];
 while ($row = mysqli_fetch_assoc($workshops_result)) {
