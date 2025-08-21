@@ -3,19 +3,7 @@ session_start();
 // Standalone school bulk enroll page
 // No session or admin login required
 
-// Incognito mode detection
-$is_incognito = false;
-if (isset($_SERVER['HTTP_USER_AGENT'])) {
-    $user_agent = $_SERVER['HTTP_USER_AGENT'];
-    // Check for incognito/private browsing indicators
-    if (strpos($user_agent, 'Chrome') !== false && strpos($user_agent, 'Headless') !== false) {
-        $is_incognito = true;
-    }
-    // Additional checks for incognito mode
-    if (isset($_SERVER['HTTP_SEC_FETCH_SITE']) && $_SERVER['HTTP_SEC_FETCH_SITE'] === 'none') {
-        $is_incognito = true;
-    }
-}
+
 
 $workshop_id = isset($_GET['workshop_id']) ? intval($_GET['workshop_id']) : 0;
 $school_id = isset($_GET['school_id']) ? intval($_GET['school_id']) : 0;
@@ -99,14 +87,7 @@ if ($workshop) {
     }
 }
 
-// Block access if in incognito mode and editing is locked
-if ($is_incognito && $is_locked) {
-    echo '<!DOCTYPE html><html><head><title>Access Restricted</title></head><body>';
-    echo '<div style="max-width:500px;margin:100px auto;padding:2em;border:1px solid #ccc;text-align:center;">';
-    echo '<h2>Access Restricted</h2><p>This page is not accessible in incognito/private browsing mode when editing is locked.</p>';
-    echo '</div></body></html>';
-    exit();
-}
+
 
 // Block any form submissions when editing is locked (additional security)
 if ($is_locked && $_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -743,16 +724,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_existing_user']))
             display: none !important;
         }
         
-        /* Additional incognito detection styles */
-        .incognito-warning {
-            background: #fff3cd;
-            border: 1px solid #ffeaa7;
-            color: #856404;
-            padding: 10px;
-            border-radius: 5px;
-            margin-bottom: 15px;
-            text-align: center;
-        }
+
     </style>
 </head>
 <body class="<?php echo $is_locked ? 'locked-mode' : ''; ?>">
@@ -769,9 +741,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_existing_user']))
     <?php if ($is_locked): ?>
         <div class="alert alert-warning text-center mb-4">Editing is locked for this workshop. You can view data, but cannot add, edit, or enroll teachers until after the workshop.</div>
     <?php endif; ?>
-    <?php if ($is_incognito && !$is_locked): ?>
-        <div class="alert alert-info text-center mb-4">You are accessing this page in incognito/private browsing mode. Some features may be restricted.</div>
-    <?php endif; ?>
+
     <?php if ($feedback_message): ?><div class="alert alert-success mt-3"><?php echo $feedback_message; ?></div><?php endif; ?>
     <?php if ($feedback_error): ?><div class="alert alert-danger mt-3"><?php echo $feedback_error; ?></div><?php endif; ?>
 
@@ -1422,7 +1392,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Developer Tools Detection and Protection
     (function() {
-        var isIncognito = false;
         var devToolsOpen = false;
         
         // Detect developer tools opening
@@ -1548,72 +1517,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
         
-        // Check for incognito mode using multiple methods
-        function detectIncognito() {
-            // Method 1: Check for FileSystem API
-            if (window.webkitRequestFileSystem) {
-                window.webkitRequestFileSystem(window.TEMPORARY, 1, function() {
-                    // Not incognito
-                }, function() {
-                    isIncognito = true;
-                });
-            }
-            
-            // Method 2: Check for IndexedDB
-            try {
-                var db = indexedDB.open('test');
-                db.onerror = function() {
-                    isIncognito = true;
-                };
-                db.onsuccess = function() {
-                    db.result.close();
-                    indexedDB.deleteDatabase('test');
-                };
-            } catch (e) {
-                isIncognito = true;
-            }
-            
-            // Method 3: Check for localStorage
-            try {
-                localStorage.setItem('test', 'test');
-                localStorage.removeItem('test');
-            } catch (e) {
-                isIncognito = true;
-            }
-            
-            // Method 4: Check for sessionStorage
-            try {
-                sessionStorage.setItem('test', 'test');
-                sessionStorage.removeItem('test');
-            } catch (e) {
-                isIncognito = true;
-            }
-            
-            // Method 5: Check for navigator.webdriver (headless browsers)
-            if (navigator.webdriver) {
-                isIncognito = true;
-            }
-            
-            // Method 6: Check for specific user agent patterns
-            var userAgent = navigator.userAgent;
-            if (userAgent.includes('Headless') || userAgent.includes('PhantomJS') || userAgent.includes('Selenium')) {
-                isIncognito = true;
-            }
-            
-            return isIncognito;
-        }
-        
-        // Run detection after a short delay
-        setTimeout(function() {
-            if (detectIncognito()) {
-                console.log('Incognito mode detected');
-                // Add warning to page
-                var warning = document.createElement('div');
-                warning.className = 'incognito-warning';
-                warning.innerHTML = '<strong>Warning:</strong> Incognito/Private browsing mode detected. Some features may be restricted.';
-                document.body.insertBefore(warning, document.body.firstChild);
-            }
-        }, 1000);
+
     })();
 
     // Countdown Timer Logic
