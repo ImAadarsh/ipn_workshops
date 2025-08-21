@@ -61,6 +61,7 @@ $sql = "SELECT u.id, u.name, u.email, u.mobile, u.designation,
         (SELECT COUNT(*) FROM payments p WHERE p.user_id = u.id AND p.workshop_id = $workshop_id AND p.payment_status = 1) as enrolled
         FROM users u 
         WHERE u.school_id = $school_id 
+        AND (SELECT COUNT(*) FROM payments p WHERE p.user_id = u.id AND p.workshop_id = $workshop_id AND p.payment_status = 1) > 0
         ORDER BY u.name";
 $result = mysqli_query($conn, $sql);
 while ($row = mysqli_fetch_assoc($result)) {
@@ -235,41 +236,33 @@ while ($row = mysqli_fetch_assoc($result)) {
                                 <?php foreach ($users as $index => $user): ?>
                                 <tr class="user-row" data-name="<?php echo strtolower(htmlspecialchars($user['name'])); ?>">
                                     <td><?php echo $index + 1; ?></td>
-                                    <td>
-                                        <strong><?php echo htmlspecialchars($user['name']); ?></strong>
-                                        <?php if ($user['enrolled']): ?>
-                                            <span class="badge bg-success ms-2">Enrolled</span>
-                                        <?php else: ?>
-                                            <span class="badge bg-warning ms-2">Not Enrolled</span>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td>
-                                        <?php if ($user['enrolled']): ?>
-                                            <?php if (
-                                                !empty($workshop['meeting_id']) &&
-                                                $workshop['meeting_id'] !== '#' &&
-                                                strtolower($workshop['meeting_id']) !== 'null'
-                                            ): ?>
-                                                <div class="d-flex align-items-center">
-                                                    <a href="https://meet.ipnacademy.in/?display_name=<?php echo $user['id'].'_'.urlencode($user['name']); ?>&mn=<?php echo urlencode($workshop['meeting_id']); ?>&pwd=<?php echo urlencode($workshop['passcode']); ?>&meeting_email=<?php echo urlencode($user['email']); ?>" 
-                                                       target="_blank" 
-                                                       class="btn btn-sm btn-info joining-link">
-                                                        <i class="ti ti-external-link me-1"></i>Join Meeting
-                                                    </a>
-                                                    <button type="button" 
-                                                            class="btn btn-sm btn-outline-secondary copy-btn copy-link-btn" 
-                                                            data-link="https://meet.ipnacademy.in/?display_name=<?php echo $user['id'].'_'.urlencode($user['name']); ?>&mn=<?php echo urlencode($workshop['meeting_id']); ?>&pwd=<?php echo urlencode($workshop['passcode']); ?>&meeting_email=<?php echo urlencode($user['email']); ?>"
-                                                            title="Copy joining link">
-                                                        <i class="ti ti-copy"></i>
-                                                    </button>
-                                                </div>
-                                            <?php else: ?>
-                                                <span class="text-muted">Available Soon</span>
-                                            <?php endif; ?>
-                                        <?php else: ?>
-                                            <span class="text-danger">Not Enrolled</span>
-                                        <?php endif; ?>
-                                    </td>
+                                                                         <td>
+                                         <strong><?php echo htmlspecialchars($user['name']); ?></strong>
+                                         <span class="badge bg-success ms-2">Enrolled</span>
+                                     </td>
+                                                                         <td>
+                                         <?php if (
+                                             !empty($workshop['meeting_id']) &&
+                                             $workshop['meeting_id'] !== '#' &&
+                                             strtolower($workshop['meeting_id']) !== 'null'
+                                         ): ?>
+                                             <div class="d-flex align-items-center">
+                                                 <a href="https://meet.ipnacademy.in/?display_name=<?php echo $user['id'].'_'.urlencode($user['name']); ?>&mn=<?php echo urlencode($workshop['meeting_id']); ?>&pwd=<?php echo urlencode($workshop['passcode']); ?>&meeting_email=<?php echo urlencode($user['email']); ?>" 
+                                                    target="_blank" 
+                                                    class="btn btn-sm btn-info joining-link">
+                                                     <i class="ti ti-external-link me-1"></i>Join Meeting
+                                                 </a>
+                                                 <button type="button" 
+                                                         class="btn btn-sm btn-outline-secondary copy-btn copy-link-btn" 
+                                                         data-link="https://meet.ipnacademy.in/?display_name=<?php echo $user['id'].'_'.urlencode($user['name']); ?>&mn=<?php echo urlencode($workshop['meeting_id']); ?>&pwd=<?php echo urlencode($workshop['passcode']); ?>&meeting_email=<?php echo urlencode($user['email']); ?>"
+                                                         title="Copy joining link">
+                                                     <i class="ti ti-copy"></i>
+                                                 </button>
+                                             </div>
+                                         <?php else: ?>
+                                             <span class="text-muted">Available Soon</span>
+                                         <?php endif; ?>
+                                     </td>
                                 </tr>
                                 <?php endforeach; ?>
                             <?php endif; ?>
@@ -289,13 +282,13 @@ while ($row = mysqli_fetch_assoc($result)) {
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body text-start">
-                    <ul>
-                        <li>Use the search box to find specific users by name.</li>
-                        <li>Click "Join Meeting" to open the meeting link in a new tab.</li>
-                        <li>Click the copy icon to copy the joining link to clipboard.</li>
-                        <li>Only enrolled users will have active joining links.</li>
-                        <li>Users marked as "Not Enrolled" need to be enrolled first.</li>
-                    </ul>
+                                         <ul>
+                         <li>Use the search box to find specific users by name.</li>
+                         <li>Click "Join Meeting" to open the meeting link in a new tab.</li>
+                         <li>Click the copy icon to copy the joining link to clipboard.</li>
+                         <li>Only enrolled users are shown in this list.</li>
+                         <li>All users listed here have active joining links.</li>
+                     </ul>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
