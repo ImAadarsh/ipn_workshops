@@ -343,7 +343,7 @@ while ($row = mysqli_fetch_assoc($result)) {
                                                  <a href="https://meet.ipnacademy.in/?display_name=<?php echo $user['id'].'_'.urlencode($user['name']); ?>&mn=<?php echo urlencode($workshop['meeting_id']); ?>&pwd=<?php echo urlencode($workshop['passcode']); ?>&meeting_email=<?php echo urlencode($user['email']); ?>" 
                                                     target="_blank" 
                                                     class="btn btn-sm btn-info joining-link me-2 mb-1">
-                                                     <i class="ti ti-external-link me-1"></i>Join Meeting
+                                                     <i class="ti ti-external-link me-1"></i>Joining Link
                                                  </a>
                                                  <button type="button" 
                                                          class="btn btn-sm btn-outline-secondary copy-btn copy-link-btn mb-1" 
@@ -377,7 +377,7 @@ while ($row = mysqli_fetch_assoc($result)) {
                 <div class="modal-body text-start">
                                          <ul>
                          <li>Use the search box to find specific users by name.</li>
-                         <li>Click "Join Meeting" to open the meeting link in a new tab.</li>
+                         <li>Click "Joining Link" to open the joining link in a new tab.</li>
                          <li>Click the copy icon to copy the joining link to clipboard.</li>
                          <li>Only enrolled users are shown in this list.</li>
                          <li>All users listed here have active joining links.</li>
