@@ -3,6 +3,20 @@ session_start();
 // Standalone school bulk enroll page
 // No session or admin login required
 
+// Incognito mode detection
+$is_incognito = false;
+if (isset($_SERVER['HTTP_USER_AGENT'])) {
+    $user_agent = $_SERVER['HTTP_USER_AGENT'];
+    // Check for incognito/private browsing indicators
+    if (strpos($user_agent, 'Chrome') !== false && strpos($user_agent, 'Headless') !== false) {
+        $is_incognito = true;
+    }
+    // Additional checks for incognito mode
+    if (isset($_SERVER['HTTP_SEC_FETCH_SITE']) && $_SERVER['HTTP_SEC_FETCH_SITE'] === 'none') {
+        $is_incognito = true;
+    }
+}
+
 $workshop_id = isset($_GET['workshop_id']) ? intval($_GET['workshop_id']) : 0;
 $school_id = isset($_GET['school_id']) ? intval($_GET['school_id']) : 0;
 $email = isset($_GET['email']) ? trim($_GET['email']) : '';
@@ -55,6 +69,52 @@ if (!$access_granted) {
     exit();
 }
 
+// Check if editing is locked
+$is_locked = false;
+$show_timer = false;
+$lock_time_ist = null;
+
+if ($workshop) {
+    $now_ist = new DateTime('now', new DateTimeZone('Asia/Kolkata'));
+    $start_dt = new DateTime($workshop['start_date'] . ' ' . $workshop['start_time'], new DateTimeZone('Asia/Kolkata'));
+    
+    if ($workshop['lock_before_hours'] > 0) {
+        $lock_dt = clone $start_dt;
+        $lock_dt->modify('-' . $workshop['lock_before_hours'] . ' hours');
+        $lock_time_ist = $lock_dt;
+        $show_timer = true;
+        
+        if ($now_ist >= $lock_dt) {
+            $is_locked = true;
+        }
+    } else {
+        $lock_dt = clone $start_dt;
+        $lock_dt->modify('-3 hours');
+        $lock_time_ist = $lock_dt;
+        $show_timer = true;
+        
+        if ($now_ist >= $lock_dt) {
+            $is_locked = true;
+        }
+    }
+}
+
+// Block access if in incognito mode and editing is locked
+if ($is_incognito && $is_locked) {
+    echo '<!DOCTYPE html><html><head><title>Access Restricted</title></head><body>';
+    echo '<div style="max-width:500px;margin:100px auto;padding:2em;border:1px solid #ccc;text-align:center;">';
+    echo '<h2>Access Restricted</h2><p>This page is not accessible in incognito/private browsing mode when editing is locked.</p>';
+    echo '</div></body></html>';
+    exit();
+}
+
+// Block any form submissions when editing is locked (additional security)
+if ($is_locked && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $_SESSION['feedback_error'] = 'Editing is locked for this workshop. You cannot make changes at this time.';
+    header("Location: school_bulk_enroll.php?workshop_id=$workshop_id&school_id=$school_id&email=" . urlencode($email));
+    exit();
+}
+
 // --- FEEDBACK ---
 $feedback_message = $_SESSION['feedback_message'] ?? '';
 $feedback_error = $_SESSION['feedback_error'] ?? '';
@@ -90,7 +150,7 @@ function enrollUser($conn, $user_id, $workshop_id, $amount, $cpd_hrs, $school_id
 }
 
 // --- CSV Upload ---
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload_school_csv'])) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload_school_csv']) && !$is_locked) {
     $file = $_FILES['csv_file']['tmp_name'];
     if ($_FILES['csv_file']['error'] == UPLOAD_ERR_OK && is_uploaded_file($file)) {
         $stats = ['new' => 0, 'updated' => 0, 'errors' => 0, 'processed' => 0];
@@ -165,7 +225,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload_school_csv']))
 }
 
 // --- Manual Enrollment (search + select) ---
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['enroll_users'])) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['enroll_users']) && !$is_locked) {
     $user_ids = isset($_POST['user_ids']) ? $_POST['user_ids'] : [];
     if (!empty($user_ids)) {
         $enrolled_count = 0;
@@ -192,7 +252,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['enroll_users'])) {
 }
 
 // --- Unenroll logic ---
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['bulk_unenroll_users'])) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['bulk_unenroll_users']) && !$is_locked) {
     $unenroll_ids = isset($_POST['user_ids']) ? $_POST['user_ids'] : [];
     $unenrolled_count = 0;
     $errors = [];
@@ -216,7 +276,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['bulk_unenroll_users']
 }
 
 // --- Manual Add User logic ---
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['manual_add_user'])) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['manual_add_user']) && !$is_locked) {
     $name = mysqli_real_escape_string($conn, trim($_POST['new_name'] ?? ''));
     $email_new = mysqli_real_escape_string($conn, trim($_POST['new_email'] ?? ''));
     $mobile = preg_replace('/[^0-9]/', '', trim($_POST['new_mobile'] ?? ''));
@@ -328,7 +388,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['select_existing_user'
 }
 
 // --- Manual Edit User logic ---
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_user'])) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_user']) && !$is_locked) {
     $edit_user_id = intval($_POST['edit_user_id']);
     $name = mysqli_real_escape_string($conn, trim($_POST['edit_name'] ?? ''));
     $email_edit = mysqli_real_escape_string($conn, trim($_POST['edit_email'] ?? ''));
@@ -468,7 +528,7 @@ if (isset($_GET['export_attendance_csv']) && $_GET['export_attendance_csv'] == '
 }
 
 // --- Bulk Remove from School logic ---
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['bulk_remove_school'])) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['bulk_remove_school']) && !$is_locked) {
     $remove_ids = isset($_POST['user_ids']) ? $_POST['user_ids'] : [];
     $removed_count = 0;
     $errors = [];
@@ -532,6 +592,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_existing_user']))
 <html lang="en">
 <head>
     <meta charset="utf-8" />
+    <meta name="robots" content="noindex, nofollow">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>Enroll Teachers | <?php echo htmlspecialchars($school['name']); ?> | IPN Academy</title>
     <?php include 'includes/head.php'; ?>
     <style>
@@ -613,9 +677,85 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_existing_user']))
         .main-content {
             padding-top: 16px;
         }
+        
+        /* Blur sensitive data when editing is locked */
+        .blur-sensitive {
+            filter: blur(4px);
+            transition: filter 0.3s ease;
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+        }
+        
+        .blur-sensitive:hover {
+            filter: blur(0);
+        }
+        
+        /* Hide sensitive data from developer tools */
+        .blur-sensitive {
+            -webkit-filter: blur(4px);
+            -moz-filter: blur(4px);
+            -o-filter: blur(4px);
+            -ms-filter: blur(4px);
+        }
+        
+        /* Additional protection against inspection */
+        .blur-sensitive {
+            pointer-events: none;
+        }
+        
+        .blur-sensitive:hover {
+            pointer-events: auto;
+        }
+        
+        /* Placeholder styling for sensitive data */
+        .sensitive-data-placeholder {
+            color: #999;
+            font-family: monospace;
+            letter-spacing: 2px;
+        }
+        
+        .sensitive-data-real {
+            display: none !important;
+        }
+        
+        /* Show real data only on hover when not in locked mode */
+        .blur-sensitive:hover .sensitive-data-placeholder {
+            display: none;
+        }
+        
+        .blur-sensitive:hover .sensitive-data-real {
+            display: inline !important;
+        }
+        
+        /* Prevent printing of sensitive data */
+        @media print {
+            .blur-sensitive,
+            .sensitive-data-real,
+            .sensitive-data-placeholder {
+                display: none !important;
+            }
+        }
+        
+        /* Hide checkboxes when locked */
+        .locked-mode .user-checkbox {
+            display: none !important;
+        }
+        
+        /* Additional incognito detection styles */
+        .incognito-warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
     </style>
 </head>
-<body>
+<body class="<?php echo $is_locked ? 'locked-mode' : ''; ?>">
     <div class="header-bar">
         <img src="https://ipnacademy.in/user/images/logo.png" alt="IPN Academy Logo" class="logo">
         <div class="workshop-title">Enroll Teachers for <?php echo htmlspecialchars($workshop['name']); ?></div>
@@ -626,46 +766,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_existing_user']))
         </div>
     </div>
     <div class="container main-content py-4">
-    <?php
-    // --- Lock logic ---
-    $is_locked = false;
-    $lock_time_ist = null;
-    $now_ist = new DateTime('now', new DateTimeZone('Asia/Kolkata'));
-    $show_timer = false;
-    if (!empty($workshop['start_date'])) {
-        $show_timer = true;
-        $start_dt = new DateTime($workshop['start_date'], new DateTimeZone('Asia/Kolkata'));
-        if (isset($workshop['type']) && $workshop['type'] == 1) {
-            $lock_dt = clone $start_dt;
-            $lock_dt->modify('-3 hours');
-        } else {
-            $lock_dt = clone $start_dt;
-        }
-        $lock_time_ist = $lock_dt;
-        if ($now_ist >= $lock_time_ist) {
-            $is_locked = true;
-        }
-    }
-    ?>
     <?php if ($is_locked): ?>
         <div class="alert alert-warning text-center mb-4">Editing is locked for this workshop. You can view data, but cannot add, edit, or enroll teachers until after the workshop.</div>
+    <?php endif; ?>
+    <?php if ($is_incognito && !$is_locked): ?>
+        <div class="alert alert-info text-center mb-4">You are accessing this page in incognito/private browsing mode. Some features may be restricted.</div>
     <?php endif; ?>
     <?php if ($feedback_message): ?><div class="alert alert-success mt-3"><?php echo $feedback_message; ?></div><?php endif; ?>
     <?php if ($feedback_error): ?><div class="alert alert-danger mt-3"><?php echo $feedback_error; ?></div><?php endif; ?>
 
     <div class="row">
-                <!-- Smart Enrollment Stats Card -->
-    <div class="card mb-4">
-        <div class="card-header"><h5 class="mb-0"><i class="ti ti-chart-bar me-1"></i> School Enrollment & Investment Stats</h5></div>
-        <div class="card-body">
-            <div class="row text-center">
-                <div class="col-md-4"><div class="fw-bold">Registered</div><div class="fs-4 text-primary"><?php echo $stats['total_registered']; ?></div></div>
-                <div class="col-md-4"><div class="fw-bold">Enrolled</div><div class="fs-4 text-success"><?php echo $stats['total_enrolled']; ?></div></div>
-                <!-- <div class="col-md-3"><div class="fw-bold">Invested Amount</div><div class="fs-4 text-info">₹<?php echo number_format($stats['invested_amount'], 2); ?></div></div> -->
-                <div class="col-md-4"><div class="fw-bold">Cultivated CPD Hours</div><div class="fs-4 text-warning"><?php echo $stats['cpd_hours']; ?></div></div>
+        <!-- Smart Enrollment Stats Card -->
+        <div class="card mb-4">
+            <div class="card-header"><h5 class="mb-0"><i class="ti ti-chart-bar me-1"></i> School Enrollment & Investment Stats</h5></div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-md-4"><div class="fw-bold">Registered</div><div class="fs-4 text-primary"><?php echo $stats['total_registered']; ?></div></div>
+                    <div class="col-md-4"><div class="fw-bold">Enrolled</div><div class="fs-4 text-success"><?php echo $stats['total_enrolled']; ?></div></div>
+                    <!-- <div class="col-md-3"><div class="fw-bold">Invested Amount</div><div class="fs-4 text-info">₹<?php echo number_format($stats['invested_amount'], 2); ?></div></div> -->
+                    <div class="col-md-4"><div class="fw-bold">Cultivated CPD Hours</div><div class="fs-4 text-warning"><?php echo $stats['cpd_hours']; ?></div></div>
+                </div>
             </div>
         </div>
-    </div>
+        
+        <?php if (!$is_locked): ?>
         <div class="col-lg-6">
             <div class="card mb-4">
                 <div class="card-header"><h5 class="card-title mb-0"><i class="ti ti-file-upload me-1"></i> Enroll via CSV</h5></div>
@@ -701,11 +825,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_existing_user']))
                 </div>
             </div>
         </div>
+        <?php endif; ?>
     </div>
+    <?php if (!$is_locked): ?>
     <div class="d-flex justify-content-end mb-2">
         <!-- <button class="btn btn-primary me-2" data-bs-toggle="modal" data-bs-target="#addExistingUserModal">+ Add Existing User</button> -->
         <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addUserModal">+ Add New User</button>
     </div>
+    <?php endif; ?>
     <div class="modal fade" id="addUserModal" tabindex="-1" aria-labelledby="addUserModalLabel" aria-hidden="true">
       <div class="modal-dialog">
         <div class="modal-content">
@@ -758,12 +885,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_existing_user']))
                         <thead>
                             <tr>
                                 <th><input type="checkbox" id="selectAllUsers"></th>
-                                <th>Name</th><th>Email</th><th>Mobile</th><th>Designation</th><th>Enrolled?</th><th>Workshop Link</th><th>Edit</th>
+                                <th>Name</th>
+                                <th>Email <?php if ($is_locked): ?><small class="text-muted">(Blurred)</small><?php endif; ?></th>
+                                <th>Mobile <?php if ($is_locked): ?><small class="text-muted">(Blurred)</small><?php endif; ?></th>
+                                <th>Designation <?php if ($is_locked): ?><small class="text-muted">(Blurred)</small><?php endif; ?></th>
+                                <th>Enrolled?</th>
+                                <th>Workshop Link</th><?php if (!$is_locked): ?><th>Edit</th><?php endif; ?>
                             </tr>
                         </thead>
                         <tbody>
                         <?php if (empty($users)): ?>
-                            <tr><td colspan="8" class="text-center">No teachers found matching your criteria.</td></tr>
+                            <tr><td colspan="<?php echo $is_locked ? '7' : '8'; ?>" class="text-center">No teachers found matching your criteria.</td></tr>
                         <?php else: ?>
                             <?php foreach ($users as $user): ?>
                             <tr>
@@ -771,9 +903,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_existing_user']))
                                     <input type="checkbox" class="user-checkbox" name="user_ids[]" value="<?php echo $user['id']; ?>">
                                 </td>
                                 <td><?php echo htmlspecialchars($user['name']); ?></td>
-                                <td><?php echo htmlspecialchars($user['email']); ?></td>
-                                <td><?php echo htmlspecialchars($user['mobile']); ?></td>
-                                <td><?php echo htmlspecialchars($user['designation']); ?></td>
+                                <td class="<?php echo $is_locked ? 'blur-sensitive' : ''; ?>">
+                                    <?php if ($is_locked): ?>
+                                        <span class="sensitive-data-placeholder">••••••••••••••••••••</span>
+                                        <span class="sensitive-data-real" style="display: none;" data-encrypted="<?php echo base64_encode($user['email']); ?>"></span>
+                                    <?php else: ?>
+                                        <?php echo htmlspecialchars($user['email']); ?>
+                                    <?php endif; ?>
+                                </td>
+                                <td class="<?php echo $is_locked ? 'blur-sensitive' : ''; ?>">
+                                    <?php if ($is_locked): ?>
+                                        <span class="sensitive-data-placeholder">••••••••••••••••••••</span>
+                                        <span class="sensitive-data-real" style="display: none;" data-encrypted="<?php echo base64_encode($user['mobile']); ?>"></span>
+                                    <?php else: ?>
+                                        <?php echo htmlspecialchars($user['mobile']); ?>
+                                    <?php endif; ?>
+                                </td>
+                                <td class="<?php echo $is_locked ? 'blur-sensitive' : ''; ?>">
+                                    <?php if ($is_locked): ?>
+                                        <span class="sensitive-data-placeholder">••••••••••••••••••••</span>
+                                        <span class="sensitive-data-real" style="display: none;" data-encrypted="<?php echo base64_encode($user['designation']); ?>"></span>
+                                    <?php else: ?>
+                                        <?php echo htmlspecialchars($user['designation']); ?>
+                                    <?php endif; ?>
+                                </td>
                                 <td>
                                     <?php if ($user['enrolled']): ?>
                                         <span class="badge bg-success">Yes</span>
@@ -803,6 +956,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_existing_user']))
                                         Not Registered
                                     <?php endif; ?>
                                 </td>
+                                <?php if (!$is_locked): ?>
                                 <td>
                                     <button type="button" class="btn btn-sm btn-warning edit-user-btn" 
                                         data-user='<?php echo json_encode([
@@ -818,15 +972,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_existing_user']))
                                         Edit
                                     </button>
                                 </td>
+                                <?php endif; ?>
                             </tr>
                             <?php endforeach; ?>
                         <?php endif; ?>
                         </tbody>
                     </table>
                 </div>
+                <?php if (!$is_locked): ?>
                 <button type="submit" name="enroll_users" value="1" class="btn btn-success">Enroll Selected Teachers</button>
                 <button type="submit" name="bulk_unenroll_users" value="1" class="btn btn-danger ms-2">Bulk Unenroll Selected</button>
                 <button type="submit" name="bulk_remove_school" value="1" class="btn btn-warning ms-2">Remove from School</button>
+                <?php endif; ?>
             </form>
         </div>
     </div>
@@ -1263,17 +1420,215 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
+    // Developer Tools Detection and Protection
+    (function() {
+        var isIncognito = false;
+        var devToolsOpen = false;
+        
+        // Detect developer tools opening
+        function detectDevTools() {
+            var threshold = 160;
+            var widthThreshold = window.outerWidth - window.innerWidth > threshold;
+            var heightThreshold = window.outerHeight - window.innerHeight > threshold;
+            
+            if (widthThreshold || heightThreshold) {
+                devToolsOpen = true;
+                handleDevToolsOpen();
+            }
+        }
+        
+        // Handle developer tools opening
+        function handleDevToolsOpen() {
+            if (<?php echo $is_locked ? 'true' : 'false'; ?>) {
+                // Hide all sensitive data when dev tools are open
+                document.querySelectorAll('.sensitive-data-real').forEach(function(el) {
+                    el.style.display = 'none !important';
+                    el.innerHTML = '••••••••••••••••••••';
+                });
+                
+                // Show warning
+                var warning = document.createElement('div');
+                warning.id = 'devtools-warning';
+                warning.style.cssText = 'position:fixed;top:0;left:0;right:0;background:red;color:white;padding:10px;text-align:center;z-index:9999;font-weight:bold;';
+                warning.innerHTML = '⚠️ Developer Tools Detected - Sensitive Data Hidden ⚠️';
+                document.body.appendChild(warning);
+                
+                // Remove warning after 3 seconds
+                setTimeout(function() {
+                    if (warning.parentNode) {
+                        warning.parentNode.removeChild(warning);
+                    }
+                }, 3000);
+            }
+        }
+        
+        // Monitor for developer tools
+        setInterval(detectDevTools, 1000);
+        
+        // Handle sensitive data display on hover
+        if (<?php echo $is_locked ? 'true' : 'false'; ?>) {
+            document.addEventListener('DOMContentLoaded', function() {
+                // Add hover event listeners to sensitive data cells
+                document.querySelectorAll('.blur-sensitive').forEach(function(cell) {
+                    cell.addEventListener('mouseenter', function() {
+                        var realDataSpan = this.querySelector('.sensitive-data-real');
+                        if (realDataSpan && realDataSpan.dataset.encrypted) {
+                            try {
+                                // Decode the base64 data
+                                var decodedData = atob(realDataSpan.dataset.encrypted);
+                                realDataSpan.textContent = decodedData;
+                                realDataSpan.style.display = 'inline';
+                            } catch (e) {
+                                console.log('Error decoding sensitive data');
+                            }
+                        }
+                    });
+                    
+                    cell.addEventListener('mouseleave', function() {
+                        var realDataSpan = this.querySelector('.sensitive-data-real');
+                        if (realDataSpan) {
+                            realDataSpan.style.display = 'none';
+                            realDataSpan.textContent = '';
+                        }
+                    });
+                });
+            });
+        }
+        
+        // Additional detection methods
+        document.addEventListener('keydown', function(e) {
+            // Detect F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+U
+            if (e.key === 'F12' || 
+                (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J')) ||
+                (e.ctrlKey && e.key === 'U')) {
+                if (<?php echo $is_locked ? 'true' : 'false'; ?>) {
+                    e.preventDefault();
+                    alert('Developer tools access is restricted when editing is locked.');
+                    return false;
+                }
+            }
+        });
+        
+        // Detect right-click context menu
+        document.addEventListener('contextmenu', function(e) {
+            if (<?php echo $is_locked ? 'true' : 'false'; ?>) {
+                e.preventDefault();
+                alert('Right-click is disabled when editing is locked.');
+                return false;
+            }
+        });
+        
+        // Detect view source attempts
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.key === 'S') {
+                if (<?php echo $is_locked ? 'true' : 'false'; ?>) {
+                    e.preventDefault();
+                    alert('Saving page is restricted when editing is locked.');
+                    return false;
+                }
+            }
+        });
+        
+        // Prevent printing when locked
+        if (<?php echo $is_locked ? 'true' : 'false'; ?>) {
+            window.addEventListener('beforeprint', function(e) {
+                e.preventDefault();
+                alert('Printing is restricted when editing is locked.');
+                return false;
+            });
+        }
+        
+        // Additional protection: Clear sensitive data when page loses focus
+        if (<?php echo $is_locked ? 'true' : 'false'; ?>) {
+            window.addEventListener('blur', function() {
+                document.querySelectorAll('.sensitive-data-real').forEach(function(el) {
+                    el.style.display = 'none';
+                    el.textContent = '';
+                });
+            });
+        }
+        
+        // Check for incognito mode using multiple methods
+        function detectIncognito() {
+            // Method 1: Check for FileSystem API
+            if (window.webkitRequestFileSystem) {
+                window.webkitRequestFileSystem(window.TEMPORARY, 1, function() {
+                    // Not incognito
+                }, function() {
+                    isIncognito = true;
+                });
+            }
+            
+            // Method 2: Check for IndexedDB
+            try {
+                var db = indexedDB.open('test');
+                db.onerror = function() {
+                    isIncognito = true;
+                };
+                db.onsuccess = function() {
+                    db.result.close();
+                    indexedDB.deleteDatabase('test');
+                };
+            } catch (e) {
+                isIncognito = true;
+            }
+            
+            // Method 3: Check for localStorage
+            try {
+                localStorage.setItem('test', 'test');
+                localStorage.removeItem('test');
+            } catch (e) {
+                isIncognito = true;
+            }
+            
+            // Method 4: Check for sessionStorage
+            try {
+                sessionStorage.setItem('test', 'test');
+                sessionStorage.removeItem('test');
+            } catch (e) {
+                isIncognito = true;
+            }
+            
+            // Method 5: Check for navigator.webdriver (headless browsers)
+            if (navigator.webdriver) {
+                isIncognito = true;
+            }
+            
+            // Method 6: Check for specific user agent patterns
+            var userAgent = navigator.userAgent;
+            if (userAgent.includes('Headless') || userAgent.includes('PhantomJS') || userAgent.includes('Selenium')) {
+                isIncognito = true;
+            }
+            
+            return isIncognito;
+        }
+        
+        // Run detection after a short delay
+        setTimeout(function() {
+            if (detectIncognito()) {
+                console.log('Incognito mode detected');
+                // Add warning to page
+                var warning = document.createElement('div');
+                warning.className = 'incognito-warning';
+                warning.innerHTML = '<strong>Warning:</strong> Incognito/Private browsing mode detected. Some features may be restricted.';
+                document.body.insertBefore(warning, document.body.firstChild);
+            }
+        }, 1000);
+    })();
+
     // Countdown Timer Logic
     (function() {
         var lockTimeIST = <?php echo $lock_time_ist ? ('"' . $lock_time_ist->format('Y-m-d H:i:s') . '"') : 'null'; ?>;
         var isLocked = <?php echo $is_locked ? 'true' : 'false'; ?>;
         var showTimer = <?php echo $show_timer ? 'true' : 'false'; ?>;
         var timerEl = document.getElementById('countdown-timer');
+        
         function getISTNow() {
             var now = new Date();
             var utc = now.getTime() + (now.getTimezoneOffset() * 60000);
             return new Date(utc + (5.5 * 60 * 60 * 1000));
         }
+        
         function updateTimer() {
             if (!lockTimeIST || !showTimer) return;
             var now = getISTNow();
@@ -1288,11 +1643,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 timerEl.textContent = 'Editing is locked';
             }
         }
+        
         if (timerEl && showTimer) {
             updateTimer();
             setInterval(updateTimer, 1000);
         }
+        
         if (isLocked) {
+            // Hide all interactive elements when locked
             document.querySelectorAll('.user-checkbox, .edit-user-btn, .btn-success, .btn-danger, .btn-warning, .btn-primary, .csv-btn, form[action*="add_existing_user"], form[action*="manual_add_user"], form[action*="edit_user"]').forEach(function(el) {
                 el.style.display = 'none';
             });
@@ -1301,8 +1659,54 @@ document.addEventListener('DOMContentLoaded', function() {
             });
             var csvForm = document.querySelector('form[action*="upload_school_csv"]');
             if (csvForm) csvForm.style.display = 'none';
+            
+            // Disable form submissions
+            document.querySelectorAll('form').forEach(function(form) {
+                form.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    alert('Editing is locked. You cannot make changes at this time.');
+                    return false;
+                });
+            });
+            
+                    // Add visual indicator for locked mode
+        document.body.classList.add('locked-mode');
+        
+        // Prevent right-click on sensitive data
+        document.addEventListener('contextmenu', function(e) {
+            if (e.target.classList.contains('blur-sensitive')) {
+                e.preventDefault();
+                alert('Right-click is disabled on sensitive data when editing is locked.');
+                return false;
+            }
+        });
+        
+        // Prevent keyboard shortcuts for copy/paste on sensitive data
+        document.addEventListener('keydown', function(e) {
+            if (e.target.classList.contains('blur-sensitive') && 
+                ((e.ctrlKey || e.metaKey) && (e.key === 'c' || e.key === 'C' || e.key === 'v' || e.key === 'V' || e.key === 'a' || e.key === 'A'))) {
+                e.preventDefault();
+                alert('Copy/paste is disabled on sensitive data when editing is locked.');
+                return false;
+            }
+        });
+        
+        // Prevent text selection on sensitive data
+        document.addEventListener('selectstart', function(e) {
+            if (e.target.classList.contains('blur-sensitive')) {
+                e.preventDefault();
+                return false;
+            }
+        });
+        
+        // Disable select all checkbox when locked
+        var selectAllCheckbox = document.getElementById('selectAllUsers');
+        if (selectAllCheckbox) {
+            selectAllCheckbox.disabled = true;
+            selectAllCheckbox.checked = false;
         }
-    })();
+    }
+})();
 
     // User Selection Modal Logic
     <?php if (isset($_SESSION['show_user_selection']) && $_SESSION['show_user_selection']): ?>

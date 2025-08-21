@@ -239,7 +239,7 @@ if ($payment_id && $payment_request_id) {
             
             if ($http_code === 200) {
                 $payment_data = json_decode($response, true);
-                
+                print_r($payment_data);
                 // Extract payment information
                 $buyer_name = $payment_data['name'] ?? '';
                 $buyer_email = $payment_data['email'] ?? '';
