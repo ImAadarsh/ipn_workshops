@@ -180,6 +180,99 @@ while ($row = mysqli_fetch_assoc($result)) {
         .copy-btn {
             margin-left: 10px;
         }
+        
+        /* Mobile Responsive Styles */
+        @media (max-width: 768px) {
+            .search-container {
+                padding: 15px;
+            }
+            
+            .table-responsive {
+                font-size: 0.9rem;
+            }
+            
+            .table th, .table td {
+                padding: 8px 4px;
+            }
+            
+            .joining-link {
+                max-width: 200px;
+                font-size: 0.8rem;
+                padding: 4px 8px;
+            }
+            
+            .copy-btn {
+                margin-left: 5px;
+                padding: 4px 6px;
+                font-size: 0.8rem;
+            }
+            
+            .btn-sm {
+                padding: 4px 8px;
+                font-size: 0.8rem;
+            }
+            
+            .d-flex.align-items-center {
+                flex-direction: column;
+                align-items: flex-start !important;
+                gap: 5px;
+            }
+            
+            .d-flex.align-items-center .copy-btn {
+                margin-left: 0;
+                align-self: flex-end;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .table-responsive {
+                font-size: 0.8rem;
+            }
+            
+            .table th, .table td {
+                padding: 6px 3px;
+            }
+            
+            .joining-link {
+                max-width: 150px;
+                font-size: 0.75rem;
+                padding: 3px 6px;
+            }
+            
+            .copy-btn {
+                padding: 3px 5px;
+                font-size: 0.75rem;
+            }
+            
+            .btn-sm {
+                padding: 3px 6px;
+                font-size: 0.75rem;
+            }
+            
+            .card-body {
+                padding: 1rem;
+            }
+            
+            .search-container {
+                padding: 10px;
+            }
+            
+            .header-bar .workshop-title {
+                font-size: 0.9rem;
+            }
+            
+            .header-bar .school-name {
+                font-size: 0.8rem;
+            }
+            
+            .table th {
+                font-size: 0.75rem;
+            }
+            
+            .badge {
+                font-size: 0.7rem;
+            }
+        }
         .no-results {
             text-align: center;
             padding: 40px;
@@ -201,7 +294,7 @@ while ($row = mysqli_fetch_assoc($result)) {
     <div class="container main-content py-4">
         <div class="search-container">
             <div class="row">
-                <div class="col-md-6">
+                <div class="col-md-6 mb-3 mb-md-0">
                     <label for="searchInput" class="form-label"><i class="ti ti-search me-1"></i>Search by Name</label>
                     <input type="text" id="searchInput" class="form-control" placeholder="Type to search users...">
                 </div>
@@ -246,14 +339,14 @@ while ($row = mysqli_fetch_assoc($result)) {
                                              $workshop['meeting_id'] !== '#' &&
                                              strtolower($workshop['meeting_id']) !== 'null'
                                          ): ?>
-                                             <div class="d-flex align-items-center">
+                                             <div class="d-flex align-items-center flex-wrap">
                                                  <a href="https://meet.ipnacademy.in/?display_name=<?php echo $user['id'].'_'.urlencode($user['name']); ?>&mn=<?php echo urlencode($workshop['meeting_id']); ?>&pwd=<?php echo urlencode($workshop['passcode']); ?>&meeting_email=<?php echo urlencode($user['email']); ?>" 
                                                     target="_blank" 
-                                                    class="btn btn-sm btn-info joining-link">
+                                                    class="btn btn-sm btn-info joining-link me-2 mb-1">
                                                      <i class="ti ti-external-link me-1"></i>Join Meeting
                                                  </a>
                                                  <button type="button" 
-                                                         class="btn btn-sm btn-outline-secondary copy-btn copy-link-btn" 
+                                                         class="btn btn-sm btn-outline-secondary copy-btn copy-link-btn mb-1" 
                                                          data-link="https://meet.ipnacademy.in/?display_name=<?php echo $user['id'].'_'.urlencode($user['name']); ?>&mn=<?php echo urlencode($workshop['meeting_id']); ?>&pwd=<?php echo urlencode($workshop['passcode']); ?>&meeting_email=<?php echo urlencode($user['email']); ?>"
                                                          title="Copy joining link">
                                                      <i class="ti ti-copy"></i>

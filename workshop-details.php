@@ -884,6 +884,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                                         <i class="ti ti-clipboard-check me-1"></i>
                                                         Attendance
                                                     </a>
+                                                    <a href="schoolWiseJL.php?workshop_id=<?php echo $workshop_id; ?>&school_id=<?php echo $school['id']; ?>&email=<?php echo $school['email']; ?>" 
+                                                       class="btn btn-outline-warning btn-sm flex-fill"
+                                                       title="View joining links for all enrolled teachers"
+                                                       target="_blank">
+                                                        <i class="ti ti-link me-1"></i>
+                                                        School Wise JL
+                                                    </a>
                                                     <?php endif; ?>
                                                     <a href="school_bulk_enroll.php?workshop_id=<?php echo $workshop_id; ?>&school_id=<?php echo $school['id']; ?>&email=<?php echo $school['email']; ?>" 
                                                        class="btn btn-outline-success btn-sm flex-fill"
