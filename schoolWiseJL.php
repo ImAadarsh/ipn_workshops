@@ -76,7 +76,7 @@ while ($row = mysqli_fetch_assoc($result)) {
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Joining Links | <?php echo htmlspecialchars($school['name']); ?> | IPN Academy</title>
+    <title>Joining Links | <?php echo htmlspecialchars($school['name']); ?> For Workshop: <?php echo htmlspecialchars($workshop['name']); ?> | Date: <?php echo date('d M Y', strtotime($workshop['start_date'])); ?> | IPN Academy</title>
     <?php include 'includes/head.php'; ?>
     <style>
         .header-bar {
