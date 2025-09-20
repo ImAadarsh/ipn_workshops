@@ -77,7 +77,7 @@ if ($workshop) {
         }
     } else {
         $lock_dt = clone $start_dt;
-        $lock_dt->modify('-3 hours');
+        $lock_dt->modify('-15 minutes');
         $lock_time_ist = $lock_dt;
         $show_timer = true;
         
