@@ -369,10 +369,40 @@
         </li>
 
         <li class="side-nav-item">
-            <a href="admin_profile_corrections.php" class="side-nav-link">
+            <a data-bs-toggle="collapse" href="#sidebarProfileCorrections" aria-expanded="false" aria-controls="sidebarProfileCorrections" class="side-nav-link">
                 <span class="menu-icon"><i class="ti ti-user-edit"></i></span>
                 <span class="menu-text">Profile Corrections</span>
+                <span class="menu-arrow"></span>
             </a>
+            <div class="collapse" id="sidebarProfileCorrections">
+                <ul class="sub-menu">
+                    <li class="side-nav-item">
+                        <a href="admin_profile_corrections.php" class="side-nav-link">
+                            <span class="menu-text">All Requests</span>
+                        </a>
+                    </li>
+                    <li class="side-nav-item">
+                        <a href="admin_profile_corrections.php?status=pending" class="side-nav-link">
+                            <span class="menu-text">Pending Requests</span>
+                        </a>
+                    </li>
+                    <li class="side-nav-item">
+                        <a href="admin_profile_corrections.php?status=approved" class="side-nav-link">
+                            <span class="menu-text">Approved Requests</span>
+                        </a>
+                    </li>
+                    <li class="side-nav-item">
+                        <a href="admin_profile_corrections.php?status=rejected" class="side-nav-link">
+                            <span class="menu-text">Rejected Requests</span>
+                        </a>
+                    </li>
+                    <li class="side-nav-item">
+                        <a href="profile_correction_request.php" class="side-nav-link">
+                            <span class="menu-text">Submit Request</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
         </li>
 
         <li class="side-nav-item">
