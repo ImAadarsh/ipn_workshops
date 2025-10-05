@@ -398,7 +398,7 @@
                     </li>
                     <li class="side-nav-item">
                         <a href="https://ipnacademy.in/correct_me.php" class="side-nav-link">
-                            <span class="menu-text">Submit Request</span>
+                            <span class="menu-text">Submit Request (For Users)</span>
                         </a>
                     </li>
                 </ul>
