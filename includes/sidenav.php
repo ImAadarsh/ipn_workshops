@@ -369,6 +369,13 @@
         </li>
 
         <li class="side-nav-item">
+            <a href="admin_profile_corrections.php" class="side-nav-link">
+                <span class="menu-icon"><i class="ti ti-user-edit"></i></span>
+                <span class="menu-text">Profile Corrections</span>
+            </a>
+        </li>
+
+        <li class="side-nav-item">
             <a data-bs-toggle="collapse" href="#sidebarInstamojo" aria-expanded="false" aria-controls="sidebarInstamojo" class="side-nav-link">
                 <span class="menu-icon"><i class="ti ti-credit-card"></i></span>
                 <span class="menu-text">Instamojo</span>
