@@ -224,14 +224,21 @@ unset($_SESSION['success_message'], $_SESSION['error_message']);
     </style>
 </head>
 <body>
-    <?php include 'includes/topbar.php'; ?>
-    <?php include 'includes/sidenav.php'; ?>
+<div class="wrapper">
+        <?php include 'includes/sidenav.php'; ?>
+        <?php include 'includes/topbar.php'; ?>
 
-    <div class="main-content">
-        <div class="container-fluid">
-            <div class="row">
-                <div class="col-12">
+        <div class="page-content">
+            <div class="page-container">
+                <div class="row mt-4">
+                    <div class="col-12">
                     <div class="page-title-box">
+                        <div class="page-title-right">
+                            <ol class="breadcrumb m-0">
+                                <li class="breadcrumb-item"><a href="dashboard.php">Dashboard</a></li>
+                                <li class="breadcrumb-item active">Profile Correction Requests</li>
+                            </ol>
+                        </div>
                         <h4 class="page-title">Profile Correction Requests</h4>
                     </div>
                 </div>
