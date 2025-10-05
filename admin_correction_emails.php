@@ -217,13 +217,30 @@ class ProfileCorrectionEmails {
     }
     
     /**
-     * Send email using the existing email helper
+     * Send email using PHP's built-in mail function
      */
     private function sendEmail($to, $subject, $message) {
         try {
-            // Use the existing email helper
-            $emailHelper = new EmailHelper();
-            return $emailHelper->sendEmail($to, $subject, $message);
+            // Use PHP's built-in mail function with proper headers
+            $headers = [
+                'MIME-Version: 1.0',
+                'Content-type: text/html; charset=UTF-8',
+                'From: IPN Academy <ipnacademy2023@gmail.com>',
+                'Reply-To: ipnacademy2023@gmail.com',
+                'X-Mailer: PHP/' . phpversion()
+            ];
+            
+            $headers_string = implode("\r\n", $headers);
+            
+            $result = mail($to, $subject, $message, $headers_string);
+            
+            if ($result) {
+                error_log("Profile correction email sent successfully to: $to");
+            } else {
+                error_log("Failed to send profile correction email to: $to");
+            }
+            
+            return $result;
         } catch (Exception $e) {
             error_log("Email sending failed: " . $e->getMessage());
             return false;
@@ -252,16 +269,6 @@ class ProfileCorrectionEmails {
         return $templates[$template_name] ?? null;
     }
     
-    /**
-     * Log email sending activity
-     */
-    private function logEmailActivity($request_id, $email_type, $recipient, $status) {
-        $log_sql = "INSERT INTO email_logs (request_id, email_type, recipient, status, sent_at) 
-                    VALUES (?, ?, ?, ?, NOW())";
-        $stmt = mysqli_prepare($this->conn, $log_sql);
-        mysqli_stmt_bind_param($stmt, 'isss', $request_id, $email_type, $recipient, $status);
-        mysqli_stmt_execute($stmt);
-    }
 }
 
 // Helper function to send approval email
