@@ -114,14 +114,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_correction']))
     </style>
 </head>
 <body>
+    <div class="wrapper">   <?php include 'includes/sidenav.php'; ?>
     <?php include 'includes/topbar.php'; ?>
     <?php include 'includes/sidenav.php'; ?>
 
-    <div class="main-content">
+    <div class="page-content">
+        <div class="page-container">
         <div class="container-fluid">
             <div class="row">
                 <div class="col-12">
                     <div class="page-title-box">
+                        <div class="page-title-right">
+                            <ol class="breadcrumb m-0">
+                                <li class="breadcrumb-item"><a href="dashboard.php">Dashboard</a></li>
+                                <li class="breadcrumb-item active">Profile Correction Request</li>
+                            </ol>
+                        </div>
+                        <h4 class="page-title">Profile Correction Request</h4>
+                    </div>
+                </div>
+            </div>
+
+            <?php if ($success_message): ?>
+                    <div class="page-title-box">
+                        <div class="page-title-right">
+                            <ol class="breadcrumb m-0">
+                                <li class="breadcrumb-item"><a href="dashboard.php">Dashboard</a></li>
+                                <li class="breadcrumb-item active">Profile Correction Request</li>
+                            </ol>
+                        </div>
                         <h4 class="page-title">Profile Correction Request</h4>
                         <p class="text-muted">Request changes to your profile information</p>
                     </div>
