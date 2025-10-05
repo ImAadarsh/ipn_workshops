@@ -397,7 +397,7 @@
                         </a>
                     </li>
                     <li class="side-nav-item">
-                        <a href="profile_correction_request.php" class="side-nav-link">
+                        <a href="https://ipnacademy.in/correct_me.php" class="side-nav-link">
                             <span class="menu-text">Submit Request</span>
                         </a>
                     </li>
