@@ -63,32 +63,32 @@
                         <div class="collapse" id="sidebarTLC2">
                             <ul class="sub-menu">
                                 <li class="side-nav-item">
-                                    <a href="<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/') !== false) ? 'tlc_2025.php' : 'tlc_editions/02/tlc_2025.php'; ?>" class="side-nav-link<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/02/') !== false && basename($_SERVER['REQUEST_URI']) == 'tlc_2025.php') ? ' active' : ''; ?>">
+                                    <a href="<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/03/') !== false) ? '../../tlc_editions/02/tlc_2025.php' : (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/02/') !== false ? 'tlc_2025.php' : 'tlc_editions/02/tlc_2025.php'); ?>" class="side-nav-link<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/02/') !== false && basename($_SERVER['REQUEST_URI']) == 'tlc_2025.php') ? ' active' : ''; ?>">
                                         <span class="menu-text">Users</span>
                                     </a>
                                 </li>
                                 <li class="side-nav-item">
-                                    <a href="<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/') !== false) ? 'tlc_feedback_day_01.php' : 'tlc_editions/02/tlc_feedback_day_01.php'; ?>" class="side-nav-link<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/02/') !== false && basename($_SERVER['REQUEST_URI']) == 'tlc_feedback_day_01.php') ? ' active' : ''; ?>">
+                                    <a href="<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/03/') !== false) ? '../../tlc_editions/02/tlc_feedback_day_01.php' : (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/02/') !== false ? 'tlc_feedback_day_01.php' : 'tlc_editions/02/tlc_feedback_day_01.php'); ?>" class="side-nav-link<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/02/') !== false && basename($_SERVER['REQUEST_URI']) == 'tlc_feedback_day_01.php') ? ' active' : ''; ?>">
                                         <span class="menu-text">Feedback Day 01</span>
                                     </a>
                                 </li>
                                 <li class="side-nav-item">
-                                    <a href="<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/') !== false) ? 'tlc_feedback_day_02.php' : 'tlc_editions/02/tlc_feedback_day_02.php'; ?>" class="side-nav-link<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/02/') !== false && basename($_SERVER['REQUEST_URI']) == 'tlc_feedback_day_02.php') ? ' active' : ''; ?>">
+                                    <a href="<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/03/') !== false) ? '../../tlc_editions/02/tlc_feedback_day_02.php' : (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/02/') !== false ? 'tlc_feedback_day_02.php' : 'tlc_editions/02/tlc_feedback_day_02.php'); ?>" class="side-nav-link<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/02/') !== false && basename($_SERVER['REQUEST_URI']) == 'tlc_feedback_day_02.php') ? ' active' : ''; ?>">
                                         <span class="menu-text">Feedback Day 02</span>
                                     </a>
                                 </li>
                                 <li class="side-nav-item">
-                                    <a href="<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/') !== false) ? 'tlc_durations.php' : 'tlc_editions/02/tlc_durations.php'; ?>" class="side-nav-link<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/02/') !== false && basename($_SERVER['REQUEST_URI']) == 'tlc_durations.php') ? ' active' : ''; ?>">
+                                    <a href="<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/03/') !== false) ? '../../tlc_editions/02/tlc_durations.php' : (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/02/') !== false ? 'tlc_durations.php' : 'tlc_editions/02/tlc_durations.php'); ?>" class="side-nav-link<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/02/') !== false && basename($_SERVER['REQUEST_URI']) == 'tlc_durations.php') ? ' active' : ''; ?>">
                                         <span class="menu-text">Join Durations</span>
                                     </a>
                                 </li>
                                 <li class="side-nav-item">
-                                    <a href="<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/') !== false) ? 'tlc_grant.php' : 'tlc_editions/02/tlc_grant.php'; ?>" class="side-nav-link<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/02/') !== false && basename($_SERVER['REQUEST_URI']) == 'tlc_grant.php') ? ' active' : ''; ?>">
+                                    <a href="<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/03/') !== false) ? '../../tlc_editions/02/tlc_grant.php' : (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/02/') !== false ? 'tlc_grant.php' : 'tlc_editions/02/tlc_grant.php'); ?>" class="side-nav-link<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/02/') !== false && basename($_SERVER['REQUEST_URI']) == 'tlc_grant.php') ? ' active' : ''; ?>">
                                         <span class="menu-text">Grace Grant</span>
                                     </a>
                                 </li>
                                 <li class="side-nav-item">
-                                    <a href="<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/') !== false) ? 'tlc_analytics.php' : 'tlc_editions/02/tlc_analytics.php'; ?>" class="side-nav-link<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/02/') !== false && basename($_SERVER['REQUEST_URI']) == 'tlc_analytics.php') ? ' active' : ''; ?>">
+                                    <a href="<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/03/') !== false) ? '../../tlc_editions/02/tlc_analytics.php' : (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/02/') !== false ? 'tlc_analytics.php' : 'tlc_editions/02/tlc_analytics.php'); ?>" class="side-nav-link<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/02/') !== false && basename($_SERVER['REQUEST_URI']) == 'tlc_analytics.php') ? ' active' : ''; ?>">
                                         <span class="menu-text">Analytics</span>
                                     </a>
                                 </li>
@@ -105,7 +105,7 @@
                         <div class="collapse" id="sidebarTLC3">
                             <ul class="sub-menu">
                                 <li class="side-nav-item">
-                                    <a href="<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/') !== false) ? 'tlc_2025.php' : 'tlc_editions/03/tlc_2025.php'; ?>" class="side-nav-link<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/03/') !== false && basename($_SERVER['REQUEST_URI']) == 'tlc_2025.php') ? ' active' : ''; ?>">
+                                    <a href="<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/02/') !== false) ? '../03/tlc_2025.php' : (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/03/') !== false ? 'tlc_2025.php' : 'tlc_editions/03/tlc_2025.php'); ?>" class="side-nav-link<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/03/') !== false && basename($_SERVER['REQUEST_URI']) == 'tlc_2025.php') ? ' active' : ''; ?>">
                                         <span class="menu-text">Users</span>
                                     </a>
                                 </li>
