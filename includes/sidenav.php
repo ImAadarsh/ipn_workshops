@@ -49,63 +49,74 @@
         <li class="side-nav-item">
             <a data-bs-toggle="collapse" href="#sidebarTLC" aria-expanded="false" aria-controls="sidebarTLC" class="side-nav-link" data-bs-target="#sidebarTLC">
                 <span class="menu-icon"><i class="ti ti-users"></i></span>
-                <span class="menu-text">TLC Edition 2</span>
+                <span class="menu-text">TLC 2025</span>
                 <span class="menu-arrow"></span>
             </a>
             <div class="collapse" id="sidebarTLC" data-bs-parent=".side-nav">
                 <ul class="sub-menu">
+                    <!-- TLC Edition 2 -->
                     <li class="side-nav-item">
-                        <a href="<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/') !== false) ? 'tlc_2025.php' : 'tlc_editions/02/tlc_2025.php'; ?>" class="side-nav-link">
-                            <span class="menu-text">Users</span>
-            </a>
-        </li>
-        <li class="side-nav-item">
-            <a href="<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/') !== false) ? 'tlc_feedback_day_01.php' : 'tlc_editions/02/tlc_feedback_day_01.php'; ?>" class="side-nav-link">
-                            <span class="menu-text">Feedback Day 01</span>
-            </a>
-        </li>
-        <li class="side-nav-item">
-            <a href="<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/') !== false) ? 'tlc_feedback_day_02.php' : 'tlc_editions/02/tlc_feedback_day_02.php'; ?>" class="side-nav-link">
-                            <span class="menu-text">Feedback Day 02</span>
-            </a>
-        </li>
-        <li class="side-nav-item">
-            <a href="<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/') !== false) ? 'tlc_durations.php' : 'tlc_editions/02/tlc_durations.php'; ?>" class="side-nav-link">
-                            <span class="menu-text">Join Durations</span>
-            </a>
-        </li>
-        <li class="side-nav-item">
-            <a href="<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/') !== false) ? 'tlc_grant.php' : 'tlc_editions/02/tlc_grant.php'; ?>" class="side-nav-link">
-                            <span class="menu-text">Grace Grant</span>
-            </a>
-        </li>
-        <li class="side-nav-item">
-            <a href="<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/') !== false) ? 'tlc_analytics.php' : 'tlc_editions/02/tlc_analytics.php'; ?>" class="side-nav-link">
-                            <span class="menu-text">Analytics</span>
-            </a>
+                        <a data-bs-toggle="collapse" href="#sidebarTLC2" aria-expanded="false" aria-controls="sidebarTLC2" class="side-nav-link">
+                            <span class="menu-text">Edition 2</span>
+                            <span class="menu-arrow"></span>
+                        </a>
+                        <div class="collapse" id="sidebarTLC2">
+                            <ul class="sub-menu">
+                                <li class="side-nav-item">
+                                    <a href="<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/') !== false) ? 'tlc_2025.php' : 'tlc_editions/02/tlc_2025.php'; ?>" class="side-nav-link">
+                                        <span class="menu-text">Users</span>
+                                    </a>
+                                </li>
+                                <li class="side-nav-item">
+                                    <a href="<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/') !== false) ? 'tlc_feedback_day_01.php' : 'tlc_editions/02/tlc_feedback_day_01.php'; ?>" class="side-nav-link">
+                                        <span class="menu-text">Feedback Day 01</span>
+                                    </a>
+                                </li>
+                                <li class="side-nav-item">
+                                    <a href="<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/') !== false) ? 'tlc_feedback_day_02.php' : 'tlc_editions/02/tlc_feedback_day_02.php'; ?>" class="side-nav-link">
+                                        <span class="menu-text">Feedback Day 02</span>
+                                    </a>
+                                </li>
+                                <li class="side-nav-item">
+                                    <a href="<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/') !== false) ? 'tlc_durations.php' : 'tlc_editions/02/tlc_durations.php'; ?>" class="side-nav-link">
+                                        <span class="menu-text">Join Durations</span>
+                                    </a>
+                                </li>
+                                <li class="side-nav-item">
+                                    <a href="<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/') !== false) ? 'tlc_grant.php' : 'tlc_editions/02/tlc_grant.php'; ?>" class="side-nav-link">
+                                        <span class="menu-text">Grace Grant</span>
+                                    </a>
+                                </li>
+                                <li class="side-nav-item">
+                                    <a href="<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/') !== false) ? 'tlc_analytics.php' : 'tlc_editions/02/tlc_analytics.php'; ?>" class="side-nav-link">
+                                        <span class="menu-text">Analytics</span>
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
                     </li>
-                </ul>
-            </div>
-        </li>
-
-        <li class="side-nav-item">
-            <a data-bs-toggle="collapse" href="#sidebarTLC3" aria-expanded="false" aria-controls="sidebarTLC3" class="side-nav-link" data-bs-target="#sidebarTLC3">
-                <span class="menu-icon"><i class="ti ti-user-group"></i></span>
-                <span class="menu-text">TLC Edition 3</span>
-                <span class="menu-arrow"></span>
-            </a>
-            <div class="collapse" id="sidebarTLC3" data-bs-parent=".side-nav">
-                <ul class="sub-menu">
+                    
+                    <!-- TLC Edition 3 -->
                     <li class="side-nav-item">
-                        <a href="<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/') !== false) ? 'tlc_2025.php' : 'tlc_editions/03/tlc_2025.php'; ?>" class="side-nav-link">
-                            <span class="menu-text">Users</span>
+                        <a data-bs-toggle="collapse" href="#sidebarTLC3" aria-expanded="false" aria-controls="sidebarTLC3" class="side-nav-link">
+                            <span class="menu-text">Edition 3</span>
+                            <span class="menu-arrow"></span>
                         </a>
+                        <div class="collapse" id="sidebarTLC3">
+                            <ul class="sub-menu">
+                                <li class="side-nav-item">
+                                    <a href="<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/') !== false) ? 'tlc_2025.php' : 'tlc_editions/03/tlc_2025.php'; ?>" class="side-nav-link">
+                                        <span class="menu-text">Users</span>
+                                    </a>
+                                </li>
+                                <!-- <li class="side-nav-item">
+                                    <a href="<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/') !== false) ? 'tlc_user_list.php' : 'tlc_editions/03/tlc_user_list.php'; ?>" class="side-nav-link">
+                                        <span class="menu-text">User List</span>
+                                    </a>
+                                </li> -->
+                            </ul>
+                        </div>
                     </li>
-                    <!-- <li class="side-nav-item">
-                        <a href="<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/') !== false) ? 'tlc_user_list.php' : 'tlc_editions/03/tlc_user_list.php'; ?>" class="side-nav-link">
-                            <span class="menu-text">User List</span>
-                        </a>
-                    </li> -->
                 </ul>
             </div>
         </li>
