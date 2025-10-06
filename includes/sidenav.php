@@ -47,12 +47,12 @@
         <li class="side-nav-title">Management</li>
 
         <li class="side-nav-item">
-            <a data-bs-toggle="collapse" href="#sidebarTLC" aria-expanded="false" aria-controls="sidebarTLC" class="side-nav-link">
+            <a data-bs-toggle="collapse" href="#sidebarTLC" aria-expanded="false" aria-controls="sidebarTLC" class="side-nav-link" data-bs-target="#sidebarTLC">
                 <span class="menu-icon"><i class="ti ti-users"></i></span>
-                <span class="menu-text">TLC 2025</span>
+                <span class="menu-text">TLC Edition 2</span>
                 <span class="menu-arrow"></span>
             </a>
-            <div class="collapse" id="sidebarTLC">
+            <div class="collapse" id="sidebarTLC" data-bs-parent=".side-nav">
                 <ul class="sub-menu">
                     <li class="side-nav-item">
                         <a href="<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/') !== false) ? 'tlc_2025.php' : 'tlc_editions/02/tlc_2025.php'; ?>" class="side-nav-link">
@@ -89,12 +89,12 @@
         </li>
 
         <li class="side-nav-item">
-            <a data-bs-toggle="collapse" href="#sidebarTLC3" aria-expanded="false" aria-controls="sidebarTLC3" class="side-nav-link">
-                <span class="menu-icon"><i class="ti ti-users"></i></span>
+            <a data-bs-toggle="collapse" href="#sidebarTLC3" aria-expanded="false" aria-controls="sidebarTLC3" class="side-nav-link" data-bs-target="#sidebarTLC3">
+                <span class="menu-icon"><i class="ti ti-user-group"></i></span>
                 <span class="menu-text">TLC Edition 3</span>
                 <span class="menu-arrow"></span>
             </a>
-            <div class="collapse" id="sidebarTLC3">
+            <div class="collapse" id="sidebarTLC3" data-bs-parent=".side-nav">
                 <ul class="sub-menu">
                     <li class="side-nav-item">
                         <a href="<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/') !== false) ? 'tlc_2025.php' : 'tlc_editions/03/tlc_2025.php'; ?>" class="side-nav-link">
