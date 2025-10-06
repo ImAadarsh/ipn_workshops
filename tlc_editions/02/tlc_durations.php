@@ -1,5 +1,5 @@
 <?php
-include 'config/show_errors.php';
+include '../../config/show_errors.php';
 session_start();
 
 $special_access_key = '5678y3uhsc76270e9yuwqdjq9q72u1ejqiw';
@@ -11,7 +11,7 @@ if (!$is_logged_in && !$is_guest_access) {
     exit();
 }
 
-$conn = require_once 'config/config.php';
+$conn = require_once '../../config/config.php';
 
 // Get school list for dropdown
 $schools = [];
@@ -123,7 +123,7 @@ foreach ($durations as $row) {
 <head>
     <meta charset="utf-8" />
     <title>TLC Join Durations | IPN Academy</title>
-    <?php include 'includes/head.php'; ?>
+    <?php include '../../includes/head.php'; ?>
     <?php if ($is_guest_access): ?>
     <style>
         .page-content { margin-left: 0 !important; padding: 20px; }
@@ -134,8 +134,8 @@ foreach ($durations as $row) {
 <body>
 <div class="wrapper">
     <?php if ($is_logged_in): ?>
-        <?php include 'includes/sidenav.php'; ?>
-        <?php include 'includes/topbar.php'; ?>
+        <?php include '../../includes/sidenav.php'; ?>
+        <?php include '../../includes/topbar.php'; ?>
     <?php endif; ?>
     <div class="page-content">
         <div class="page-container">
@@ -283,13 +283,13 @@ foreach ($durations as $row) {
             </div>
         </div>
     </div>
-    <?php include 'includes/footer.php'; ?>
+    <?php include '../../includes/footer.php'; ?>
     <?php if ($is_logged_in): ?>
-        <?php include 'includes/theme_settings.php'; ?>
+        <?php include '../../includes/theme_settings.php'; ?>
     <?php endif; ?>
 </div>
-<script src="assets/js/vendor.min.js"></script>
-<script src="assets/js/app.min.js"></script>
+<script src="../../assets/js/vendor.min.js"></script>
+<script src="../../assets/js/app.min.js"></script>
 <!-- DataTables -->
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>

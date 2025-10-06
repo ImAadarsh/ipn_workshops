@@ -1,5 +1,5 @@
 <?php
-include 'config/show_errors.php';
+include '../../config/show_errors.php';
 session_start();
 
 $special_access_key = '5678y3uhsc76270e9yuwqdjq9q72u1ejqiw';
@@ -12,7 +12,7 @@ if (!$is_logged_in && !$is_guest_access) {
 }
 
 // Include database connection
-$conn = require_once 'config/config.php';
+$conn = require_once '../../config/config.php';
 
 // Get user info from session if logged in
 if ($is_logged_in) {
@@ -20,20 +20,21 @@ if ($is_logged_in) {
     $userType = $_SESSION['user_type'];
 }
 
-// Fetch stats for TLC Feedback Day 01
+// Fetch stats for TLC Feedback Day 02
 $stats_sql = "SELECT 
     COUNT(*) as total_feedbacks, 
     AVG(overall_rating) as avg_overall_rating,
     AVG(keynote_rating) as avg_keynote_rating,
-    AVG(mc1_rating) as avg_mc1_rating,
-    AVG(panel_rating) as avg_panel_rating,
-    AVG(mc2_rating) as avg_mc2_rating
-    FROM tlc_25_day_1";
+    AVG(mc3_rating) as avg_mc3_rating,
+    AVG(mc4_rating) as avg_mc4_rating,
+    AVG(mc5_rating) as avg_mc5_rating,
+    AVG(panel_rating) as avg_panel_rating
+    FROM tlc_25_day_2";
 $stats_result = mysqli_query($conn, $stats_sql);
 $stats = mysqli_fetch_assoc($stats_result);
 
 // Fetch all feedback entries
-$feedback_sql = "SELECT * FROM tlc_25_day_1 ORDER BY submitted_at DESC";
+$feedback_sql = "SELECT * FROM tlc_25_day_2 ORDER BY submitted_at DESC";
 $feedback_result = mysqli_query($conn, $feedback_sql);
 $feedbacks = [];
 if ($feedback_result) {
@@ -59,8 +60,8 @@ function getInitials($name) {
 <html lang="en">
 <head>
     <meta charset="utf-8" />
-    <title>TLC Feedback Day 01 | IPN Academy</title>
-    <?php include 'includes/head.php'; ?>
+    <title>TLC Feedback Day 02 | IPN Academy</title>
+    <?php include '../../includes/head.php'; ?>
     <!-- DataTables CSS -->
     <link href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css" rel="stylesheet" type="text/css" />
     <link href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.bootstrap5.min.css" rel="stylesheet" type="text/css" />
@@ -87,8 +88,8 @@ function getInitials($name) {
     <!-- Begin page -->
     <div class="wrapper">
         <?php if ($is_logged_in): ?>
-        <?php include 'includes/sidenav.php'; ?>
-        <?php include 'includes/topbar.php'; ?>
+        <?php include '../../includes/sidenav.php'; ?>
+        <?php include '../../includes/topbar.php'; ?>
         <?php endif; ?>
         <div class="page-content">
             <div class="page-container">
@@ -99,11 +100,11 @@ function getInitials($name) {
                             <div class="page-title-right">
                                 <ol class="breadcrumb m-0">
                                     <li class="breadcrumb-item"><a href="dashboard.php">Dashboard</a></li>
-                                    <li class="breadcrumb-item active">TLC Feedback Day 01</li>
+                                    <li class="breadcrumb-item active">TLC Feedback Day 02</li>
                                 </ol>
                             </div>
                             <?php endif; ?>
-                            <h4 class="page-title">TLC Feedback Day 01</h4>
+                            <h4 class="page-title">TLC Feedback Day 02</h4>
                         </div>
                     </div>
                 </div>
@@ -159,7 +160,7 @@ function getInitials($name) {
                     <div class="col-12">
                         <div class="card">
                             <div class="card-header d-flex align-items-center justify-content-between">
-                                <h4 class="header-title mb-0">TLC Feedback Day 01 List</h4>
+                                <h4 class="header-title mb-0">TLC Feedback Day 02 List</h4>
                                 <div>
                                     <button class="btn btn-primary me-2" id="exportCSV">
                                         <i class="ti ti-file-export me-1"></i> Export CSV
@@ -181,12 +182,14 @@ function getInitials($name) {
                                                 <th>Timing</th>
                                                 <th>Keynote Feedback</th>
                                                 <th>Keynote Rating</th>
-                                                <th>MC1 Feedback</th>
-                                                <th>MC1 Rating</th>
+                                                <th>MC3 Feedback</th>
+                                                <th>MC3 Rating</th>
+                                                <th>MC4 Feedback</th>
+                                                <th>MC4 Rating</th>
+                                                <th>MC5 Feedback</th>
+                                                <th>MC5 Rating</th>
                                                 <th>Panel Feedback</th>
                                                 <th>Panel Rating</th>
-                                                <th>MC2 Feedback</th>
-                                                <th>MC2 Rating</th>
                                                 <th>Submitted At</th>
                                             </tr>
                                         </thead>
@@ -200,12 +203,14 @@ function getInitials($name) {
                                                 <td><?php echo htmlspecialchars($fb['timing']); ?></td>
                                                 <td><?php echo htmlspecialchars($fb['keynote_feedback']); ?></td>
                                                 <td><?php echo htmlspecialchars($fb['keynote_rating']); ?></td>
-                                                <td><?php echo htmlspecialchars($fb['mc1_feedback']); ?></td>
-                                                <td><?php echo htmlspecialchars($fb['mc1_rating']); ?></td>
+                                                <td><?php echo htmlspecialchars($fb['mc3_feedback']); ?></td>
+                                                <td><?php echo htmlspecialchars($fb['mc3_rating']); ?></td>
+                                                <td><?php echo htmlspecialchars($fb['mc4_feedback']); ?></td>
+                                                <td><?php echo htmlspecialchars($fb['mc4_rating']); ?></td>
+                                                <td><?php echo htmlspecialchars($fb['mc5_feedback']); ?></td>
+                                                <td><?php echo htmlspecialchars($fb['mc5_rating']); ?></td>
                                                 <td><?php echo htmlspecialchars($fb['panel_feedback']); ?></td>
                                                 <td><?php echo htmlspecialchars($fb['panel_rating']); ?></td>
-                                                <td><?php echo htmlspecialchars($fb['mc2_feedback']); ?></td>
-                                                <td><?php echo htmlspecialchars($fb['mc2_rating']); ?></td>
                                                 <td><?php 
                                                     if ($fb['submitted_at']) {
                                                         $dt = new DateTime($fb['submitted_at'], new DateTimeZone('UTC'));
@@ -226,12 +231,12 @@ function getInitials($name) {
                 </div>
             </div>
             <?php if ($is_logged_in): ?>
-            <?php include 'includes/footer.php'; ?>
+            <?php include '../../includes/footer.php'; ?>
             <?php endif; ?>
         </div>
     </div>
     <?php if ($is_logged_in): ?>
-    <?php include 'includes/theme_settings.php'; ?>
+    <?php include '../../includes/theme_settings.php'; ?>
     <?php endif; ?>
     <!-- Core JS -->
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
@@ -246,7 +251,7 @@ function getInitials($name) {
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
     <link href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.bootstrap5.min.css" rel="stylesheet" type="text/css" />
-    <script src="assets/js/app.min.js"></script>
+    <script src="../../assets/js/app.min.js"></script>
     <script>
         $(document).ready(function() {
             var table = $('#tlc-feedback-table').DataTable({
@@ -257,7 +262,7 @@ function getInitials($name) {
                         extend: 'csv',
                         text: 'Export CSV',
                         className: 'd-none',
-                        filename: 'tlc_feedback_day_01_<?php echo date("Y-m-d"); ?>',
+                        filename: 'tlc_feedback_day_02_<?php echo date("Y-m-d"); ?>',
                         exportOptions: {
                             columns: ':visible',
                             format: {
@@ -271,13 +276,13 @@ function getInitials($name) {
                         extend: 'excelHtml5',
                         text: 'Export Excel',
                         className: 'd-none',
-                        filename: 'tlc_feedback_day_01_<?php echo date("Y-m-d"); ?>',
+                        filename: 'tlc_feedback_day_02_<?php echo date("Y-m-d"); ?>',
                         exportOptions: {
                             columns: ':visible'
                         }
                     }
                 ],
-                order: [[13, 'desc']]
+                order: [[15, 'desc']]
             });
             $('#exportCSV').on('click', function() {
                 table.button('.buttons-csv').trigger();

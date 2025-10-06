@@ -1,5 +1,5 @@
 <?php
-include 'config/show_errors.php';
+include '../../config/show_errors.php';
 session_start();
 
 $special_access_key = '5678y3uhsc76270e9yuwqdjq9q72u1ejqiw';
@@ -12,7 +12,7 @@ if (!$is_logged_in && !$is_guest_access) {
 }
 
 // Include database connection
-$conn = require_once 'config/config.php';
+$conn = require_once '../../config/config.php';
 
 // Get user info from session if logged in
 if ($is_logged_in) {
@@ -122,7 +122,7 @@ arsort($institute_counts);
 <head>
     <meta charset="utf-8" />
     <title>TLC 2025 Users | IPN Academy</title>
-    <?php include 'includes/head.php'; ?>
+    <?php include '../../includes/head.php'; ?>
     <!-- DataTables CSS -->
     <link href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css" rel="stylesheet" type="text/css" />
     <link href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.bootstrap5.min.css" rel="stylesheet" type="text/css" />
@@ -152,11 +152,11 @@ arsort($institute_counts);
         
         <?php if ($is_logged_in): ?>
         <!-- Sidenav Menu Start -->
-        <?php include 'includes/sidenav.php'; ?>
+        <?php include '../../includes/sidenav.php'; ?>
         <!-- Sidenav Menu End -->
 
         <!-- Topbar Start -->
-        <?php include 'includes/topbar.php'; ?>
+        <?php include '../../includes/topbar.php'; ?>
         <!-- Topbar End -->
         <?php endif; ?>
 
@@ -398,7 +398,7 @@ arsort($institute_counts);
             </div>
             <?php if ($is_logged_in): ?>
             <!-- Footer Start -->
-            <?php include 'includes/footer.php'; ?>
+            <?php include '../../includes/footer.php'; ?>
             <!-- end Footer -->
             <?php endif; ?>
         </div>
@@ -406,7 +406,7 @@ arsort($institute_counts);
 
     <?php if ($is_logged_in): ?>
     <!-- Theme Settings -->
-    <?php include 'includes/theme_settings.php'; ?>
+    <?php include '../../includes/theme_settings.php'; ?>
     <?php endif; ?>
 
     <!-- Core JS -->
@@ -425,7 +425,7 @@ arsort($institute_counts);
     <link href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.bootstrap5.min.css" rel="stylesheet" type="text/css" />
 
     <!-- App js -->
-    <script src="assets/js/app.min.js"></script>
+    <script src="../../assets/js/app.min.js"></script>
 
     <script>
         $(document).ready(function() {

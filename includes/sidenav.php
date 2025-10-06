@@ -1,17 +1,17 @@
 <div class="sidenav-menu">
 
 <!-- Brand Logo -->
-<a href="index.php" class="logo">
+<a href="<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/') !== false) ? '../../index.php' : 'index.php'; ?>" class="logo">
                     <!-- Brand Logo -->
-                    <a href="dashboard.php" class="logo">
+                    <a href="<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/') !== false) ? '../../dashboard.php' : 'dashboard.php'; ?>" class="logo">
                         <span class="logo-light">
-                            <span class="logo-lg"><img style="min-height: 55px !important;" src="logo.svg" alt="IPN Academy Logo" ></span>
-                            <span class="logo-sm"><img style="min-height: 40px !important;" src="logo.png" alt="IPN Academy Logo" class="logo-img"></span>
+                            <span class="logo-lg"><img style="min-height: 55px !important;" src="<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/') !== false) ? '../../logo.svg' : 'logo.svg'; ?>" alt="IPN Academy Logo" ></span>
+                            <span class="logo-sm"><img style="min-height: 40px !important;" src="<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/') !== false) ? '../../logo.png' : 'logo.png'; ?>" alt="IPN Academy Logo" class="logo-img"></span>
                         </span>
 
                         <span class="logo-dark">
-                            <span class="logo-lg"><img style="min-height: 55px !important;" src="logo.svg" alt="IPN Academy Logo" ></span>
-                            <span class="logo-sm"><img style="min-height: 40px !important;" src="logo.png" alt="IPN Academy Logo" class="logo-img"></span>
+                            <span class="logo-lg"><img style="min-height: 55px !important;" src="<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/') !== false) ? '../../logo.svg' : 'logo.svg'; ?>" alt="IPN Academy Logo" ></span>
+                            <span class="logo-sm"><img style="min-height: 40px !important;" src="<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/') !== false) ? '../../logo.png' : 'logo.png'; ?>" alt="IPN Academy Logo" class="logo-img"></span>
                         </span>
                     </a>
 </a>
@@ -32,13 +32,13 @@
     <ul class="side-nav">
 
         <li class="side-nav-item">
-            <a href="dashboard.php" class="side-nav-link">
+            <a href="<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/') !== false) ? '../../dashboard.php' : 'dashboard.php'; ?>" class="side-nav-link">
                 <span class="menu-icon"><i class="ti ti-dashboard"></i></span>
                 <span class="menu-text">Dashboard</span>
             </a>
         </li>
         <li class="side-nav-item">
-            <a href="workshops.php" class="side-nav-link">
+            <a href="<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/') !== false) ? '../../workshops.php' : 'workshops.php'; ?>" class="side-nav-link">
                 <span class="menu-icon"><i class="ti ti-calendar-event"></i></span>
                 <span class="menu-text">All Workshops</span>
             </a>
@@ -55,32 +55,32 @@
             <div class="collapse" id="sidebarTLC">
                 <ul class="sub-menu">
                     <li class="side-nav-item">
-                        <a href="tlc_2025.php" class="side-nav-link">
+                        <a href="<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/') !== false) ? 'tlc_2025.php' : 'tlc_editions/02/tlc_2025.php'; ?>" class="side-nav-link">
                             <span class="menu-text">Users</span>
             </a>
         </li>
         <li class="side-nav-item">
-            <a href="tlc_feedback_day_01.php" class="side-nav-link">
+            <a href="<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/') !== false) ? 'tlc_feedback_day_01.php' : 'tlc_editions/02/tlc_feedback_day_01.php'; ?>" class="side-nav-link">
                             <span class="menu-text">Feedback Day 01</span>
             </a>
         </li>
         <li class="side-nav-item">
-            <a href="tlc_feedback_day_02.php" class="side-nav-link">
+            <a href="<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/') !== false) ? 'tlc_feedback_day_02.php' : 'tlc_editions/02/tlc_feedback_day_02.php'; ?>" class="side-nav-link">
                             <span class="menu-text">Feedback Day 02</span>
             </a>
         </li>
         <li class="side-nav-item">
-            <a href="tlc_durations.php" class="side-nav-link">
+            <a href="<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/') !== false) ? 'tlc_durations.php' : 'tlc_editions/02/tlc_durations.php'; ?>" class="side-nav-link">
                             <span class="menu-text">Join Durations</span>
             </a>
         </li>
         <li class="side-nav-item">
-            <a href="tlc_grant.php" class="side-nav-link">
+            <a href="<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/') !== false) ? 'tlc_grant.php' : 'tlc_editions/02/tlc_grant.php'; ?>" class="side-nav-link">
                             <span class="menu-text">Grace Grant</span>
             </a>
         </li>
         <li class="side-nav-item">
-            <a href="tlc_analytics.php" class="side-nav-link">
+            <a href="<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/') !== false) ? 'tlc_analytics.php' : 'tlc_editions/02/tlc_analytics.php'; ?>" class="side-nav-link">
                             <span class="menu-text">Analytics</span>
             </a>
                     </li>
@@ -89,7 +89,29 @@
         </li>
 
         <li class="side-nav-item">
-            <a href="generate_school_links.php" class="side-nav-link">
+            <a data-bs-toggle="collapse" href="#sidebarTLC3" aria-expanded="false" aria-controls="sidebarTLC3" class="side-nav-link">
+                <span class="menu-icon"><i class="ti ti-users"></i></span>
+                <span class="menu-text">TLC Edition 3</span>
+                <span class="menu-arrow"></span>
+            </a>
+            <div class="collapse" id="sidebarTLC3">
+                <ul class="sub-menu">
+                    <li class="side-nav-item">
+                        <a href="<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/') !== false) ? 'tlc_2025.php' : 'tlc_editions/03/tlc_2025.php'; ?>" class="side-nav-link">
+                            <span class="menu-text">Users</span>
+                        </a>
+                    </li>
+                    <!-- <li class="side-nav-item">
+                        <a href="<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/') !== false) ? 'tlc_user_list.php' : 'tlc_editions/03/tlc_user_list.php'; ?>" class="side-nav-link">
+                            <span class="menu-text">User List</span>
+                        </a>
+                    </li> -->
+                </ul>
+            </div>
+        </li>
+
+        <li class="side-nav-item">
+            <a href="<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/') !== false) ? '../../generate_school_links.php' : 'generate_school_links.php'; ?>" class="side-nav-link">
                 <span class="menu-icon"><i class="ti ti-link"></i></span>
                 <span class="menu-text">Generate School Links</span>
             </a>
@@ -105,17 +127,17 @@
             <div class="collapse" id="sidebarUsers">
                 <ul class="sub-menu">
                     <li class="side-nav-item">
-                        <a href="user_management.php" class="side-nav-link">
+                        <a href="<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/') !== false) ? '../../user_management.php' : 'user_management.php'; ?>" class="side-nav-link">
                             <span class="menu-text">All Users</span>
                         </a>
                     </li>
                     <li class="side-nav-item">
-                        <a href="bad_users.php" class="side-nav-link">
+                        <a href="<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/') !== false) ? '../../bad_users.php' : 'bad_users.php'; ?>" class="side-nav-link">
                             <span class="menu-text">Bad Users</span>
                         </a>
                     </li>
                     <li class="side-nav-item">
-                        <a href="add_user.php" class="side-nav-link">
+                        <a href="<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/') !== false) ? '../../add_user.php' : 'add_user.php'; ?>" class="side-nav-link">
                             <span class="menu-text">Add New User</span>
                         </a>
                     </li>
@@ -133,12 +155,12 @@
             <div class="collapse" id="sidebarTrainers">
                 <ul class="sub-menu">
                     <li class="side-nav-item">
-                        <a href="trainers.php" class="side-nav-link">
+                        <a href="<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/') !== false) ? '../../trainers.php' : 'trainers.php'; ?>" class="side-nav-link">
                             <span class="menu-text">All Trainers</span>
                         </a>
                     </li>
                     <li class="side-nav-item">
-                        <a href="add_trainer.php" class="side-nav-link">
+                        <a href="<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/') !== false) ? '../../add_trainer.php' : 'add_trainer.php'; ?>" class="side-nav-link">
                             <span class="menu-text">Add New Trainer</span>
                         </a>
                     </li>
@@ -346,7 +368,7 @@
         </li> -->
 
         <li class="side-nav-item">
-            <a href="workshop_questions.php" class="side-nav-link">
+            <a href="<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/') !== false) ? '../../workshop_questions.php' : 'workshop_questions.php'; ?>" class="side-nav-link">
                 <span class="menu-icon"><i class="ti ti-list-check"></i></span>
                 <span class="menu-text">Ai MCQ Panel</span>
             </a>
@@ -355,14 +377,14 @@
 
 
         <li class="side-nav-item">
-            <a href="trainer_reports.php" class="side-nav-link">
+            <a href="<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/') !== false) ? '../../trainer_reports.php' : 'trainer_reports.php'; ?>" class="side-nav-link">
                 <span class="menu-icon"><i class="ti ti-report-analytics"></i></span>
                 <span class="menu-text">Trainer Reports</span>
             </a>
         </li>
 
         <li class="side-nav-item">
-            <a href="schools_management.php" class="side-nav-link">
+            <a href="<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/') !== false) ? '../../schools_management.php' : 'schools_management.php'; ?>" class="side-nav-link">
                 <span class="menu-icon"><i class="ti ti-building"></i></span>
                 <span class="menu-text">Schools Management</span>
             </a>
@@ -377,22 +399,22 @@
             <div class="collapse" id="sidebarProfileCorrections">
                 <ul class="sub-menu">
                     <li class="side-nav-item">
-                        <a href="admin_profile_corrections.php" class="side-nav-link">
+                        <a href="<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/') !== false) ? '../../admin_profile_corrections.php' : 'admin_profile_corrections.php'; ?>" class="side-nav-link">
                             <span class="menu-text">All Requests</span>
                         </a>
                     </li>
                     <li class="side-nav-item">
-                        <a href="admin_profile_corrections.php?status=pending" class="side-nav-link">
+                        <a href="<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/') !== false) ? '../../admin_profile_corrections.php?status=pending' : 'admin_profile_corrections.php?status=pending'; ?>" class="side-nav-link">
                             <span class="menu-text">Pending Requests</span>
                         </a>
                     </li>
                     <li class="side-nav-item">
-                        <a href="admin_profile_corrections.php?status=approved" class="side-nav-link">
+                        <a href="<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/') !== false) ? '../../admin_profile_corrections.php?status=approved' : 'admin_profile_corrections.php?status=approved'; ?>" class="side-nav-link">
                             <span class="menu-text">Approved Requests</span>
                         </a>
                     </li>
                     <li class="side-nav-item">
-                        <a href="admin_profile_corrections.php?status=rejected" class="side-nav-link">
+                        <a href="<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/') !== false) ? '../../admin_profile_corrections.php?status=rejected' : 'admin_profile_corrections.php?status=rejected'; ?>" class="side-nav-link">
                             <span class="menu-text">Rejected Requests</span>
                         </a>
                     </li>
@@ -414,17 +436,17 @@
             <div class="collapse" id="sidebarInstamojo">
                 <ul class="sub-menu">
                     <li class="side-nav-item">
-                        <a href="instamojo_dashboard.php" class="side-nav-link">
+                        <a href="<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/') !== false) ? '../../instamojo_dashboard.php' : 'instamojo_dashboard.php'; ?>" class="side-nav-link">
                             <span class="menu-text">Dashboard</span>
                         </a>
                     </li>
                     <li class="side-nav-item">
-                        <a href="instamojo_links.php" class="side-nav-link">
+                        <a href="<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/') !== false) ? '../../instamojo_links.php' : 'instamojo_links.php'; ?>" class="side-nav-link">
                             <span class="menu-text">Payment Links</span>
                         </a>
                     </li>
                     <li class="side-nav-item">
-                        <a href="instamojo_payments.php" class="side-nav-link">
+                        <a href="<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/') !== false) ? '../../instamojo_payments.php' : 'instamojo_payments.php'; ?>" class="side-nav-link">
                             <span class="menu-text">Payment History</span>
                         </a>
                     </li>
@@ -451,7 +473,7 @@
         </li>
         <!-- Logout -->
         <li class="side-nav-item">
-            <a href="logout.php" class="side-nav-link">
+            <a href="<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/') !== false) ? '../../logout.php' : 'logout.php'; ?>" class="side-nav-link">
                 <span class="menu-icon"><i class="ti ti-logout"></i></span>
                 <span class="menu-text">Logout</span>
             </a>

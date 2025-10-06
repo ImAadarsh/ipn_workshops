@@ -51,18 +51,18 @@
                     <div class="topbar-item">
                         <div class="dropdown">
                             <button class="topbar-link btn btn-outline-primary btn-icon" data-bs-toggle="dropdown" data-bs-offset="0,24" type="button" aria-haspopup="false" aria-expanded="false">
-                                <img src="assets/images/flags/us.svg" alt="user-image" class="w-100 rounded" height="18" id="selected-language-image">
+                                <img src="<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/') !== false) ? '../../assets/images/flags/us.svg' : 'assets/images/flags/us.svg'; ?>" alt="user-image" class="w-100 rounded" height="18" id="selected-language-image">
                             </button>
 
                             <div class="dropdown-menu dropdown-menu-end">
                                 <!-- item-->
                                 <a href="javascript:void(0);" class="dropdown-item" data-translator-lang="en">
-                                    <img src="assets/images/flags/us.svg" alt="user-image" class="me-1 rounded" height="18" data-translator-image> <span class="align-middle">English</span>
+                                    <img src="<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/') !== false) ? '../../assets/images/flags/us.svg' : 'assets/images/flags/us.svg'; ?>" alt="user-image" class="me-1 rounded" height="18" data-translator-image> <span class="align-middle">English</span>
                                 </a>
 
                                 <!-- item-->
                                 <a href="javascript:void(0);" class="dropdown-item" data-translator-lang="hi">
-                                    <img src="assets/images/flags/in.svg" alt="user-image" class="me-1 rounded" height="18" data-translator-image> <span class="align-middle">Hindi</span>
+                                    <img src="<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/') !== false) ? '../../assets/images/flags/in.svg' : 'assets/images/flags/in.svg'; ?>" alt="user-image" class="me-1 rounded" height="18" data-translator-image> <span class="align-middle">Hindi</span>
                                 </a>
 
 

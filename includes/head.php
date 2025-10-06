@@ -3,19 +3,19 @@
     <meta content="Endeavour Digital" name="author" />
 
     <!-- App favicon -->
-    <link rel="shortcut icon" href="logo.png">
+    <link rel="shortcut icon" href="<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/') !== false) ? '../../logo.png' : 'logo.png'; ?>">
 
     <!-- Theme Config Js -->
-    <script src="assets/js/config.js"></script>
+    <script src="<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/') !== false) ? '../../assets/js/config.js' : 'assets/js/config.js'; ?>"></script>
 
     <!-- Vendor css -->
-    <link href="assets/css/vendor.min.css" rel="stylesheet" type="text/css" />
+    <link href="<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/') !== false) ? '../../assets/css/vendor.min.css' : 'assets/css/vendor.min.css'; ?>" rel="stylesheet" type="text/css" />
 
     <!-- App css -->
-    <link href="assets/css/app.min.css" rel="stylesheet" type="text/css" id="app-style" />
+    <link href="<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/') !== false) ? '../../assets/css/app.min.css' : 'assets/css/app.min.css'; ?>" rel="stylesheet" type="text/css" id="app-style" />
 
     <!-- Icons css -->
-    <link href="assets/css/icons.min.css" rel="stylesheet" type="text/css" />
+    <link href="<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/') !== false) ? '../../assets/css/icons.min.css' : 'assets/css/icons.min.css'; ?>" rel="stylesheet" type="text/css" />
 
     <!-- Custom CSS for logo text -->
     <style>

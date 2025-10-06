@@ -1,5 +1,5 @@
 <?php
-include 'config/show_errors.php';
+include '../../config/show_errors.php';
 session_start();
 
 $special_access_key = '5678y3uhsc76270e9yuwqdjq9q72u1ejqiw';
@@ -11,7 +11,7 @@ if (!$is_logged_in && !$is_guest_access) {
     exit();
 }
 
-$conn = require_once 'config/config.php';
+$conn = require_once '../../config/config.php';
 
 $type = isset($_GET['type']) ? $_GET['type'] : '';
 $users = [];
