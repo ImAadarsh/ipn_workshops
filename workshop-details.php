@@ -186,6 +186,65 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 font-size: 1.5rem !important;
             }
         }
+        
+        /* Joining Links Progress Bar Styling */
+        #joiningLinksProgress {
+            background: linear-gradient(90deg, #28a745, #20c997);
+            transition: width 0.6s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        #joiningLinksProgress.animating::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            animation: shimmer 2s infinite;
+        }
+        
+        @keyframes shimmer {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+        
+        .joining-links-card {
+            border-left: 4px solid #28a745;
+        }
+        
+        .joining-links-card .card-header {
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+        }
+        
+        /* Loading blur effect */
+        .joining-links-card.loading {
+            filter: blur(2px);
+            pointer-events: none;
+            opacity: 0.7;
+            transition: all 0.3s ease;
+        }
+        
+        .joining-links-card.loading .card-body {
+            position: relative;
+        }
+        
+        .joining-links-card.loading .card-body::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
     </style>
 </head>
 <body>
@@ -227,6 +286,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <a href="registered_users.php?tab=discarded&workshop=<?php echo $workshop_id; ?>" class="btn btn-outline-danger">
                             <i class="ti ti-alert-triangle me-1"></i> View Discarded Entries
                         </a>
+                    </div>
+                </div>
+
+                <!-- Joining Link Management -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="card joining-links-card loading">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h5 class="card-title mb-0">
+                                    <i class="ti ti-mail me-1"></i> Joining Link Management
+                                </h5>
+                                <div class="d-flex gap-2">
+                                    <button type="button" class="btn btn-success" id="sendJoiningLinksBtn" onclick="sendJoiningLinks()">
+                                        <i class="ti ti-mail me-1"></i> Prepare Joining Links
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="row align-items-center">
+                                    <div class="col-md-8">
+                                        <div class="d-flex align-items-center mb-2">
+                                            <span class="me-3">Progress:</span>
+                                            <div class="progress flex-grow-1 me-3" style="height: 25px;">
+                                                <div class="progress-bar" id="joiningLinksProgress" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                                                    <span id="progressText">0%</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="d-flex justify-content-between">
+                                            <small class="text-muted">
+                                                <span id="sentCount">Loading...</span> / <span id="totalCount">Loading...</span> emails sent
+                                            </small>
+                                            <small class="text-muted" id="statusText">Loading...</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 text-md-end">
+                                        <div class="alert alert-info mb-0" id="joiningLinksInfo">
+                                            <small>
+                                                <i class="ti ti-loader me-1"></i>
+                                                Loading joining links status...
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -1179,6 +1284,149 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 .catch(error => {
                     console.error('Error:', error);
                     alert('Error loading user data. Please try again.');
+                });
+        }
+
+        // Joining Links Management Functions
+        function sendJoiningLinks() {
+            if (!confirm('Are you sure you want to prepare joining links for all enrolled users? This action will populate the workshops_emails table with is_sent = 0.')) {
+                return;
+            }
+
+            const btn = document.getElementById('sendJoiningLinksBtn');
+            const progressBar = document.getElementById('joiningLinksProgress');
+            const progressText = document.getElementById('progressText');
+            const sentCount = document.getElementById('sentCount');
+            const totalCount = document.getElementById('totalCount');
+            const statusText = document.getElementById('statusText');
+            const info = document.getElementById('joiningLinksInfo');
+            const card = document.querySelector('.joining-links-card');
+
+            // Card already has loading class, just update UI
+            // Disable button and show loading
+            btn.disabled = true;
+            btn.innerHTML = '<i class="ti ti-loader me-1"></i> Preparing...';
+            statusText.textContent = 'Preparing joining links...';
+            info.innerHTML = '<small><i class="ti ti-loader me-1"></i> Preparing joining links for enrolled users...</small>';
+            
+            // Add animating class to progress bar
+            progressBar.classList.add('animating');
+
+            // Make AJAX request
+            fetch('send_joining_links.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    workshop_id: <?php echo $workshop_id; ?>
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Update progress - show 0% initially since we just prepared emails (is_sent = 0)
+                    progressBar.style.width = '0%';
+                    progressBar.setAttribute('aria-valuenow', '0');
+                    progressText.textContent = '0%';
+                    sentCount.textContent = '0';
+                    totalCount.textContent = data.total_count;
+                    statusText.textContent = 'Completed successfully!';
+                    
+                    // Show different messages based on whether new entries were added
+                    if (data.new_entries_added > 0) {
+                        info.innerHTML = '<small class="text-success"><i class="ti ti-check me-1"></i> Added ' + data.new_entries_added + ' new entries! Total: ' + data.total_count + ' emails ready to send.</small>';
+                    } else {
+                        info.innerHTML = '<small class="text-info"><i class="ti ti-info-circle me-1"></i> No new entries to add. All users already prepared.</small>';
+                    }
+                    
+                    // Remove animating class and loading blur
+                    progressBar.classList.remove('animating');
+                    card.classList.remove('loading');
+                    
+                    // Update button
+                    btn.innerHTML = '<i class="ti ti-check me-1"></i> Prepared Successfully';
+                    btn.classList.remove('btn-success');
+                    btn.classList.add('btn-outline-success');
+                } else {
+                    throw new Error(data.message || 'Failed to send joining links');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                statusText.textContent = 'Error occurred';
+                info.innerHTML = '<small class="text-danger"><i class="ti ti-alert-circle me-1"></i> Error: ' + error.message + '</small>';
+                btn.innerHTML = '<i class="ti ti-mail me-1"></i> Prepare Joining Links';
+                btn.disabled = false;
+                
+                // Remove animating class and loading blur on error
+                progressBar.classList.remove('animating');
+                card.classList.remove('loading');
+            });
+        }
+
+
+        // Load initial status on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadJoiningLinksStatus();
+        });
+
+        function loadJoiningLinksStatus() {
+            const card = document.querySelector('.joining-links-card');
+            
+            // Card already has loading class from HTML, just fetch data
+            fetch('get_joining_links_status.php?workshop_id=<?php echo $workshop_id; ?>')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const progressBar = document.getElementById('joiningLinksProgress');
+                        const progressText = document.getElementById('progressText');
+                        const sentCount = document.getElementById('sentCount');
+                        const totalCount = document.getElementById('totalCount');
+                        const statusText = document.getElementById('statusText');
+                        const info = document.getElementById('joiningLinksInfo');
+                        const sendBtn = document.getElementById('sendJoiningLinksBtn');
+
+                        if (data.total_count > 0) {
+                            const percentage = Math.round((data.sent_count / data.total_count) * 100);
+                            progressBar.style.width = percentage + '%';
+                            progressBar.setAttribute('aria-valuenow', percentage);
+                            progressText.textContent = percentage + '%';
+                            sentCount.textContent = data.sent_count;
+                            totalCount.textContent = data.total_count;
+                            
+                            if (data.sent_count === data.total_count) {
+                                statusText.textContent = 'All emails sent';
+                                info.innerHTML = '<small class="text-success"><i class="ti ti-check me-1"></i> All joining links have been sent!</small>';
+                                
+                                // Update buttons
+                                sendBtn.innerHTML = '<i class="ti ti-check me-1"></i> All Sent';
+                                sendBtn.classList.remove('btn-success');
+                                sendBtn.classList.add('btn-outline-success');
+                                sendBtn.disabled = true;
+                            } else {
+                                statusText.textContent = 'Some emails sent';
+                                info.innerHTML = '<small class="text-warning"><i class="ti ti-info-circle me-1"></i> ' + data.sent_count + ' of ' + data.total_count + ' emails sent</small>';
+                                
+                                // Update buttons
+                                sendBtn.innerHTML = '<i class="ti ti-mail me-1"></i> Prepare More';
+                                sendBtn.disabled = false;
+                            }
+                        } else {
+                            sentCount.textContent = '0';
+                            totalCount.textContent = '0';
+                            statusText.textContent = 'Ready to prepare';
+                            info.innerHTML = '<small><i class="ti ti-info-circle me-1"></i> This will prepare joining links for all enrolled users with payment_status = 1</small>';
+                        }
+                        
+                        // Remove loading blur effect
+                        card.classList.remove('loading');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading status:', error);
+                    // Remove loading blur effect on error
+                    card.classList.remove('loading');
                 });
         }
     </script>
