@@ -19,8 +19,7 @@ try {
         throw new Exception('Workshop ID is required');
     }
 
-    // Start transaction
-    mysqli_begin_transaction($conn);
+    // No transaction needed - we'll update each email individually
 
     // Get workshop details
     $workshop_sql = "SELECT w.*, t.name as trainer_name 
@@ -87,6 +86,9 @@ try {
             // Generate unique joining link using the correct format
             $joining_link = 'https://meet.ipnacademy.in/?display_name=' . $email_data['user_id'] . '_' . urlencode($email_data['user_name']) . '&mn=' . urlencode($workshop['meeting_id']) . '&pwd=' . urlencode($workshop['passcode']) . '&meeting_email=' . urlencode($email_data['user_email']);
 
+            // Start transaction for this email
+            mysqli_begin_transaction($conn);
+
             // Send email with timeout
             $email_sent = sendEmailWithTimeout($user_data, $workshop_data, $joining_link);
             
@@ -119,14 +121,13 @@ try {
                             $verify_workshop_result = mysqli_query($conn, $verify_workshop_sql);
                             $workshop_verify = mysqli_fetch_assoc($verify_workshop_result);
                             
-                            $verify_payment_sql = "SELECT mail_send, last_mail FROM payments WHERE id = " . $email_data['payment_id'];
+                            $verify_payment_sql = "SELECT mail_send, updated_at FROM payments WHERE id = " . $email_data['payment_id'];
                             $verify_payment_result = mysqli_query($conn, $verify_payment_sql);
                             $payment_verify = mysqli_fetch_assoc($verify_payment_result);
                             
                             // Check if updates actually worked
                             if ($workshop_verify['is_sent'] != 1 || $payment_verify['mail_send'] != 1) {
                                 // Database updates failed - stop the process
-                                mysqli_rollback($conn);
                                 echo json_encode([
                                     'success' => false,
                                     'message' => 'Database update verification failed after first email. Stopping process.',
@@ -158,12 +159,22 @@ try {
                             $sending_email = $configs[0]['username']; // Default to first config
                         }
                         
+                        // Update the workshops_emails table with the sending email
+                        $update_sending_email_sql = "UPDATE workshops_emails 
+                                                     SET sending_user_email = '$sending_email' 
+                                                     WHERE id = " . $email_data['id'];
+                        mysqli_query($conn, $update_sending_email_sql);
+                        
+                        // Commit the transaction immediately after successful email send
+                        mysqli_commit($conn);
+                        
                         // Log success
-                        error_log("Successfully sent email to: " . $email_data['user_email']);
+                        error_log("Successfully sent email to: " . $email_data['user_email'] . " - Database committed");
                     } else {
+                        // Rollback transaction on payment update failure
+                        mysqli_rollback($conn);
                         if ($is_first_email) {
                             // First email failed database update - stop process
-                            mysqli_rollback($conn);
                             echo json_encode([
                                 'success' => false,
                                 'message' => 'Failed to update payments table after first email. Stopping process.',
@@ -177,9 +188,10 @@ try {
                         $failed_count++;
                     }
                 } else {
+                    // Rollback transaction on workshops_emails update failure
+                    mysqli_rollback($conn);
                     if ($is_first_email) {
                         // First email failed database update - stop process
-                        mysqli_rollback($conn);
                         echo json_encode([
                             'success' => false,
                             'message' => 'Failed to update workshops_emails table after first email. Stopping process.',
@@ -193,9 +205,10 @@ try {
                     $failed_count++;
                 }
             } else {
+                // Rollback transaction on email send failure
+                mysqli_rollback($conn);
                 if ($is_first_email) {
                     // First email failed to send - stop process
-                    mysqli_rollback($conn);
                     echo json_encode([
                         'success' => false,
                         'message' => 'Failed to send first email. Stopping process.',
@@ -211,9 +224,10 @@ try {
             usleep(100000); // 0.1 second delay
 
         } catch (Exception $e) {
+            // Rollback transaction on any exception
+            mysqli_rollback($conn);
             if ($is_first_email) {
                 // First email had exception - stop process
-                mysqli_rollback($conn);
                 echo json_encode([
                     'success' => false,
                     'message' => 'Exception occurred while processing first email. Stopping process.',
@@ -236,8 +250,7 @@ try {
         mysqli_query($conn, $update_sending_email_sql);
     }
 
-    // Commit transaction
-    mysqli_commit($conn);
+    // No transaction to commit - each email was updated individually
 
     // Get updated counts
     $total_sent_sql = "SELECT COUNT(*) as total_sent 
@@ -264,10 +277,7 @@ try {
     ]);
 
 } catch (Exception $e) {
-    // Rollback transaction on error
-    if (isset($conn)) {
-        mysqli_rollback($conn);
-    }
+    // No transaction to rollback - each email was updated individually
     
     error_log("Send workshop reminder emails error: " . $e->getMessage());
     echo json_encode([
