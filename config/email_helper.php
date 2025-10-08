@@ -11,6 +11,10 @@ class EmailHelper {
     private $current_email_index = 0;
     private $email_configs = [
         [
+            'username' => 'ipnacademy2024@gmail.com',
+            'password' => 'qplqwdflqyyntbho'
+        ],
+        [
             'username' => 'ipnacademy2023@gmail.com',
             'password' => 'aopkalikqhzmvpuq'
         ],
@@ -96,6 +100,10 @@ class EmailHelper {
             error_log("Workshop reminder email sending error trace: " . $e->getTraceAsString());
             return false;
         }
+    }
+
+    public function getLastUsedEmail() {
+        return $this->email_configs[$this->current_email_index]['username'];
     }
 
     private function sendWithPHPMailerWithFallback($user_data, $payment_data, $workshops_data) {
@@ -1360,10 +1368,23 @@ function sendPaymentConfirmationEmail($user_data, $payment_data, $workshops_data
 function sendWorkshopReminderEmail($user_data, $workshop_data, $joining_link) {
     try {
         $email_helper = new EmailHelper();
-        return $email_helper->sendWorkshopReminderEmail($user_data, $workshop_data, $joining_link);
+        $result = $email_helper->sendWorkshopReminderEmail($user_data, $workshop_data, $joining_link);
+        
+        // Store the email helper instance globally so we can get the last used email
+        $GLOBALS['last_email_helper'] = $email_helper;
+        
+        return $result;
     } catch (Exception $e) {
         error_log("Workshop reminder email error: " . $e->getMessage());
         return false;
     }
+}
+
+// Function to get the last used email
+function getLastUsedEmail() {
+    if (isset($GLOBALS['last_email_helper'])) {
+        return $GLOBALS['last_email_helper']->getLastUsedEmail();
+    }
+    return 'ipnacademy2023@gmail.com'; // fallback
 }
 ?> 

@@ -163,16 +163,16 @@ try {
                                 $workshop_sent++;
                                 $total_emails_sent++;
                                 
-                                // Get sending email on first successful send
-                                if (empty($sending_email)) {
-                                    $sending_email = 'ipnacademy2023@gmail.com'; // Default sending email
-                                }
+                                // Get the actual sending email that was used
+                                $actual_sending_email = getLastUsedEmail();
                                 
-                                // Update sending email
+                                // Update sending email with the actual email used
                                 $update_sending_email_sql = "UPDATE workshops_emails 
-                                                             SET sending_user_email = '$sending_email' 
+                                                             SET sending_user_email = '$actual_sending_email' 
                                                              WHERE id = " . $email_data['id'];
                                 mysqli_query($conn, $update_sending_email_sql);
+                                
+                                logMessage("✓ Email sent using: $actual_sending_email to: {$email_data['user_email']}");
                                 
                                 // Commit the transaction immediately after successful email send
                                 mysqli_commit($conn);

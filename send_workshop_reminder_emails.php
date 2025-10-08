@@ -145,25 +145,16 @@ try {
                             $is_first_email = false; // Mark that we've processed the first email
                         }
                         
-                        // Get the sending email from the first successful send
-                        if (empty($sending_email)) {
-                            // Get the email that was used to send (from EmailHelper config)
-                            $email_helper = new EmailHelper();
-                            $reflection = new ReflectionClass($email_helper);
-                            $property = $reflection->getProperty('email_configs');
-                            $property->setAccessible(true);
-                            $configs = $property->getValue($email_helper);
-                            
-                            // Get the current email index (this is a simplified approach)
-                            // In a real implementation, you might want to track which email was used
-                            $sending_email = $configs[0]['username']; // Default to first config
-                        }
+                        // Get the actual sending email that was used
+                        $actual_sending_email = getLastUsedEmail();
                         
-                        // Update the workshops_emails table with the sending email
+                        // Update the workshops_emails table with the actual sending email
                         $update_sending_email_sql = "UPDATE workshops_emails 
-                                                     SET sending_user_email = '$sending_email' 
+                                                     SET sending_user_email = '$actual_sending_email' 
                                                      WHERE id = " . $email_data['id'];
                         mysqli_query($conn, $update_sending_email_sql);
+                        
+                        error_log("✓ Email sent using: $actual_sending_email to: " . $email_data['user_email']);
                         
                         // Commit the transaction immediately after successful email send
                         mysqli_commit($conn);
