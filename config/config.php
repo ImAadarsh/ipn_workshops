@@ -26,8 +26,11 @@ if (!$conn) {
 // Set charset to utf8mb4
 mysqli_set_charset($conn, "utf8mb4");
 
-$uri = 'https://api.ipnacademy.in/storage/app/';
+// Set timezone to IST (Indian Standard Time)
 date_default_timezone_set('Asia/Kolkata');
+mysqli_query($conn, "SET time_zone = '+05:30'");
+
+$uri = 'https://api.ipnacademy.in/storage/app/';
 $current_time = time();
 
 // API Configuration

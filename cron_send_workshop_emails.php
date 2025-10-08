@@ -182,6 +182,7 @@ try {
                                 // Rollback transaction on payment update failure
                                 mysqli_rollback($conn);
                                 logMessage("✗ Failed to update payments table for: {$email_data['user_email']} - Transaction rolled back");
+                                logEmailError($conn, $workshop_id, $email_data, 'database_error', 'Failed to update payment record: ' . mysqli_error($conn));
                                 $workshop_failed++;
                                 $total_emails_failed++;
                             }
@@ -189,6 +190,7 @@ try {
                             // Rollback transaction on workshops_emails update failure
                             mysqli_rollback($conn);
                             logMessage("✗ Failed to update workshops_emails table for: {$email_data['user_email']} - Transaction rolled back");
+                            logEmailError($conn, $workshop_id, $email_data, 'database_error', 'Failed to update email record: ' . mysqli_error($conn));
                             $workshop_failed++;
                             $total_emails_failed++;
                         }
@@ -196,6 +198,7 @@ try {
                         // Rollback transaction on email send failure
                         mysqli_rollback($conn);
                         logMessage("✗ Failed to send email to: {$email_data['user_email']} - Transaction rolled back");
+                        logEmailError($conn, $workshop_id, $email_data, 'smtp_error', 'Failed to send email to: ' . $email_data['user_email']);
                         $workshop_failed++;
                         $total_emails_failed++;
                     }
@@ -207,6 +210,7 @@ try {
                     // Rollback transaction on any exception
                     mysqli_rollback($conn);
                     logMessage("✗ Error processing email for {$email_data['user_email']}: " . $e->getMessage() . " - Transaction rolled back");
+                    logEmailError($conn, $workshop_id, $email_data, 'other', 'Exception: ' . $e->getMessage());
                     $workshop_failed++;
                     $total_emails_failed++;
                 }
@@ -256,5 +260,37 @@ try {
     }
     
     exit(1);
+}
+
+// Helper function to log email errors
+function logEmailError($conn, $workshop_id, $email_data, $error_type, $error_message) {
+    $sql = "INSERT INTO email_errors 
+            (workshop_id, user_id, payment_id, user_email, user_name, error_type, error_message, retry_count, is_resolved, created_at, updated_at) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, 1, 0, NOW(), NOW())
+            ON DUPLICATE KEY UPDATE 
+            payment_id = VALUES(payment_id),
+            user_email = VALUES(user_email),
+            user_name = VALUES(user_name),
+            error_type = VALUES(error_type),
+            error_message = VALUES(error_message),
+            retry_count = retry_count + 1,
+            is_resolved = 0,
+            resolved_at = NULL,
+            updated_at = NOW()";
+    
+    $stmt = mysqli_prepare($conn, $sql);
+    if ($stmt) {
+        mysqli_stmt_bind_param($stmt, "iiissss", 
+            $workshop_id, 
+            $email_data['user_id'], 
+            $email_data['payment_id'], 
+            $email_data['user_email'], 
+            $email_data['user_name'], 
+            $error_type, 
+            $error_message
+        );
+        mysqli_stmt_execute($stmt);
+        mysqli_stmt_close($stmt);
+    }
 }
 ?>

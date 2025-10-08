@@ -280,8 +280,18 @@ try {
 // Helper function to log email errors
 function logEmailError($conn, $workshop_id, $email_data, $error_type, $error_message) {
     $sql = "INSERT INTO email_errors 
-            (workshop_id, user_id, payment_id, user_email, user_name, error_type, error_message, created_at) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, NOW())";
+            (workshop_id, user_id, payment_id, user_email, user_name, error_type, error_message, retry_count, is_resolved, created_at, updated_at) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, 1, 0, NOW(), NOW())
+            ON DUPLICATE KEY UPDATE 
+            payment_id = VALUES(payment_id),
+            user_email = VALUES(user_email),
+            user_name = VALUES(user_name),
+            error_type = VALUES(error_type),
+            error_message = VALUES(error_message),
+            retry_count = retry_count + 1,
+            is_resolved = 0,
+            resolved_at = NULL,
+            updated_at = NOW()";
     
     $stmt = mysqli_prepare($conn, $sql);
     if ($stmt) {

@@ -304,6 +304,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     <button type="button" class="btn btn-primary" id="sendReminderEmailsBtn" onclick="sendWorkshopReminderEmails()">
                                         <i class="ti ti-send me-1"></i> Send Reminder Emails
                                     </button>
+                                    <button type="button" class="btn btn-danger" id="errorEmailsBtn" onclick="viewErrorEmails()">
+                                        <i class="ti ti-alert-circle me-1"></i> Error Emails
+                                        <span class="badge bg-white text-danger ms-1" id="errorEmailsCount">0</span>
+                                    </button>
+                                    <button type="button" class="btn btn-info" id="emailTrackingBtn" onclick="viewEmailTracking()">
+                                        <i class="ti ti-mail me-1"></i> Email Tracking
+                                    </button>
                                 </div>
                             </div>
                             <div class="card-body">
@@ -1455,6 +1462,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Load initial status on page load
         document.addEventListener('DOMContentLoaded', function() {
             loadJoiningLinksStatus();
+            loadErrorEmailsCount();
         });
 
         function loadJoiningLinksStatus() {
@@ -1514,6 +1522,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     // Remove loading blur effect on error
                     card.classList.remove('loading');
                 });
+        }
+
+        function loadErrorEmailsCount() {
+            fetch('get_error_emails_count.php?workshop_id=<?php echo $workshop_id; ?>')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const errorCount = document.getElementById('errorEmailsCount');
+                        errorCount.textContent = data.count;
+                        
+                        // Update button visibility based on count
+                        const errorBtn = document.getElementById('errorEmailsBtn');
+                        if (data.count > 0) {
+                            errorBtn.style.display = 'inline-block';
+                        } else {
+                            errorBtn.style.display = 'none';
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading error emails count:', error);
+                });
+        }
+
+        function viewErrorEmails() {
+            window.open('error_emails_management.php?workshop_id=<?php echo $workshop_id; ?>', '_blank');
+        }
+
+        function viewEmailTracking() {
+            window.open('email_delivery_tracking.php?workshop_id=<?php echo $workshop_id; ?>', '_blank');
         }
     </script>
 </body>
