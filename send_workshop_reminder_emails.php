@@ -57,6 +57,7 @@ try {
     }
 
     // Process each email one by one
+    $is_first_email = true;
     foreach ($emails_to_send as $email_data) {
         try {
             // Validate email address first
@@ -100,10 +101,9 @@ try {
                 $update_result = mysqli_query($conn, $update_sql);
                 
                 if ($update_result) {
-                    // Also update the payments table to mark mail_sent = 1
+                    // Also update the payments table to mark mail_send = 1
                     $update_payment_sql = "UPDATE payments 
-                                           SET mail_sent = 1, 
-                                               last_mail = NOW(), 
+                                           SET mail_send = 1, 
                                                updated_at = NOW() 
                                            WHERE id = " . $email_data['payment_id'];
                     
@@ -111,6 +111,39 @@ try {
                     
                     if ($update_payment_result) {
                         $sent_count++;
+                        
+                        // Check if this is the first email and verify database updates
+                        if ($is_first_email) {
+                            // Verify the updates actually worked
+                            $verify_workshop_sql = "SELECT is_sent, sent_at FROM workshops_emails WHERE id = " . $email_data['id'];
+                            $verify_workshop_result = mysqli_query($conn, $verify_workshop_sql);
+                            $workshop_verify = mysqli_fetch_assoc($verify_workshop_result);
+                            
+                            $verify_payment_sql = "SELECT mail_send, last_mail FROM payments WHERE id = " . $email_data['payment_id'];
+                            $verify_payment_result = mysqli_query($conn, $verify_payment_sql);
+                            $payment_verify = mysqli_fetch_assoc($verify_payment_result);
+                            
+                            // Check if updates actually worked
+                            if ($workshop_verify['is_sent'] != 1 || $payment_verify['mail_send'] != 1) {
+                                // Database updates failed - stop the process
+                                mysqli_rollback($conn);
+                                echo json_encode([
+                                    'success' => false,
+                                    'message' => 'Database update verification failed after first email. Stopping process.',
+                                    'details' => [
+                                        'workshop_emails_is_sent' => $workshop_verify['is_sent'],
+                                        'payments_mail_send' => $payment_verify['mail_send'],
+                                        'workshop_emails_id' => $email_data['id'],
+                                        'payments_id' => $email_data['payment_id'],
+                                        'user_email' => $email_data['user_email']
+                                    ]
+                                ]);
+                                exit;
+                            }
+                            
+                            $is_first_email = false; // Mark that we've processed the first email
+                        }
+                        
                         // Get the sending email from the first successful send
                         if (empty($sending_email)) {
                             // Get the email that was used to send (from EmailHelper config)
@@ -128,14 +161,48 @@ try {
                         // Log success
                         error_log("Successfully sent email to: " . $email_data['user_email']);
                     } else {
+                        if ($is_first_email) {
+                            // First email failed database update - stop process
+                            mysqli_rollback($conn);
+                            echo json_encode([
+                                'success' => false,
+                                'message' => 'Failed to update payments table after first email. Stopping process.',
+                                'error' => mysqli_error($conn),
+                                'payment_id' => $email_data['payment_id'],
+                                'user_email' => $email_data['user_email']
+                            ]);
+                            exit;
+                        }
                         logEmailError($conn, $workshop_id, $email_data, 'database_error', 'Failed to update payment record: ' . mysqli_error($conn));
                         $failed_count++;
                     }
                 } else {
+                    if ($is_first_email) {
+                        // First email failed database update - stop process
+                        mysqli_rollback($conn);
+                        echo json_encode([
+                            'success' => false,
+                            'message' => 'Failed to update workshops_emails table after first email. Stopping process.',
+                            'error' => mysqli_error($conn),
+                            'workshop_emails_id' => $email_data['id'],
+                            'user_email' => $email_data['user_email']
+                        ]);
+                        exit;
+                    }
                     logEmailError($conn, $workshop_id, $email_data, 'database_error', 'Failed to update email record: ' . mysqli_error($conn));
                     $failed_count++;
                 }
             } else {
+                if ($is_first_email) {
+                    // First email failed to send - stop process
+                    mysqli_rollback($conn);
+                    echo json_encode([
+                        'success' => false,
+                        'message' => 'Failed to send first email. Stopping process.',
+                        'user_email' => $email_data['user_email']
+                    ]);
+                    exit;
+                }
                 logEmailError($conn, $workshop_id, $email_data, 'smtp_error', 'Failed to send email to: ' . $email_data['user_email']);
                 $failed_count++;
             }
@@ -144,6 +211,17 @@ try {
             usleep(100000); // 0.1 second delay
 
         } catch (Exception $e) {
+            if ($is_first_email) {
+                // First email had exception - stop process
+                mysqli_rollback($conn);
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'Exception occurred while processing first email. Stopping process.',
+                    'error' => $e->getMessage(),
+                    'user_email' => $email_data['user_email']
+                ]);
+                exit;
+            }
             logEmailError($conn, $workshop_id, $email_data, 'other', 'Exception: ' . $e->getMessage());
             $failed_count++;
             error_log("Error sending email to " . $email_data['user_email'] . ": " . $e->getMessage());
