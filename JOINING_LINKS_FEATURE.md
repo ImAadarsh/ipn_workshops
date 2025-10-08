@@ -1,7 +1,7 @@
 # Joining Links Management Feature
 
 ## Overview
-This feature allows administrators to prepare joining links for all enrolled users for a workshop and track the progress. It populates the workshops_emails table with is_sent = 0 to indicate emails are ready for sending. It includes the ability to revert the action if needed.
+This feature allows administrators to prepare joining links for all enrolled users for a workshop and track the progress. It populates the workshops_emails table with is_sent = 0 to indicate emails are ready for sending. It also includes the ability to send actual workshop reminder emails with professional templates and unique joining links.
 
 ## Files Added/Modified
 
@@ -10,7 +10,7 @@ This feature allows administrators to prepare joining links for all enrolled use
 
 ### New Files:
 - `send_joining_links.php` - Handles preparing joining links and populating the workshops_emails table with is_sent = 0
-- `revert_joining_links.php` - Handles reverting the joining links action
+- `send_workshop_reminder_emails.php` - Handles sending actual workshop reminder emails to prepared users
 - `get_joining_links_status.php` - Returns the current status of prepared joining links for a workshop
 
 ## Database Schema
@@ -68,11 +68,36 @@ CREATE TABLE workshops_emails (
 
 ### Buttons
 - **Prepare Joining Links**: Initiates the preparation process
+- **Send Reminder Emails**: Sends actual workshop reminder emails to prepared users
 
 ### Status Display
 - Real-time status updates
 - Count of sent emails (is_sent = 1) vs. total entries in workshops_emails table
 - Informational messages
+
+## Workshop Reminder Email Features
+
+### Email Template
+- Professional HTML email template with IPN Academy branding
+- Includes workshop details, trainer information, and meeting credentials
+- Features unique joining links for each user
+- Mobile-responsive design with modern styling
+- Includes certificate download instructions and disclaimer
+
+### Email Content
+- Workshop name, trainer name, and timing
+- Meeting ID and passcode
+- User's registered email address
+- Unique joining link with user and payment tracking
+- Steps to download certificate
+- Professional disclaimer and contact information
+
+### Email Delivery
+- Uses multiple email configurations for reliability
+- Supports both PHPMailer and built-in PHP mail functions
+- Includes error handling and retry mechanisms
+- Tracks which email address was used for sending
+- Updates database with sent status and timestamp
 
 ## Security Features
 - Session-based authentication required
@@ -86,6 +111,8 @@ CREATE TABLE workshops_emails (
 3. Click "Prepare Joining Links" to populate the workshops_emails table with is_sent = 0
 4. Monitor progress in real-time
 5. The system will show 0% progress initially after preparing (since is_sent = 0)
+6. Click "Send Reminder Emails" to send actual workshop reminder emails to prepared users
+7. Monitor email sending progress and view detailed results
 
 ## Technical Notes
 - Uses AJAX for seamless user experience

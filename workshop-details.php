@@ -301,6 +301,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     <button type="button" class="btn btn-success" id="sendJoiningLinksBtn" onclick="sendJoiningLinks()">
                                         <i class="ti ti-mail me-1"></i> Prepare Joining Links
                                     </button>
+                                    <button type="button" class="btn btn-primary" id="sendReminderEmailsBtn" onclick="sendWorkshopReminderEmails()">
+                                        <i class="ti ti-send me-1"></i> Send Reminder Emails
+                                    </button>
                                 </div>
                             </div>
                             <div class="card-body">
@@ -1365,6 +1368,89 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             });
         }
 
+        function sendWorkshopReminderEmails() {
+            if (!confirm('Are you sure you want to send workshop reminder emails to all prepared users? This will send actual emails with joining links.')) {
+                return;
+            }
+
+            const btn = document.getElementById('sendReminderEmailsBtn');
+            const progressBar = document.getElementById('joiningLinksProgress');
+            const progressText = document.getElementById('progressText');
+            const sentCount = document.getElementById('sentCount');
+            const totalCount = document.getElementById('totalCount');
+            const statusText = document.getElementById('statusText');
+            const info = document.getElementById('joiningLinksInfo');
+            const card = document.querySelector('.joining-links-card');
+
+            // Add loading blur effect
+            card.classList.add('loading');
+            
+            // Disable button and show loading
+            btn.disabled = true;
+            btn.innerHTML = '<i class="ti ti-loader me-1"></i> Sending...';
+            statusText.textContent = 'Sending reminder emails...';
+            info.innerHTML = '<small><i class="ti ti-loader me-1"></i> Sending workshop reminder emails to prepared users...</small>';
+            
+            // Add animating class to progress bar
+            progressBar.classList.add('animating');
+
+            // Make AJAX request
+            fetch('send_workshop_reminder_emails.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    workshop_id: <?php echo $workshop_id; ?>
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Update progress based on sent/total ratio
+                    const progressPercentage = data.total_prepared > 0 ? Math.round((data.total_sent / data.total_prepared) * 100) : 0;
+                    progressBar.style.width = progressPercentage + '%';
+                    progressBar.setAttribute('aria-valuenow', progressPercentage);
+                    progressText.textContent = progressPercentage + '%';
+                    sentCount.textContent = data.total_sent;
+                    totalCount.textContent = data.total_prepared;
+                    statusText.textContent = 'Emails sent successfully!';
+                    
+                    // Show detailed results
+                    if (data.sent_count > 0) {
+                        info.innerHTML = '<small class="text-success"><i class="ti ti-check me-1"></i> Successfully sent ' + data.sent_count + ' emails! Total sent: ' + data.total_sent + ' / ' + data.total_prepared + '</small>';
+                    } else {
+                        info.innerHTML = '<small class="text-warning"><i class="ti ti-alert-triangle me-1"></i> No emails were sent. Please check if there are prepared emails.</small>';
+                    }
+                    
+                    if (data.failed_count > 0) {
+                        info.innerHTML += '<br><small class="text-danger"><i class="ti ti-alert-circle me-1"></i> ' + data.failed_count + ' emails failed to send.</small>';
+                    }
+                    
+                    // Remove animating class and loading blur
+                    progressBar.classList.remove('animating');
+                    card.classList.remove('loading');
+                    
+                    // Update button
+                    btn.innerHTML = '<i class="ti ti-check me-1"></i> Emails Sent';
+                    btn.classList.remove('btn-primary');
+                    btn.classList.add('btn-outline-primary');
+                } else {
+                    throw new Error(data.message || 'Failed to send reminder emails');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                statusText.textContent = 'Error occurred';
+                info.innerHTML = '<small class="text-danger"><i class="ti ti-alert-circle me-1"></i> Error: ' + error.message + '</small>';
+                btn.innerHTML = '<i class="ti ti-send me-1"></i> Send Reminder Emails';
+                btn.disabled = false;
+                
+                // Remove animating class and loading blur on error
+                progressBar.classList.remove('animating');
+                card.classList.remove('loading');
+            });
+        }
 
         // Load initial status on page load
         document.addEventListener('DOMContentLoaded', function() {
