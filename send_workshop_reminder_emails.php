@@ -56,9 +56,17 @@ try {
         throw new Exception('No prepared emails found for this workshop');
     }
 
-    // Process each email
+    // Process each email one by one
     foreach ($emails_to_send as $email_data) {
         try {
+            // Validate email address first
+            if (empty($email_data['user_email']) || !filter_var($email_data['user_email'], FILTER_VALIDATE_EMAIL)) {
+                // Log invalid email error
+                logEmailError($conn, $workshop_id, $email_data, 'invalid_email', 'Invalid email address: ' . $email_data['user_email']);
+                $failed_count++;
+                continue;
+            }
+
             // Prepare user data
             $user_data = [
                 'name' => $email_data['user_name'],
@@ -78,8 +86,8 @@ try {
             // Generate unique joining link using the correct format
             $joining_link = 'https://meet.ipnacademy.in/?display_name=' . $email_data['user_id'] . '_' . urlencode($email_data['user_name']) . '&mn=' . urlencode($workshop['meeting_id']) . '&pwd=' . urlencode($workshop['passcode']) . '&meeting_email=' . urlencode($email_data['user_email']);
 
-            // Send email
-            $email_sent = sendWorkshopReminderEmail($user_data, $workshop_data, $joining_link);
+            // Send email with timeout
+            $email_sent = sendEmailWithTimeout($user_data, $workshop_data, $joining_link);
             
             if ($email_sent) {
                 // Update the email record as sent
@@ -116,23 +124,27 @@ try {
                             // In a real implementation, you might want to track which email was used
                             $sending_email = $configs[0]['username']; // Default to first config
                         }
+                        
+                        // Log success
+                        error_log("Successfully sent email to: " . $email_data['user_email']);
                     } else {
+                        logEmailError($conn, $workshop_id, $email_data, 'database_error', 'Failed to update payment record: ' . mysqli_error($conn));
                         $failed_count++;
-                        error_log("Failed to update payment record: " . mysqli_error($conn));
                     }
                 } else {
+                    logEmailError($conn, $workshop_id, $email_data, 'database_error', 'Failed to update email record: ' . mysqli_error($conn));
                     $failed_count++;
-                    error_log("Failed to update email record: " . mysqli_error($conn));
                 }
             } else {
+                logEmailError($conn, $workshop_id, $email_data, 'smtp_error', 'Failed to send email to: ' . $email_data['user_email']);
                 $failed_count++;
-                error_log("Failed to send email to: " . $email_data['user_email']);
             }
 
             // Add a small delay to prevent overwhelming the email server
             usleep(100000); // 0.1 second delay
 
         } catch (Exception $e) {
+            logEmailError($conn, $workshop_id, $email_data, 'other', 'Exception: ' . $e->getMessage());
             $failed_count++;
             error_log("Error sending email to " . $email_data['user_email'] . ": " . $e->getMessage());
         }
@@ -184,5 +196,50 @@ try {
         'success' => false,
         'message' => $e->getMessage()
     ]);
+}
+
+// Helper function to log email errors
+function logEmailError($conn, $workshop_id, $email_data, $error_type, $error_message) {
+    $sql = "INSERT INTO email_errors 
+            (workshop_id, user_id, payment_id, user_email, user_name, error_type, error_message, created_at) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, NOW())";
+    
+    $stmt = mysqli_prepare($conn, $sql);
+    if ($stmt) {
+        mysqli_stmt_bind_param($stmt, "iiissss", 
+            $workshop_id, 
+            $email_data['user_id'], 
+            $email_data['payment_id'], 
+            $email_data['user_email'], 
+            $email_data['user_name'], 
+            $error_type, 
+            $error_message
+        );
+        mysqli_stmt_execute($stmt);
+        mysqli_stmt_close($stmt);
+    }
+}
+
+// Helper function to send email with timeout
+function sendEmailWithTimeout($user_data, $workshop_data, $joining_link) {
+    // Set a timeout for email sending (30 seconds)
+    $timeout = 30;
+    $start_time = time();
+    
+    try {
+        // Send email
+        $result = sendWorkshopReminderEmail($user_data, $workshop_data, $joining_link);
+        
+        // Check if we've exceeded the timeout
+        if ((time() - $start_time) > $timeout) {
+            error_log("Email sending timeout for: " . $user_data['email']);
+            return false;
+        }
+        
+        return $result;
+    } catch (Exception $e) {
+        error_log("Email sending exception for " . $user_data['email'] . ": " . $e->getMessage());
+        return false;
+    }
 }
 ?>
