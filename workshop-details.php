@@ -1354,10 +1354,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     progressBar.classList.remove('animating');
                     card.classList.remove('loading');
                     
-                    // Update button
-                    btn.innerHTML = '<i class="ti ti-check me-1"></i> Prepared Successfully';
-                    btn.classList.remove('btn-success');
-                    btn.classList.add('btn-outline-success');
+                    // Update button - Keep enabled for adding more users
+                    btn.innerHTML = '<i class="ti ti-mail me-1"></i> Prepare More';
+                    btn.classList.remove('btn-outline-success');
+                    btn.classList.add('btn-success');
+                    btn.disabled = false;
                 } else {
                     throw new Error(data.message || 'Failed to send joining links');
                 }
@@ -1490,17 +1491,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             totalCount.textContent = data.total_count;
                             
                             if (data.sent_count === data.total_count) {
-                                statusText.textContent = 'All emails sent';
-                                info.innerHTML = '<small class="text-success"><i class="ti ti-check me-1"></i> All joining links have been sent!</small>';
+                                statusText.textContent = 'All prepared emails sent';
+                                info.innerHTML = '<small class="text-success"><i class="ti ti-check me-1"></i> All prepared joining links have been sent! You can prepare more if new users are added.</small>';
                                 
-                                // Update buttons
-                                sendBtn.innerHTML = '<i class="ti ti-check me-1"></i> All Sent';
-                                sendBtn.classList.remove('btn-success');
-                                sendBtn.classList.add('btn-outline-success');
-                                sendBtn.disabled = true;
+                                // Update buttons - Keep enabled for adding more users
+                                sendBtn.innerHTML = '<i class="ti ti-mail me-1"></i> Prepare More';
+                                sendBtn.classList.remove('btn-outline-success');
+                                sendBtn.classList.add('btn-success');
+                                sendBtn.disabled = false;
                             } else {
                                 statusText.textContent = 'Some emails sent';
-                                info.innerHTML = '<small class="text-warning"><i class="ti ti-info-circle me-1"></i> ' + data.sent_count + ' of ' + data.total_count + ' emails sent</small>';
+                                info.innerHTML = '<small class="text-warning"><i class="ti ti-info-circle me-1"></i> ' + data.sent_count + ' of ' + data.total_count + ' emails sent. You can prepare more for new users.</small>';
                                 
                                 // Update buttons
                                 sendBtn.innerHTML = '<i class="ti ti-mail me-1"></i> Prepare More';
