@@ -1343,60 +1343,6 @@ while ($row = mysqli_fetch_assoc($user_segmentation_result)) {
                     </div>
                 </div>
 
-                <!-- 🚀 Advanced 3D Visualizations -->
-                <div class="row g-4 mb-4">
-                    <div class="col-12">
-                        <h4 class="section-title">🚀 Advanced 3D Visualizations</h4>
-                    </div>
-                </div>
-
-                <!-- 3D Charts Row 1 -->
-                <div class="row g-4 mb-4">
-                    <div class="col-lg-6">
-                        <div class="card analytics-card chart-3d particle-bg">
-                            <div class="card-header">
-                                <h5 class="card-title mb-0">🎯 3D User Growth Pyramid</h5>
-                            </div>
-                            <div class="card-body">
-                                <div class="viz-container" id="pyramid3d"></div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-lg-6">
-                        <div class="card analytics-card chart-3d particle-bg">
-                            <div class="card-header">
-                                <h5 class="card-title mb-0">🌍 3D Geographic Distribution</h5>
-                            </div>
-                            <div class="card-body">
-                                <div class="viz-container" id="geo3d"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 3D Charts Row 2 -->
-                <div class="row g-4 mb-4">
-                    <div class="col-lg-6">
-                        <div class="card analytics-card chart-3d particle-bg">
-                            <div class="card-header">
-                                <h5 class="card-title mb-0">📊 3D School Performance Matrix</h5>
-                            </div>
-                            <div class="card-body">
-                                <div class="viz-container" id="school3d"></div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-lg-6">
-                        <div class="card analytics-card chart-3d particle-bg">
-                            <div class="card-header">
-                                <h5 class="card-title mb-0">🎪 3D User Journey Funnel</h5>
-                            </div>
-                            <div class="card-body">
-                                <div class="viz-container" id="funnel3d"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
 
                 <!-- 🔄 Flow Charts & Network Diagrams -->
                 <div class="row g-4 mb-4">
