@@ -2185,252 +2185,293 @@ while ($row = mysqli_fetch_assoc($user_segmentation_result)) {
 
         // 3D Geographic Distribution
         function create3DGeoChart() {
-            const cities = <?php echo json_encode(array_slice($analytics['top_cities'], 0, 10)); ?>;
-            const data = [{
-                type: 'scatter3d',
-                x: cities.map((_, i) => Math.random() * 100),
-                y: cities.map((_, i) => Math.random() * 100),
-                z: cities.map(city => city.count),
-                mode: 'markers',
-                marker: {
-                    size: cities.map(city => Math.sqrt(city.count) * 2),
-                    color: cities.map(city => city.count),
-                    colorscale: 'Viridis',
-                    line: { color: 'white', width: 2 }
-                },
-                text: cities.map(city => `${city.city}: ${city.count} users`),
-                hovertemplate: '<b>%{text}</b><br>X: %{x}<br>Y: %{y}<br>Z: %{z}<extra></extra>'
-            }];
+            try {
+                const cities = <?php echo json_encode(isset($analytics['top_cities']) ? array_slice($analytics['top_cities'], 0, 10) : []); ?>;
+                if (cities.length === 0) {
+                    console.log('No city data available for 3D Geographic Distribution');
+                    return;
+                }
+                
+                const data = [{
+                    type: 'scatter3d',
+                    x: cities.map((_, i) => Math.random() * 100),
+                    y: cities.map((_, i) => Math.random() * 100),
+                    z: cities.map(city => city.count),
+                    mode: 'markers',
+                    marker: {
+                        size: cities.map(city => Math.sqrt(city.count) * 2),
+                        color: cities.map(city => city.count),
+                        colorscale: 'Viridis',
+                        line: { color: 'white', width: 2 }
+                    },
+                    text: cities.map(city => `${city.city}: ${city.count} users`),
+                    hovertemplate: '<b>%{text}</b><br>X: %{x}<br>Y: %{y}<br>Z: %{z}<extra></extra>'
+                }];
 
-            const layout = {
-                title: '3D Geographic Distribution',
-                scene: {
-                    xaxis: { title: 'Longitude' },
-                    yaxis: { title: 'Latitude' },
-                    zaxis: { title: 'User Count' },
-                    camera: { eye: { x: 1.5, y: 1.5, z: 1.5 } }
-                },
-                paper_bgcolor: 'rgba(0,0,0,0)',
-                plot_bgcolor: 'rgba(0,0,0,0)',
-                font: { color: 'white' }
-            };
+                const layout = {
+                    title: '3D Geographic Distribution',
+                    scene: {
+                        xaxis: { title: 'Longitude' },
+                        yaxis: { title: 'Latitude' },
+                        zaxis: { title: 'User Count' },
+                        camera: { eye: { x: 1.5, y: 1.5, z: 1.5 } }
+                    },
+                    paper_bgcolor: 'rgba(0,0,0,0)',
+                    plot_bgcolor: 'rgba(0,0,0,0)',
+                    font: { color: 'white' }
+                };
 
-            Plotly.newPlot('geo3d', data, layout, {responsive: true});
+                Plotly.newPlot('geo3d', data, layout, {responsive: true});
+            } catch (error) {
+                console.log('Error creating 3D Geographic Distribution:', error);
+            }
         }
 
         // 3D School Performance Matrix
         function create3DSchoolMatrix() {
-            const schools = <?php echo json_encode(array_slice($analytics['school_performance'], 0, 8)); ?>;
-            const data = [{
-                type: 'scatter3d',
-                x: schools.map((_, i) => i),
-                y: schools.map(school => school.user_count),
-                z: schools.map(school => school.avg_engagement || 0),
-                mode: 'markers+text',
-                marker: {
-                    size: schools.map(school => Math.sqrt(school.user_count) * 3),
-                    color: schools.map(school => school.user_count),
-                    colorscale: 'Plasma',
-                    line: { color: 'white', width: 2 }
-                },
-                text: schools.map(school => school.school_name.substring(0, 10)),
-                textposition: 'top center'
-            }];
+            try {
+                const schools = <?php echo json_encode(isset($analytics['school_performance']) ? array_slice($analytics['school_performance'], 0, 8) : []); ?>;
+                if (schools.length === 0) {
+                    console.log('No school data available for 3D School Performance Matrix');
+                    return;
+                }
+                
+                const data = [{
+                    type: 'scatter3d',
+                    x: schools.map((_, i) => i),
+                    y: schools.map(school => school.user_count),
+                    z: schools.map(school => school.avg_engagement || 0),
+                    mode: 'markers+text',
+                    marker: {
+                        size: schools.map(school => Math.sqrt(school.user_count) * 3),
+                        color: schools.map(school => school.user_count),
+                        colorscale: 'Plasma',
+                        line: { color: 'white', width: 2 }
+                    },
+                    text: schools.map(school => school.school_name.substring(0, 10)),
+                    textposition: 'top center'
+                }];
 
-            const layout = {
-                title: '3D School Performance Matrix',
-                scene: {
-                    xaxis: { title: 'School Index' },
-                    yaxis: { title: 'User Count' },
-                    zaxis: { title: 'Engagement Score' },
-                    camera: { eye: { x: 1.5, y: 1.5, z: 1.5 } }
-                },
-                paper_bgcolor: 'rgba(0,0,0,0)',
-                plot_bgcolor: 'rgba(0,0,0,0)',
-                font: { color: 'white' }
-            };
+                const layout = {
+                    title: '3D School Performance Matrix',
+                    scene: {
+                        xaxis: { title: 'School Index' },
+                        yaxis: { title: 'User Count' },
+                        zaxis: { title: 'Engagement Score' },
+                        camera: { eye: { x: 1.5, y: 1.5, z: 1.5 } }
+                    },
+                    paper_bgcolor: 'rgba(0,0,0,0)',
+                    plot_bgcolor: 'rgba(0,0,0,0)',
+                    font: { color: 'white' }
+                };
 
-            Plotly.newPlot('school3d', data, layout, {responsive: true});
+                Plotly.newPlot('school3d', data, layout, {responsive: true});
+            } catch (error) {
+                console.log('Error creating 3D School Performance Matrix:', error);
+            }
         }
 
         // 3D User Journey Funnel
         function create3DFunnel() {
-            const stages = ['Visitors', 'Registered', 'Active', 'Engaged', 'Retained'];
-            const values = [<?php echo $analytics['total_users'] * 3; ?>, <?php echo $analytics['total_users']; ?>, <?php echo $analytics['total_users'] * 0.7; ?>, <?php echo $analytics['total_users'] * 0.4; ?>, <?php echo $analytics['total_users'] * 0.2; ?>];
-            
-            const data = [{
-                type: 'funnel',
-                y: stages,
-                x: values,
-                marker: {
-                    color: ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7'],
-                    line: { color: 'white', width: 2 }
-                },
-                textinfo: 'value+percent initial'
-            }];
+            try {
+                const totalUsers = <?php echo isset($analytics['total_users']) ? $analytics['total_users'] : 1000; ?>;
+                const stages = ['Visitors', 'Registered', 'Active', 'Engaged', 'Retained'];
+                const values = [totalUsers * 3, totalUsers, totalUsers * 0.7, totalUsers * 0.4, totalUsers * 0.2];
+                
+                const data = [{
+                    type: 'funnel',
+                    y: stages,
+                    x: values,
+                    marker: {
+                        color: ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7'],
+                        line: { color: 'white', width: 2 }
+                    },
+                    textinfo: 'value+percent initial'
+                }];
 
-            const layout = {
-                title: '3D User Journey Funnel',
-                paper_bgcolor: 'rgba(0,0,0,0)',
-                plot_bgcolor: 'rgba(0,0,0,0)',
-                font: { color: 'white' }
-            };
+                const layout = {
+                    title: '3D User Journey Funnel',
+                    paper_bgcolor: 'rgba(0,0,0,0)',
+                    plot_bgcolor: 'rgba(0,0,0,0)',
+                    font: { color: 'white' }
+                };
 
-            Plotly.newPlot('funnel3d', data, layout, {responsive: true});
+                Plotly.newPlot('funnel3d', data, layout, {responsive: true});
+            } catch (error) {
+                console.log('Error creating 3D User Journey Funnel:', error);
+            }
         }
 
         // Sankey Flow Diagram
         function createSankeyFlow() {
-            const data = {
-                type: "sankey",
-                orientation: "h",
-                node: {
-                    pad: 15,
-                    thickness: 20,
-                    line: { color: "black", width: 0.5 },
-                    label: ["Direct", "Social Media", "Email", "Referral", "Students", "Teachers", "Principals", "Active Users", "Engaged Users"],
-                    color: ["#FF6B6B", "#4ECDC4", "#45B7D1", "#96CEB4", "#FFEAA7", "#DDA0DD", "#98D8C8", "#F7DC6F", "#BB8FCE"]
-                },
-                link: {
-                    source: [0, 1, 2, 3, 4, 5, 6, 7],
-                    target: [4, 5, 6, 4, 7, 7, 7, 8],
-                    value: [<?php echo $analytics['total_users'] * 0.3; ?>, <?php echo $analytics['total_users'] * 0.25; ?>, <?php echo $analytics['total_users'] * 0.2; ?>, <?php echo $analytics['total_users'] * 0.25; ?>, <?php echo $analytics['total_users'] * 0.7; ?>, <?php echo $analytics['total_users'] * 0.6; ?>, <?php echo $analytics['total_users'] * 0.5; ?>, <?php echo $analytics['total_users'] * 0.4; ?>]
-                }
-            };
+            try {
+                const totalUsers = <?php echo isset($analytics['total_users']) ? $analytics['total_users'] : 1000; ?>;
+                const data = {
+                    type: "sankey",
+                    orientation: "h",
+                    node: {
+                        pad: 15,
+                        thickness: 20,
+                        line: { color: "black", width: 0.5 },
+                        label: ["Direct", "Social Media", "Email", "Referral", "Students", "Teachers", "Principals", "Active Users", "Engaged Users"],
+                        color: ["#FF6B6B", "#4ECDC4", "#45B7D1", "#96CEB4", "#FFEAA7", "#DDA0DD", "#98D8C8", "#F7DC6F", "#BB8FCE"]
+                    },
+                    link: {
+                        source: [0, 1, 2, 3, 4, 5, 6, 7],
+                        target: [4, 5, 6, 4, 7, 7, 7, 8],
+                        value: [totalUsers * 0.3, totalUsers * 0.25, totalUsers * 0.2, totalUsers * 0.25, totalUsers * 0.7, totalUsers * 0.6, totalUsers * 0.5, totalUsers * 0.4]
+                    }
+                };
 
-            const layout = {
-                title: "User Registration Flow",
-                font: { size: 10, color: 'white' },
-                paper_bgcolor: 'rgba(0,0,0,0)',
-                plot_bgcolor: 'rgba(0,0,0,0)'
-            };
+                const layout = {
+                    title: "User Registration Flow",
+                    font: { size: 10, color: 'white' },
+                    paper_bgcolor: 'rgba(0,0,0,0)',
+                    plot_bgcolor: 'rgba(0,0,0,0)'
+                };
 
-            Plotly.newPlot('sankeyFlow', [data], layout, {responsive: true});
+                Plotly.newPlot('sankeyFlow', [data], layout, {responsive: true});
+            } catch (error) {
+                console.log('Error creating Sankey Flow Diagram:', error);
+            }
         }
 
         // Network Graph
         function createNetworkGraph() {
-            const schools = <?php echo json_encode(array_slice($analytics['school_performance'], 0, 6)); ?>;
-            const nodes = schools.map((school, i) => ({
-                id: i,
-                label: school.school_name.substring(0, 15),
-                size: Math.sqrt(school.user_count) * 2,
-                color: `hsl(${i * 60}, 70%, 60%)`
-            }));
+            try {
+                const schools = <?php echo json_encode(isset($analytics['school_performance']) ? array_slice($analytics['school_performance'], 0, 6) : []); ?>;
+                if (schools.length === 0) {
+                    console.log('No school data available for Network Graph');
+                    return;
+                }
+                
+                const nodes = schools.map((school, i) => ({
+                    id: i,
+                    label: school.school_name.substring(0, 15),
+                    size: Math.sqrt(school.user_count) * 2,
+                    color: `hsl(${i * 60}, 70%, 60%)`
+                }));
 
-            const links = [];
-            for (let i = 0; i < nodes.length - 1; i++) {
-                links.push({
-                    source: i,
-                    target: i + 1,
-                    strength: 0.5
+                const links = [];
+                for (let i = 0; i < nodes.length - 1; i++) {
+                    links.push({
+                        source: i,
+                        target: i + 1,
+                        strength: 0.5
+                    });
+                }
+
+                const svg = d3.select('#networkGraph')
+                    .append('svg')
+                    .attr('width', '100%')
+                    .attr('height', '100%');
+
+                const width = 300;
+                const height = 300;
+
+                const simulation = d3.forceSimulation(nodes)
+                    .force('link', d3.forceLink(links).id(d => d.id).distance(50))
+                    .force('charge', d3.forceManyBody().strength(-300))
+                    .force('center', d3.forceCenter(width / 2, height / 2));
+
+                const link = svg.append('g')
+                    .selectAll('line')
+                    .data(links)
+                    .enter().append('line')
+                    .attr('stroke', '#999')
+                    .attr('stroke-opacity', 0.6)
+                    .attr('stroke-width', 2);
+
+                const node = svg.append('g')
+                    .selectAll('circle')
+                    .data(nodes)
+                    .enter().append('circle')
+                    .attr('r', d => d.size)
+                    .attr('fill', d => d.color)
+                    .attr('stroke', '#fff')
+                    .attr('stroke-width', 2)
+                    .call(d3.drag()
+                        .on('start', dragstarted)
+                        .on('drag', dragged)
+                        .on('end', dragended));
+
+                const label = svg.append('g')
+                    .selectAll('text')
+                    .data(nodes)
+                    .enter().append('text')
+                    .text(d => d.label)
+                    .attr('font-size', 10)
+                    .attr('text-anchor', 'middle')
+                    .attr('dy', 4)
+                    .attr('fill', 'white');
+
+                simulation.on('tick', () => {
+                    link
+                        .attr('x1', d => d.source.x)
+                        .attr('y1', d => d.source.y)
+                        .attr('x2', d => d.target.x)
+                        .attr('y2', d => d.target.y);
+
+                    node
+                        .attr('cx', d => d.x)
+                        .attr('cy', d => d.y);
+
+                    label
+                        .attr('x', d => d.x)
+                        .attr('y', d => d.y);
                 });
-            }
 
-            const svg = d3.select('#networkGraph')
-                .append('svg')
-                .attr('width', '100%')
-                .attr('height', '100%');
+                function dragstarted(event, d) {
+                    if (!event.active) simulation.alphaTarget(0.3).restart();
+                    d.fx = d.x;
+                    d.fy = d.y;
+                }
 
-            const width = 300;
-            const height = 300;
+                function dragged(event, d) {
+                    d.fx = event.x;
+                    d.fy = event.y;
+                }
 
-            const simulation = d3.forceSimulation(nodes)
-                .force('link', d3.forceLink(links).id(d => d.id).distance(50))
-                .force('charge', d3.forceManyBody().strength(-300))
-                .force('center', d3.forceCenter(width / 2, height / 2));
-
-            const link = svg.append('g')
-                .selectAll('line')
-                .data(links)
-                .enter().append('line')
-                .attr('stroke', '#999')
-                .attr('stroke-opacity', 0.6)
-                .attr('stroke-width', 2);
-
-            const node = svg.append('g')
-                .selectAll('circle')
-                .data(nodes)
-                .enter().append('circle')
-                .attr('r', d => d.size)
-                .attr('fill', d => d.color)
-                .attr('stroke', '#fff')
-                .attr('stroke-width', 2)
-                .call(d3.drag()
-                    .on('start', dragstarted)
-                    .on('drag', dragged)
-                    .on('end', dragended));
-
-            const label = svg.append('g')
-                .selectAll('text')
-                .data(nodes)
-                .enter().append('text')
-                .text(d => d.label)
-                .attr('font-size', 10)
-                .attr('text-anchor', 'middle')
-                .attr('dy', 4)
-                .attr('fill', 'white');
-
-            simulation.on('tick', () => {
-                link
-                    .attr('x1', d => d.source.x)
-                    .attr('y1', d => d.source.y)
-                    .attr('x2', d => d.target.x)
-                    .attr('y2', d => d.target.y);
-
-                node
-                    .attr('cx', d => d.x)
-                    .attr('cy', d => d.y);
-
-                label
-                    .attr('x', d => d.x)
-                    .attr('y', d => d.y);
-            });
-
-            function dragstarted(event, d) {
-                if (!event.active) simulation.alphaTarget(0.3).restart();
-                d.fx = d.x;
-                d.fy = d.y;
-            }
-
-            function dragged(event, d) {
-                d.fx = event.x;
-                d.fy = event.y;
-            }
-
-            function dragended(event, d) {
-                if (!event.active) simulation.alphaTarget(0);
-                d.fx = null;
-                d.fy = null;
+                function dragended(event, d) {
+                    if (!event.active) simulation.alphaTarget(0);
+                    d.fx = null;
+                    d.fy = null;
+                }
+            } catch (error) {
+                console.log('Error creating Network Graph:', error);
             }
         }
 
         // Interactive Map
         function createInteractiveMap() {
-            const map = L.map('interactiveMap').setView([20.5937, 78.9629], 5);
-            
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '© OpenStreetMap contributors'
-            }).addTo(map);
-
-            const cities = <?php echo json_encode($analytics['top_cities']); ?>;
-            cities.forEach(city => {
-                const lat = 20.5937 + (Math.random() - 0.5) * 10;
-                const lng = 78.9629 + (Math.random() - 0.5) * 10;
+            try {
+                const map = L.map('interactiveMap').setView([20.5937, 78.9629], 5);
                 
-                L.circleMarker([lat, lng], {
-                    radius: Math.sqrt(city.count) * 0.5,
-                    fillColor: '#3498db',
-                    color: '#fff',
-                    weight: 2,
-                    opacity: 1,
-                    fillOpacity: 0.8
-                }).addTo(map).bindPopup(`
-                    <strong>${city.city}</strong><br>
-                    Users: ${city.count}<br>
-                    Percentage: ${city.percentage}%
-                `);
-            });
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap contributors'
+                }).addTo(map);
+
+                const cities = <?php echo json_encode(isset($analytics['top_cities']) ? $analytics['top_cities'] : []); ?>;
+                cities.forEach(city => {
+                    const lat = 20.5937 + (Math.random() - 0.5) * 10;
+                    const lng = 78.9629 + (Math.random() - 0.5) * 10;
+                    
+                    L.circleMarker([lat, lng], {
+                        radius: Math.sqrt(city.count) * 0.5,
+                        fillColor: '#3498db',
+                        color: '#fff',
+                        weight: 2,
+                        opacity: 1,
+                        fillOpacity: 0.8
+                    }).addTo(map).bindPopup(`
+                        <strong>${city.city}</strong><br>
+                        Users: ${city.count}<br>
+                        Percentage: ${city.percentage}%
+                    `);
+                });
+            } catch (error) {
+                console.log('Error creating Interactive Map:', error);
+            }
         }
 
         // Heatmap
