@@ -522,6 +522,658 @@ $analytics['user_segmentation'] = [];
 while ($row = mysqli_fetch_assoc($user_segmentation_result)) {
     $analytics['user_segmentation'][] = $row;
 }
+
+// ===== WORKSHOP ANALYTICS =====
+// Workshop Performance Dashboard
+$workshop_performance_sql = "
+    SELECT 
+        w.id,
+        w.name,
+        w.trainer_name,
+        w.price,
+        w.start_date,
+        COUNT(p.id) as total_enrollments,
+        SUM(CASE WHEN p.payment_status = 1 THEN 1 ELSE 0 END) as paid_enrollments,
+        SUM(CASE WHEN p.payment_status = 1 THEN w.price ELSE 0 END) as revenue,
+        AVG(CASE WHEN f.feedback_rating IS NOT NULL THEN f.feedback_rating ELSE 0 END) as avg_rating,
+        COUNT(f.id) as feedback_count
+    FROM workshops w
+    LEFT JOIN payments p ON w.id = p.workshop_id
+    LEFT JOIN workshop_feedback f ON w.id = f.workshop_id
+    WHERE w.is_deleted = 0
+    GROUP BY w.id
+    ORDER BY revenue DESC
+    LIMIT 20
+";
+$workshop_performance_result = mysqli_query($conn, $workshop_performance_sql);
+$analytics['workshop_performance'] = [];
+while ($row = mysqli_fetch_assoc($workshop_performance_result)) {
+    $analytics['workshop_performance'][] = $row;
+}
+
+// Trainer Performance Metrics
+$trainer_performance_sql = "
+    SELECT 
+        t.id,
+        t.name,
+        t.designation,
+        COUNT(DISTINCT w.id) as total_workshops,
+        COUNT(DISTINCT p.id) as total_enrollments,
+        SUM(CASE WHEN p.payment_status = 1 THEN w.price ELSE 0 END) as total_revenue,
+        AVG(CASE WHEN f.feedback_rating IS NOT NULL THEN f.feedback_rating ELSE 0 END) as avg_rating,
+        COUNT(f.id) as feedback_count
+    FROM trainers t
+    LEFT JOIN workshops w ON t.id = w.trainer_id
+    LEFT JOIN payments p ON w.id = p.workshop_id
+    LEFT JOIN workshop_feedback f ON w.id = f.workshop_id
+    WHERE t.active = 1
+    GROUP BY t.id
+    ORDER BY total_revenue DESC
+";
+$trainer_performance_result = mysqli_query($conn, $trainer_performance_sql);
+$analytics['trainer_performance'] = [];
+while ($row = mysqli_fetch_assoc($trainer_performance_result)) {
+    $analytics['trainer_performance'][] = $row;
+}
+
+// Workshop Category Analysis
+$category_analysis_sql = "
+    SELECT 
+        c.name as category_name,
+        COUNT(DISTINCT w.id) as workshop_count,
+        COUNT(p.id) as total_enrollments,
+        SUM(CASE WHEN p.payment_status = 1 THEN w.price ELSE 0 END) as revenue,
+        AVG(w.price) as avg_price
+    FROM categories c
+    LEFT JOIN workshops w ON c.id = w.category_id
+    LEFT JOIN payments p ON w.id = p.workshop_id
+    GROUP BY c.id, c.name
+    ORDER BY revenue DESC
+";
+$category_analysis_result = mysqli_query($conn, $category_analysis_sql);
+$analytics['category_analysis'] = [];
+while ($row = mysqli_fetch_assoc($category_analysis_result)) {
+    $analytics['category_analysis'][] = $row;
+}
+
+// Workshop Pricing Analysis
+$pricing_analysis_sql = "
+    SELECT 
+        CASE 
+            WHEN w.price <= 500 THEN 'Low (≤500)'
+            WHEN w.price <= 1000 THEN 'Medium (501-1000)'
+            WHEN w.price <= 2000 THEN 'High (1001-2000)'
+            ELSE 'Premium (>2000)'
+        END as price_range,
+        COUNT(*) as workshop_count,
+        COUNT(p.id) as enrollments,
+        SUM(CASE WHEN p.payment_status = 1 THEN 1 ELSE 0 END) as paid_enrollments,
+        ROUND(SUM(CASE WHEN p.payment_status = 1 THEN 1 ELSE 0 END) * 100.0 / COUNT(p.id), 2) as conversion_rate
+    FROM workshops w
+    LEFT JOIN payments p ON w.id = p.workshop_id
+    WHERE w.is_deleted = 0
+    GROUP BY price_range
+    ORDER BY MIN(w.price)
+";
+$pricing_analysis_result = mysqli_query($conn, $pricing_analysis_sql);
+$analytics['pricing_analysis'] = [];
+while ($row = mysqli_fetch_assoc($pricing_analysis_result)) {
+    $analytics['pricing_analysis'][] = $row;
+}
+
+// Workshop Completion Rates
+$completion_rates_sql = "
+    SELECT 
+        w.id,
+        w.name,
+        COUNT(p.id) as total_enrollments,
+        COUNT(a.id) as attended_count,
+        ROUND(COUNT(a.id) * 100.0 / COUNT(p.id), 2) as completion_rate
+    FROM workshops w
+    LEFT JOIN payments p ON w.id = p.workshop_id AND p.payment_status = 1
+    LEFT JOIN Attendees a ON w.id = a.workshop_id
+    WHERE w.is_deleted = 0
+    GROUP BY w.id
+    HAVING total_enrollments > 0
+    ORDER BY completion_rate DESC
+    LIMIT 15
+";
+$completion_rates_result = mysqli_query($conn, $completion_rates_sql);
+$analytics['completion_rates'] = [];
+while ($row = mysqli_fetch_assoc($completion_rates_result)) {
+    $analytics['completion_rates'][] = $row;
+}
+
+// Workshop Feedback Analysis
+$feedback_analysis_sql = "
+    SELECT 
+        feedback_rating,
+        COUNT(*) as count,
+        ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM workshop_feedback), 2) as percentage
+    FROM workshop_feedback
+    GROUP BY feedback_rating
+    ORDER BY feedback_rating DESC
+";
+$feedback_analysis_result = mysqli_query($conn, $feedback_analysis_sql);
+$analytics['feedback_analysis'] = [];
+while ($row = mysqli_fetch_assoc($feedback_analysis_result)) {
+    $analytics['feedback_analysis'][] = $row;
+}
+
+// Workshop Revenue Trends (Monthly)
+$revenue_trends_sql = "
+    SELECT 
+        DATE_FORMAT(p.created_at, '%Y-%m') as month,
+        COUNT(p.id) as payment_count,
+        SUM(w.price) as total_revenue,
+        AVG(w.price) as avg_transaction_value
+    FROM payments p
+    JOIN workshops w ON p.workshop_id = w.id
+    WHERE p.payment_status = 1
+    GROUP BY DATE_FORMAT(p.created_at, '%Y-%m')
+    ORDER BY month DESC
+    LIMIT 12
+";
+$revenue_trends_result = mysqli_query($conn, $revenue_trends_sql);
+$analytics['revenue_trends'] = [];
+while ($row = mysqli_fetch_assoc($revenue_trends_result)) {
+    $analytics['revenue_trends'][] = $row;
+}
+
+// Workshop Attendance Patterns
+$attendance_patterns_sql = "
+    SELECT 
+        HOUR(a.login) as hour_of_day,
+        DAYNAME(a.login) as day_of_week,
+        COUNT(*) as attendance_count
+    FROM Attendees a
+    WHERE a.login IS NOT NULL
+    GROUP BY HOUR(a.login), DAYNAME(a.login)
+    ORDER BY attendance_count DESC
+";
+$attendance_patterns_result = mysqli_query($conn, $attendance_patterns_sql);
+$analytics['attendance_patterns'] = [];
+while ($row = mysqli_fetch_assoc($attendance_patterns_result)) {
+    $analytics['attendance_patterns'][] = $row;
+}
+
+// ===== PAYMENT & REVENUE ANALYTICS =====
+// Payment Method Analysis
+$payment_methods_sql = "
+    SELECT 
+        CASE 
+            WHEN payment_id LIKE 'IM%' THEN 'Instamojo'
+            WHEN payment_id IS NOT NULL THEN 'Other Online'
+            ELSE 'Pending/Unknown'
+        END as payment_method,
+        COUNT(*) as count,
+        SUM(CASE WHEN payment_status = 1 THEN 1 ELSE 0 END) as successful_payments,
+        ROUND(SUM(CASE WHEN payment_status = 1 THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 2) as success_rate
+    FROM payments
+    GROUP BY payment_method
+    ORDER BY count DESC
+";
+$payment_methods_result = mysqli_query($conn, $payment_methods_sql);
+$analytics['payment_methods'] = [];
+while ($row = mysqli_fetch_assoc($payment_methods_result)) {
+    $analytics['payment_methods'][] = $row;
+}
+
+// Revenue by School vs Individual
+$revenue_breakdown_sql = "
+    SELECT 
+        CASE 
+            WHEN u.school_id IS NOT NULL THEN 'School Users'
+            ELSE 'Individual Users'
+        END as user_type,
+        COUNT(p.id) as payment_count,
+        SUM(w.price) as total_revenue,
+        AVG(w.price) as avg_transaction_value
+    FROM payments p
+    JOIN workshops w ON p.workshop_id = w.id
+    JOIN users u ON p.user_id = u.id
+    WHERE p.payment_status = 1
+    GROUP BY user_type
+";
+$revenue_breakdown_result = mysqli_query($conn, $revenue_breakdown_sql);
+$analytics['revenue_breakdown'] = [];
+while ($row = mysqli_fetch_assoc($revenue_breakdown_result)) {
+    $analytics['revenue_breakdown'][] = $row;
+}
+
+// Coupon Usage Analytics
+$coupon_usage_sql = "
+    SELECT 
+        c.coupon_code,
+        c.flat_discount,
+        COUNT(p.id) as usage_count,
+        SUM(w.price) as total_revenue,
+        SUM(c.flat_discount) as total_discount_given
+    FROM coupons c
+    LEFT JOIN payments p ON c.coupon_code = p.coupon_code
+    LEFT JOIN workshops w ON p.workshop_id = w.id
+    WHERE p.payment_status = 1
+    GROUP BY c.id
+    ORDER BY usage_count DESC
+    LIMIT 15
+";
+$coupon_usage_result = mysqli_query($conn, $coupon_usage_sql);
+$analytics['coupon_usage'] = [];
+while ($row = mysqli_fetch_assoc($coupon_usage_result)) {
+    $analytics['coupon_usage'][] = $row;
+}
+
+// Payment Status Tracking
+$payment_status_sql = "
+    SELECT 
+        CASE 
+            WHEN payment_status = 1 THEN 'Completed'
+            WHEN payment_status = 0 THEN 'Pending'
+            ELSE 'Failed'
+        END as status,
+        COUNT(*) as count,
+        ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM payments), 2) as percentage
+    FROM payments
+    GROUP BY payment_status
+";
+$payment_status_result = mysqli_query($conn, $payment_status_sql);
+$analytics['payment_status'] = [];
+while ($row = mysqli_fetch_assoc($payment_status_result)) {
+    $analytics['payment_status'][] = $row;
+}
+
+// Average Transaction Value Trends
+$atv_trends_sql = "
+    SELECT 
+        DATE_FORMAT(created_at, '%Y-%m') as month,
+        COUNT(*) as transaction_count,
+        AVG(w.price) as avg_transaction_value,
+        SUM(w.price) as total_revenue
+    FROM payments p
+    JOIN workshops w ON p.workshop_id = w.id
+    WHERE p.payment_status = 1
+    GROUP BY DATE_FORMAT(created_at, '%Y-%m')
+    ORDER BY month DESC
+    LIMIT 12
+";
+$atv_trends_result = mysqli_query($conn, $atv_trends_sql);
+$analytics['atv_trends'] = [];
+while ($row = mysqli_fetch_assoc($atv_trends_result)) {
+    $analytics['atv_trends'][] = $row;
+}
+
+// ===== SCHOOL & USER ANALYTICS =====
+// School Performance Ranking
+$school_ranking_sql = "
+    SELECT 
+        s.id,
+        s.name as school_name,
+        COUNT(DISTINCT u.id) as total_users,
+        COUNT(p.id) as total_purchases,
+        SUM(CASE WHEN p.payment_status = 1 THEN w.price ELSE 0 END) as total_revenue,
+        AVG(CASE WHEN p.payment_status = 1 THEN w.price ELSE 0 END) as avg_purchase_value
+    FROM schools s
+    LEFT JOIN users u ON s.id = u.school_id
+    LEFT JOIN payments p ON u.id = p.user_id
+    LEFT JOIN workshops w ON p.workshop_id = w.id
+    WHERE s.is_active = 1
+    GROUP BY s.id
+    HAVING total_users > 0
+    ORDER BY total_revenue DESC
+    LIMIT 20
+";
+$school_ranking_result = mysqli_query($conn, $school_ranking_sql);
+$analytics['school_ranking'] = [];
+while ($row = mysqli_fetch_assoc($school_ranking_result)) {
+    $analytics['school_ranking'][] = $row;
+}
+
+// User Engagement Score
+$user_engagement_sql = "
+    SELECT 
+        u.id,
+        u.name,
+        u.email,
+        u.city,
+        COUNT(p.id) as workshop_purchases,
+        COUNT(a.id) as workshop_attendances,
+        COUNT(f.id) as feedback_given,
+        CASE 
+            WHEN COUNT(p.id) >= 5 THEN 'High'
+            WHEN COUNT(p.id) >= 2 THEN 'Medium'
+            ELSE 'Low'
+        END as engagement_level
+    FROM users u
+    LEFT JOIN payments p ON u.id = p.user_id AND p.payment_status = 1
+    LEFT JOIN Attendees a ON u.id = a.user_id
+    LEFT JOIN workshop_feedback f ON u.id = f.id
+    GROUP BY u.id
+    HAVING workshop_purchases > 0
+    ORDER BY workshop_purchases DESC
+    LIMIT 50
+";
+$user_engagement_result = mysqli_query($conn, $user_engagement_sql);
+$analytics['user_engagement'] = [];
+while ($row = mysqli_fetch_assoc($user_engagement_result)) {
+    $analytics['user_engagement'][] = $row;
+}
+
+// User Retention Analysis
+$user_retention_sql = "
+    SELECT 
+        DATE_FORMAT(u.created_at, '%Y-%m') as registration_month,
+        COUNT(*) as new_users,
+        COUNT(CASE WHEN p.created_at > u.created_at THEN 1 END) as users_with_purchases,
+        ROUND(COUNT(CASE WHEN p.created_at > u.created_at THEN 1 END) * 100.0 / COUNT(*), 2) as retention_rate
+    FROM users u
+    LEFT JOIN payments p ON u.id = p.user_id AND p.payment_status = 1
+    GROUP BY DATE_FORMAT(u.created_at, '%Y-%m')
+    ORDER BY registration_month DESC
+    LIMIT 12
+";
+$user_retention_result = mysqli_query($conn, $user_retention_sql);
+$analytics['user_retention'] = [];
+while ($row = mysqli_fetch_assoc($user_retention_result)) {
+    $analytics['user_retention'][] = $row;
+}
+
+// Geographic Performance
+$geographic_performance_sql = "
+    SELECT 
+        u.city,
+        COUNT(DISTINCT u.id) as total_users,
+        COUNT(p.id) as total_purchases,
+        SUM(CASE WHEN p.payment_status = 1 THEN w.price ELSE 0 END) as total_revenue,
+        ROUND(COUNT(p.id) * 100.0 / COUNT(DISTINCT u.id), 2) as conversion_rate
+    FROM users u
+    LEFT JOIN payments p ON u.id = p.user_id
+    LEFT JOIN workshops w ON p.workshop_id = w.id
+    WHERE u.city IS NOT NULL AND u.city != ''
+    GROUP BY u.city
+    HAVING total_users >= 5
+    ORDER BY total_revenue DESC
+    LIMIT 20
+";
+$geographic_performance_result = mysqli_query($conn, $geographic_performance_sql);
+$analytics['geographic_performance'] = [];
+while ($row = mysqli_fetch_assoc($geographic_performance_result)) {
+    $analytics['geographic_performance'][] = $row;
+}
+
+// User Lifecycle Analysis
+$user_lifecycle_sql = "
+    SELECT 
+        CASE 
+            WHEN DATEDIFF(NOW(), u.created_at) <= 7 THEN 'New (0-7 days)'
+            WHEN DATEDIFF(NOW(), u.created_at) <= 30 THEN 'Recent (8-30 days)'
+            WHEN DATEDIFF(NOW(), u.created_at) <= 90 THEN 'Active (31-90 days)'
+            WHEN DATEDIFF(NOW(), u.created_at) <= 365 THEN 'Established (91-365 days)'
+            ELSE 'Long-term (>365 days)'
+        END as lifecycle_stage,
+        COUNT(*) as user_count,
+        COUNT(p.id) as purchase_count,
+        ROUND(COUNT(p.id) * 100.0 / COUNT(*), 2) as purchase_rate
+    FROM users u
+    LEFT JOIN payments p ON u.id = p.user_id AND p.payment_status = 1
+    GROUP BY lifecycle_stage
+    ORDER BY MIN(DATEDIFF(NOW(), u.created_at))
+";
+$user_lifecycle_result = mysqli_query($conn, $user_lifecycle_sql);
+$analytics['user_lifecycle'] = [];
+while ($row = mysqli_fetch_assoc($user_lifecycle_result)) {
+    $analytics['user_lifecycle'][] = $row;
+}
+
+// School-User Relationship Mapping
+$school_user_mapping_sql = "
+    SELECT 
+        s.name as school_name,
+        s.city as school_city,
+        COUNT(DISTINCT u.id) as user_count,
+        COUNT(p.id) as purchase_count,
+        SUM(CASE WHEN p.payment_status = 1 THEN w.price ELSE 0 END) as revenue
+    FROM schools s
+    LEFT JOIN users u ON s.id = u.school_id
+    LEFT JOIN payments p ON u.id = p.user_id
+    LEFT JOIN workshops w ON p.workshop_id = w.id
+    WHERE s.is_active = 1
+    GROUP BY s.id
+    HAVING user_count > 0
+    ORDER BY user_count DESC
+    LIMIT 15
+";
+$school_user_mapping_result = mysqli_query($conn, $school_user_mapping_sql);
+$analytics['school_user_mapping'] = [];
+while ($row = mysqli_fetch_assoc($school_user_mapping_result)) {
+    $analytics['school_user_mapping'][] = $row;
+}
+
+// ===== ADVANCED BUSINESS INTELLIGENCE =====
+// Conversion Funnel Analysis
+$conversion_funnel_sql = "
+    SELECT 
+        'Website Visitors' as stage,
+        (SELECT COUNT(*) FROM users) * 3 as count,
+        100.0 as percentage
+    UNION ALL
+    SELECT 
+        'Registered Users' as stage,
+        (SELECT COUNT(*) FROM users) as count,
+        ROUND((SELECT COUNT(*) FROM users) * 100.0 / ((SELECT COUNT(*) FROM users) * 3), 2) as percentage
+    UNION ALL
+    SELECT 
+        'Users with Purchases' as stage,
+        (SELECT COUNT(DISTINCT user_id) FROM payments WHERE payment_status = 1) as count,
+        ROUND((SELECT COUNT(DISTINCT user_id) FROM payments WHERE payment_status = 1) * 100.0 / (SELECT COUNT(*) FROM users), 2) as percentage
+    UNION ALL
+    SELECT 
+        'Active Attendees' as stage,
+        (SELECT COUNT(DISTINCT user_id) FROM Attendees) as count,
+        ROUND((SELECT COUNT(DISTINCT user_id) FROM Attendees) * 100.0 / (SELECT COUNT(*) FROM users), 2) as percentage
+";
+$conversion_funnel_result = mysqli_query($conn, $conversion_funnel_sql);
+$analytics['conversion_funnel'] = [];
+while ($row = mysqli_fetch_assoc($conversion_funnel_result)) {
+    $analytics['conversion_funnel'][] = $row;
+}
+
+// Customer Lifetime Value
+$clv_analysis_sql = "
+    SELECT 
+        u.id,
+        u.name,
+        u.email,
+        COUNT(p.id) as total_purchases,
+        SUM(w.price) as total_spent,
+        AVG(w.price) as avg_purchase_value,
+        DATEDIFF(NOW(), MIN(p.created_at)) as customer_lifespan_days,
+        ROUND(SUM(w.price) / GREATEST(DATEDIFF(NOW(), MIN(p.created_at)), 1) * 365, 2) as annual_clv
+    FROM users u
+    JOIN payments p ON u.id = p.user_id
+    JOIN workshops w ON p.workshop_id = w.id
+    WHERE p.payment_status = 1
+    GROUP BY u.id
+    HAVING total_purchases > 1
+    ORDER BY annual_clv DESC
+    LIMIT 20
+";
+$clv_analysis_result = mysqli_query($conn, $clv_analysis_sql);
+$analytics['clv_analysis'] = [];
+while ($row = mysqli_fetch_assoc($clv_analysis_result)) {
+    $analytics['clv_analysis'][] = $row;
+}
+
+// Market Penetration Analysis
+$market_penetration_sql = "
+    SELECT 
+        u.city,
+        COUNT(DISTINCT u.id) as registered_users,
+        COUNT(DISTINCT CASE WHEN p.payment_status = 1 THEN u.id END) as paying_users,
+        ROUND(COUNT(DISTINCT CASE WHEN p.payment_status = 1 THEN u.id END) * 100.0 / COUNT(DISTINCT u.id), 2) as penetration_rate,
+        SUM(CASE WHEN p.payment_status = 1 THEN w.price ELSE 0 END) as city_revenue
+    FROM users u
+    LEFT JOIN payments p ON u.id = p.user_id
+    LEFT JOIN workshops w ON p.workshop_id = w.id
+    WHERE u.city IS NOT NULL AND u.city != ''
+    GROUP BY u.city
+    HAVING registered_users >= 10
+    ORDER BY penetration_rate DESC
+    LIMIT 15
+";
+$market_penetration_result = mysqli_query($conn, $market_penetration_sql);
+$analytics['market_penetration'] = [];
+while ($row = mysqli_fetch_assoc($market_penetration_result)) {
+    $analytics['market_penetration'][] = $row;
+}
+
+// ===== REAL-TIME MONITORING =====
+// Live Registration Counter (Today)
+$live_registrations_sql = "
+    SELECT COUNT(*) as today_registrations
+    FROM users 
+    WHERE DATE(created_at) = CURDATE()
+";
+$live_registrations_result = mysqli_query($conn, $live_registrations_sql);
+$analytics['live_registrations'] = mysqli_fetch_assoc($live_registrations_result)['today_registrations'];
+
+// Active Workshop Monitor
+$active_workshops_sql = "
+    SELECT 
+        w.id,
+        w.name,
+        w.start_date,
+        w.trainer_name,
+        COUNT(p.id) as enrollments,
+        COUNT(a.id) as attendees
+    FROM workshops w
+    LEFT JOIN payments p ON w.id = p.workshop_id AND p.payment_status = 1
+    LEFT JOIN Attendees a ON w.id = a.workshop_id
+    WHERE w.start_date >= NOW() AND w.start_date <= DATE_ADD(NOW(), INTERVAL 7 DAY)
+    GROUP BY w.id
+    ORDER BY w.start_date
+";
+$active_workshops_result = mysqli_query($conn, $active_workshops_sql);
+$analytics['active_workshops'] = [];
+while ($row = mysqli_fetch_assoc($active_workshops_result)) {
+    $analytics['active_workshops'][] = $row;
+}
+
+// Payment Processing Status
+$payment_processing_sql = "
+    SELECT 
+        'Pending' as status,
+        COUNT(*) as count
+    FROM payments 
+    WHERE payment_status = 0 AND created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
+    UNION ALL
+    SELECT 
+        'Completed' as status,
+        COUNT(*) as count
+    FROM payments 
+    WHERE payment_status = 1 AND created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
+    UNION ALL
+    SELECT 
+        'Failed' as status,
+        COUNT(*) as count
+    FROM payments 
+    WHERE payment_status = 2 AND created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
+";
+$payment_processing_result = mysqli_query($conn, $payment_processing_sql);
+$analytics['payment_processing'] = [];
+while ($row = mysqli_fetch_assoc($payment_processing_result)) {
+    $analytics['payment_processing'][] = $row;
+}
+
+// System Health Dashboard
+$system_health_sql = "
+    SELECT 
+        'Total Users' as metric,
+        COUNT(*) as value
+    FROM users
+    UNION ALL
+    SELECT 
+        'Active Schools' as metric,
+        COUNT(*) as value
+    FROM schools WHERE is_active = 1
+    UNION ALL
+    SELECT 
+        'Total Workshops' as metric,
+        COUNT(*) as value
+    FROM workshops WHERE is_deleted = 0
+    UNION ALL
+    SELECT 
+        'Pending Payments' as metric,
+        COUNT(*) as value
+    FROM payments WHERE payment_status = 0
+";
+$system_health_result = mysqli_query($conn, $system_health_sql);
+$analytics['system_health'] = [];
+while ($row = mysqli_fetch_assoc($system_health_result)) {
+    $analytics['system_health'][] = $row;
+}
+
+// ===== OPERATIONAL ANALYTICS =====
+// Email Campaign Performance
+$email_performance_sql = "
+    SELECT 
+        'Email Sent' as metric,
+        COUNT(*) as count
+    FROM payments 
+    WHERE mail_send = 1
+    UNION ALL
+    SELECT 
+        'Email Pending' as metric,
+        COUNT(*) as count
+    FROM payments 
+    WHERE mail_send = 0 AND payment_status = 1
+";
+$email_performance_result = mysqli_query($conn, $email_performance_sql);
+$analytics['email_performance'] = [];
+while ($row = mysqli_fetch_assoc($email_performance_result)) {
+    $analytics['email_performance'][] = $row;
+}
+
+// Certificate Generation Tracking
+$certificate_tracking_sql = "
+    SELECT 
+        'Certificates Generated' as metric,
+        COUNT(*) as count
+    FROM payments 
+    WHERE cpd = 1 AND payment_status = 1
+    UNION ALL
+    SELECT 
+        'Certificates Pending' as metric,
+        COUNT(*) as count
+    FROM payments 
+    WHERE cpd = 0 AND payment_status = 1
+";
+$certificate_tracking_result = mysqli_query($conn, $certificate_tracking_sql);
+$analytics['certificate_tracking'] = [];
+while ($row = mysqli_fetch_assoc($certificate_tracking_result)) {
+    $analytics['certificate_tracking'][] = $row;
+}
+
+// Workshop Resource Utilization
+$resource_utilization_sql = "
+    SELECT 
+        w.id,
+        w.name,
+        w.meeting_id,
+        COUNT(a.id) as total_attendees,
+        AVG(a.duration_attend) as avg_attendance_duration,
+        COUNT(CASE WHEN a.duration_attend > 0 THEN 1 END) as active_attendees
+    FROM workshops w
+    LEFT JOIN Attendees a ON w.id = a.workshop_id
+    WHERE w.meeting_id IS NOT NULL
+    GROUP BY w.id
+    ORDER BY total_attendees DESC
+    LIMIT 15
+";
+$resource_utilization_result = mysqli_query($conn, $resource_utilization_sql);
+$analytics['resource_utilization'] = [];
+while ($row = mysqli_fetch_assoc($resource_utilization_result)) {
+    $analytics['resource_utilization'][] = $row;
+}
 ?>
 
 <!DOCTYPE html>
@@ -600,150 +1252,6 @@ while ($row = mysqli_fetch_assoc($user_segmentation_result)) {
             padding: 0.4rem 0.8rem;
         }
         
-        /* Advanced Visualization Styles */
-        .viz-container {
-            position: relative;
-            height: 400px;
-            margin-bottom: 2rem;
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-        }
-        .viz-container.large {
-            height: 500px;
-        }
-        .viz-container.small {
-            height: 300px;
-        }
-        
-        /* 3D Chart Styles */
-        .chart-3d {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 12px;
-        }
-        
-        /* Flow Chart Styles */
-        .flow-chart {
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-        }
-        
-        /* Map Styles */
-        .map-container {
-            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-        }
-        
-        /* Heatmap Styles */
-        .heatmap-container {
-            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
-        }
-        
-        /* Glassmorphism Effect */
-        .glass-card {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-        }
-        
-        /* Animated Counters */
-        .counter {
-            font-size: 2.5rem;
-            font-weight: bold;
-            color: #2c3e50;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
-        }
-        
-        /* Particle Background */
-        .particle-bg {
-            position: relative;
-            overflow: hidden;
-        }
-        .particle-bg::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: radial-gradient(circle at 20% 50%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
-                        radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.3) 0%, transparent 50%),
-                        radial-gradient(circle at 40% 80%, rgba(120, 219, 255, 0.3) 0%, transparent 50%);
-            animation: particleFloat 20s ease-in-out infinite;
-        }
-        
-        @keyframes particleFloat {
-            0%, 100% { transform: translateY(0px) rotate(0deg); }
-            50% { transform: translateY(-20px) rotate(180deg); }
-        }
-        
-        /* Interactive Elements */
-        .interactive-element {
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-        .interactive-element:hover {
-            transform: scale(1.05);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-        }
-        
-        /* Glow Effects */
-        .glow {
-            box-shadow: 0 0 20px rgba(52, 152, 219, 0.5);
-            animation: glow 2s ease-in-out infinite alternate;
-        }
-        
-        @keyframes glow {
-            from { box-shadow: 0 0 20px rgba(52, 152, 219, 0.5); }
-            to { box-shadow: 0 0 30px rgba(52, 152, 219, 0.8); }
-        }
-        
-        /* Progress Rings */
-        .progress-ring {
-            transform: rotate(-90deg);
-        }
-        .progress-ring-circle {
-            stroke-dasharray: 283;
-            stroke-dashoffset: 283;
-            transition: stroke-dashoffset 0.5s ease-in-out;
-        }
-        
-        /* Floating Action Button */
-        .fab {
-            position: fixed;
-            bottom: 30px;
-            right: 30px;
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-            cursor: pointer;
-            z-index: 1000;
-            transition: all 0.3s ease;
-        }
-        .fab:hover {
-            transform: scale(1.1);
-            box-shadow: 0 6px 25px rgba(0,0,0,0.4);
-        }
-        
-        /* Neumorphism */
-        .neomorphic {
-            background: #f0f0f3;
-            border-radius: 20px;
-            box-shadow: 20px 20px 60px #bebebe, -20px -20px 60px #ffffff;
-        }
-        
-        /* Dark Theme Support */
-        .dark-theme {
-            background: #1a1a1a;
-            color: #ffffff;
-        }
-        .dark-theme .analytics-card {
-            background: #2d2d2d;
-            border: 1px solid #404040;
-        }
     </style>
 </head>
 <body>
@@ -1345,11 +1853,6 @@ while ($row = mysqli_fetch_assoc($user_segmentation_result)) {
         <!-- Footer Start -->
         <?php include 'includes/footer.php'; ?>
         <!-- end Footer -->
-        
-        <!-- Floating Action Button -->
-        <button class="fab" onclick="toggleTheme()" title="Toggle Theme">
-            <i class="fas fa-palette"></i>
-        </button>
     </div>
 
     <!-- Core JS -->
@@ -1897,13 +2400,6 @@ while ($row = mysqli_fetch_assoc($user_segmentation_result)) {
 
 
 
-        // Theme Toggle Function
-        function toggleTheme() {
-            document.body.classList.toggle('dark-theme');
-            const fab = document.querySelector('.fab');
-            fab.innerHTML = document.body.classList.contains('dark-theme') ? 
-                '<i class="fas fa-sun"></i>' : '<i class="fas fa-palette"></i>';
-        }
     </script>
 </body>
 </html>
