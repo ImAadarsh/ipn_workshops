@@ -696,484 +696,6 @@ $analytics['attendance_patterns'] = [];
 while ($row = mysqli_fetch_assoc($attendance_patterns_result)) {
     $analytics['attendance_patterns'][] = $row;
 }
-
-// ===== PAYMENT & REVENUE ANALYTICS =====
-// Payment Method Analysis
-$payment_methods_sql = "
-    SELECT 
-        CASE 
-            WHEN payment_id LIKE 'IM%' THEN 'Instamojo'
-            WHEN payment_id IS NOT NULL THEN 'Other Online'
-            ELSE 'Pending/Unknown'
-        END as payment_method,
-        COUNT(*) as count,
-        SUM(CASE WHEN payment_status = 1 THEN 1 ELSE 0 END) as successful_payments,
-        ROUND(SUM(CASE WHEN payment_status = 1 THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 2) as success_rate
-    FROM payments
-    GROUP BY payment_method
-    ORDER BY count DESC
-";
-$payment_methods_result = mysqli_query($conn, $payment_methods_sql);
-$analytics['payment_methods'] = [];
-while ($row = mysqli_fetch_assoc($payment_methods_result)) {
-    $analytics['payment_methods'][] = $row;
-}
-
-// Revenue by School vs Individual
-$revenue_breakdown_sql = "
-    SELECT 
-        CASE 
-            WHEN u.school_id IS NOT NULL THEN 'School Users'
-            ELSE 'Individual Users'
-        END as user_type,
-        COUNT(p.id) as payment_count,
-        SUM(w.price) as total_revenue,
-        AVG(w.price) as avg_transaction_value
-    FROM payments p
-    JOIN workshops w ON p.workshop_id = w.id
-    JOIN users u ON p.user_id = u.id
-    WHERE p.payment_status = 1
-    GROUP BY user_type
-";
-$revenue_breakdown_result = mysqli_query($conn, $revenue_breakdown_sql);
-$analytics['revenue_breakdown'] = [];
-while ($row = mysqli_fetch_assoc($revenue_breakdown_result)) {
-    $analytics['revenue_breakdown'][] = $row;
-}
-
-// Coupon Usage Analytics
-$coupon_usage_sql = "
-    SELECT 
-        c.coupon_code,
-        c.flat_discount,
-        COUNT(p.id) as usage_count,
-        SUM(w.price) as total_revenue,
-        SUM(c.flat_discount) as total_discount_given
-    FROM coupons c
-    LEFT JOIN payments p ON c.coupon_code = p.coupon_code
-    LEFT JOIN workshops w ON p.workshop_id = w.id
-    WHERE p.payment_status = 1
-    GROUP BY c.id
-    ORDER BY usage_count DESC
-    LIMIT 15
-";
-$coupon_usage_result = mysqli_query($conn, $coupon_usage_sql);
-$analytics['coupon_usage'] = [];
-while ($row = mysqli_fetch_assoc($coupon_usage_result)) {
-    $analytics['coupon_usage'][] = $row;
-}
-
-// Payment Status Tracking
-$payment_status_sql = "
-    SELECT 
-        CASE 
-            WHEN payment_status = 1 THEN 'Completed'
-            WHEN payment_status = 0 THEN 'Pending'
-            ELSE 'Failed'
-        END as status,
-        COUNT(*) as count,
-        ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM payments), 2) as percentage
-    FROM payments
-    GROUP BY payment_status
-";
-$payment_status_result = mysqli_query($conn, $payment_status_sql);
-$analytics['payment_status'] = [];
-while ($row = mysqli_fetch_assoc($payment_status_result)) {
-    $analytics['payment_status'][] = $row;
-}
-
-// Average Transaction Value Trends
-$atv_trends_sql = "
-    SELECT 
-        DATE_FORMAT(created_at, '%Y-%m') as month,
-        COUNT(*) as transaction_count,
-        AVG(w.price) as avg_transaction_value,
-        SUM(w.price) as total_revenue
-    FROM payments p
-    JOIN workshops w ON p.workshop_id = w.id
-    WHERE p.payment_status = 1
-    GROUP BY DATE_FORMAT(created_at, '%Y-%m')
-    ORDER BY month DESC
-    LIMIT 12
-";
-$atv_trends_result = mysqli_query($conn, $atv_trends_sql);
-$analytics['atv_trends'] = [];
-while ($row = mysqli_fetch_assoc($atv_trends_result)) {
-    $analytics['atv_trends'][] = $row;
-}
-
-// ===== SCHOOL & USER ANALYTICS =====
-// School Performance Ranking
-$school_ranking_sql = "
-    SELECT 
-        s.id,
-        s.name as school_name,
-        COUNT(DISTINCT u.id) as total_users,
-        COUNT(p.id) as total_purchases,
-        SUM(CASE WHEN p.payment_status = 1 THEN w.price ELSE 0 END) as total_revenue,
-        AVG(CASE WHEN p.payment_status = 1 THEN w.price ELSE 0 END) as avg_purchase_value
-    FROM schools s
-    LEFT JOIN users u ON s.id = u.school_id
-    LEFT JOIN payments p ON u.id = p.user_id
-    LEFT JOIN workshops w ON p.workshop_id = w.id
-    WHERE s.is_active = 1
-    GROUP BY s.id
-    HAVING total_users > 0
-    ORDER BY total_revenue DESC
-    LIMIT 20
-";
-$school_ranking_result = mysqli_query($conn, $school_ranking_sql);
-$analytics['school_ranking'] = [];
-while ($row = mysqli_fetch_assoc($school_ranking_result)) {
-    $analytics['school_ranking'][] = $row;
-}
-
-// User Engagement Score
-$user_engagement_sql = "
-    SELECT 
-        u.id,
-        u.name,
-        u.email,
-        u.city,
-        COUNT(p.id) as workshop_purchases,
-        COUNT(a.id) as workshop_attendances,
-        COUNT(f.id) as feedback_given,
-        CASE 
-            WHEN COUNT(p.id) >= 5 THEN 'High'
-            WHEN COUNT(p.id) >= 2 THEN 'Medium'
-            ELSE 'Low'
-        END as engagement_level
-    FROM users u
-    LEFT JOIN payments p ON u.id = p.user_id AND p.payment_status = 1
-    LEFT JOIN Attendees a ON u.id = a.user_id
-    LEFT JOIN workshop_feedback f ON u.id = f.id
-    GROUP BY u.id
-    HAVING workshop_purchases > 0
-    ORDER BY workshop_purchases DESC
-    LIMIT 50
-";
-$user_engagement_result = mysqli_query($conn, $user_engagement_sql);
-$analytics['user_engagement'] = [];
-while ($row = mysqli_fetch_assoc($user_engagement_result)) {
-    $analytics['user_engagement'][] = $row;
-}
-
-// User Retention Analysis
-$user_retention_sql = "
-    SELECT 
-        DATE_FORMAT(u.created_at, '%Y-%m') as registration_month,
-        COUNT(*) as new_users,
-        COUNT(CASE WHEN p.created_at > u.created_at THEN 1 END) as users_with_purchases,
-        ROUND(COUNT(CASE WHEN p.created_at > u.created_at THEN 1 END) * 100.0 / COUNT(*), 2) as retention_rate
-    FROM users u
-    LEFT JOIN payments p ON u.id = p.user_id AND p.payment_status = 1
-    GROUP BY DATE_FORMAT(u.created_at, '%Y-%m')
-    ORDER BY registration_month DESC
-    LIMIT 12
-";
-$user_retention_result = mysqli_query($conn, $user_retention_sql);
-$analytics['user_retention'] = [];
-while ($row = mysqli_fetch_assoc($user_retention_result)) {
-    $analytics['user_retention'][] = $row;
-}
-
-// Geographic Performance
-$geographic_performance_sql = "
-    SELECT 
-        u.city,
-        COUNT(DISTINCT u.id) as total_users,
-        COUNT(p.id) as total_purchases,
-        SUM(CASE WHEN p.payment_status = 1 THEN w.price ELSE 0 END) as total_revenue,
-        ROUND(COUNT(p.id) * 100.0 / COUNT(DISTINCT u.id), 2) as conversion_rate
-    FROM users u
-    LEFT JOIN payments p ON u.id = p.user_id
-    LEFT JOIN workshops w ON p.workshop_id = w.id
-    WHERE u.city IS NOT NULL AND u.city != ''
-    GROUP BY u.city
-    HAVING total_users >= 5
-    ORDER BY total_revenue DESC
-    LIMIT 20
-";
-$geographic_performance_result = mysqli_query($conn, $geographic_performance_sql);
-$analytics['geographic_performance'] = [];
-while ($row = mysqli_fetch_assoc($geographic_performance_result)) {
-    $analytics['geographic_performance'][] = $row;
-}
-
-// User Lifecycle Analysis
-$user_lifecycle_sql = "
-    SELECT 
-        CASE 
-            WHEN DATEDIFF(NOW(), u.created_at) <= 7 THEN 'New (0-7 days)'
-            WHEN DATEDIFF(NOW(), u.created_at) <= 30 THEN 'Recent (8-30 days)'
-            WHEN DATEDIFF(NOW(), u.created_at) <= 90 THEN 'Active (31-90 days)'
-            WHEN DATEDIFF(NOW(), u.created_at) <= 365 THEN 'Established (91-365 days)'
-            ELSE 'Long-term (>365 days)'
-        END as lifecycle_stage,
-        COUNT(*) as user_count,
-        COUNT(p.id) as purchase_count,
-        ROUND(COUNT(p.id) * 100.0 / COUNT(*), 2) as purchase_rate
-    FROM users u
-    LEFT JOIN payments p ON u.id = p.user_id AND p.payment_status = 1
-    GROUP BY lifecycle_stage
-    ORDER BY MIN(DATEDIFF(NOW(), u.created_at))
-";
-$user_lifecycle_result = mysqli_query($conn, $user_lifecycle_sql);
-$analytics['user_lifecycle'] = [];
-while ($row = mysqli_fetch_assoc($user_lifecycle_result)) {
-    $analytics['user_lifecycle'][] = $row;
-}
-
-// School-User Relationship Mapping
-$school_user_mapping_sql = "
-    SELECT 
-        s.name as school_name,
-        s.city as school_city,
-        COUNT(DISTINCT u.id) as user_count,
-        COUNT(p.id) as purchase_count,
-        SUM(CASE WHEN p.payment_status = 1 THEN w.price ELSE 0 END) as revenue
-    FROM schools s
-    LEFT JOIN users u ON s.id = u.school_id
-    LEFT JOIN payments p ON u.id = p.user_id
-    LEFT JOIN workshops w ON p.workshop_id = w.id
-    WHERE s.is_active = 1
-    GROUP BY s.id
-    HAVING user_count > 0
-    ORDER BY user_count DESC
-    LIMIT 15
-";
-$school_user_mapping_result = mysqli_query($conn, $school_user_mapping_sql);
-$analytics['school_user_mapping'] = [];
-while ($row = mysqli_fetch_assoc($school_user_mapping_result)) {
-    $analytics['school_user_mapping'][] = $row;
-}
-
-// ===== ADVANCED BUSINESS INTELLIGENCE =====
-// Conversion Funnel Analysis
-$conversion_funnel_sql = "
-    SELECT 
-        'Website Visitors' as stage,
-        (SELECT COUNT(*) FROM users) * 3 as count,
-        100.0 as percentage
-    UNION ALL
-    SELECT 
-        'Registered Users' as stage,
-        (SELECT COUNT(*) FROM users) as count,
-        ROUND((SELECT COUNT(*) FROM users) * 100.0 / ((SELECT COUNT(*) FROM users) * 3), 2) as percentage
-    UNION ALL
-    SELECT 
-        'Users with Purchases' as stage,
-        (SELECT COUNT(DISTINCT user_id) FROM payments WHERE payment_status = 1) as count,
-        ROUND((SELECT COUNT(DISTINCT user_id) FROM payments WHERE payment_status = 1) * 100.0 / (SELECT COUNT(*) FROM users), 2) as percentage
-    UNION ALL
-    SELECT 
-        'Active Attendees' as stage,
-        (SELECT COUNT(DISTINCT user_id) FROM Attendees) as count,
-        ROUND((SELECT COUNT(DISTINCT user_id) FROM Attendees) * 100.0 / (SELECT COUNT(*) FROM users), 2) as percentage
-";
-$conversion_funnel_result = mysqli_query($conn, $conversion_funnel_sql);
-$analytics['conversion_funnel'] = [];
-while ($row = mysqli_fetch_assoc($conversion_funnel_result)) {
-    $analytics['conversion_funnel'][] = $row;
-}
-
-// Customer Lifetime Value
-$clv_analysis_sql = "
-    SELECT 
-        u.id,
-        u.name,
-        u.email,
-        COUNT(p.id) as total_purchases,
-        SUM(w.price) as total_spent,
-        AVG(w.price) as avg_purchase_value,
-        DATEDIFF(NOW(), MIN(p.created_at)) as customer_lifespan_days,
-        ROUND(SUM(w.price) / GREATEST(DATEDIFF(NOW(), MIN(p.created_at)), 1) * 365, 2) as annual_clv
-    FROM users u
-    JOIN payments p ON u.id = p.user_id
-    JOIN workshops w ON p.workshop_id = w.id
-    WHERE p.payment_status = 1
-    GROUP BY u.id
-    HAVING total_purchases > 1
-    ORDER BY annual_clv DESC
-    LIMIT 20
-";
-$clv_analysis_result = mysqli_query($conn, $clv_analysis_sql);
-$analytics['clv_analysis'] = [];
-while ($row = mysqli_fetch_assoc($clv_analysis_result)) {
-    $analytics['clv_analysis'][] = $row;
-}
-
-// Market Penetration Analysis
-$market_penetration_sql = "
-    SELECT 
-        u.city,
-        COUNT(DISTINCT u.id) as registered_users,
-        COUNT(DISTINCT CASE WHEN p.payment_status = 1 THEN u.id END) as paying_users,
-        ROUND(COUNT(DISTINCT CASE WHEN p.payment_status = 1 THEN u.id END) * 100.0 / COUNT(DISTINCT u.id), 2) as penetration_rate,
-        SUM(CASE WHEN p.payment_status = 1 THEN w.price ELSE 0 END) as city_revenue
-    FROM users u
-    LEFT JOIN payments p ON u.id = p.user_id
-    LEFT JOIN workshops w ON p.workshop_id = w.id
-    WHERE u.city IS NOT NULL AND u.city != ''
-    GROUP BY u.city
-    HAVING registered_users >= 10
-    ORDER BY penetration_rate DESC
-    LIMIT 15
-";
-$market_penetration_result = mysqli_query($conn, $market_penetration_sql);
-$analytics['market_penetration'] = [];
-while ($row = mysqli_fetch_assoc($market_penetration_result)) {
-    $analytics['market_penetration'][] = $row;
-}
-
-// ===== REAL-TIME MONITORING =====
-// Live Registration Counter (Today)
-$live_registrations_sql = "
-    SELECT COUNT(*) as today_registrations
-    FROM users 
-    WHERE DATE(created_at) = CURDATE()
-";
-$live_registrations_result = mysqli_query($conn, $live_registrations_sql);
-$analytics['live_registrations'] = mysqli_fetch_assoc($live_registrations_result)['today_registrations'];
-
-// Active Workshop Monitor
-$active_workshops_sql = "
-    SELECT 
-        w.id,
-        w.name,
-        w.start_date,
-        w.trainer_name,
-        COUNT(p.id) as enrollments,
-        COUNT(a.id) as attendees
-    FROM workshops w
-    LEFT JOIN payments p ON w.id = p.workshop_id AND p.payment_status = 1
-    LEFT JOIN Attendees a ON w.id = a.workshop_id
-    WHERE w.start_date >= NOW() AND w.start_date <= DATE_ADD(NOW(), INTERVAL 7 DAY)
-    GROUP BY w.id
-    ORDER BY w.start_date
-";
-$active_workshops_result = mysqli_query($conn, $active_workshops_sql);
-$analytics['active_workshops'] = [];
-while ($row = mysqli_fetch_assoc($active_workshops_result)) {
-    $analytics['active_workshops'][] = $row;
-}
-
-// Payment Processing Status
-$payment_processing_sql = "
-    SELECT 
-        'Pending' as status,
-        COUNT(*) as count
-    FROM payments 
-    WHERE payment_status = 0 AND created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
-    UNION ALL
-    SELECT 
-        'Completed' as status,
-        COUNT(*) as count
-    FROM payments 
-    WHERE payment_status = 1 AND created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
-    UNION ALL
-    SELECT 
-        'Failed' as status,
-        COUNT(*) as count
-    FROM payments 
-    WHERE payment_status = 2 AND created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
-";
-$payment_processing_result = mysqli_query($conn, $payment_processing_sql);
-$analytics['payment_processing'] = [];
-while ($row = mysqli_fetch_assoc($payment_processing_result)) {
-    $analytics['payment_processing'][] = $row;
-}
-
-// System Health Dashboard
-$system_health_sql = "
-    SELECT 
-        'Total Users' as metric,
-        COUNT(*) as value
-    FROM users
-    UNION ALL
-    SELECT 
-        'Active Schools' as metric,
-        COUNT(*) as value
-    FROM schools WHERE is_active = 1
-    UNION ALL
-    SELECT 
-        'Total Workshops' as metric,
-        COUNT(*) as value
-    FROM workshops WHERE is_deleted = 0
-    UNION ALL
-    SELECT 
-        'Pending Payments' as metric,
-        COUNT(*) as value
-    FROM payments WHERE payment_status = 0
-";
-$system_health_result = mysqli_query($conn, $system_health_sql);
-$analytics['system_health'] = [];
-while ($row = mysqli_fetch_assoc($system_health_result)) {
-    $analytics['system_health'][] = $row;
-}
-
-// ===== OPERATIONAL ANALYTICS =====
-// Email Campaign Performance
-$email_performance_sql = "
-    SELECT 
-        'Email Sent' as metric,
-        COUNT(*) as count
-    FROM payments 
-    WHERE mail_send = 1
-    UNION ALL
-    SELECT 
-        'Email Pending' as metric,
-        COUNT(*) as count
-    FROM payments 
-    WHERE mail_send = 0 AND payment_status = 1
-";
-$email_performance_result = mysqli_query($conn, $email_performance_sql);
-$analytics['email_performance'] = [];
-while ($row = mysqli_fetch_assoc($email_performance_result)) {
-    $analytics['email_performance'][] = $row;
-}
-
-// Certificate Generation Tracking
-$certificate_tracking_sql = "
-    SELECT 
-        'Certificates Generated' as metric,
-        COUNT(*) as count
-    FROM payments 
-    WHERE cpd = 1 AND payment_status = 1
-    UNION ALL
-    SELECT 
-        'Certificates Pending' as metric,
-        COUNT(*) as count
-    FROM payments 
-    WHERE cpd = 0 AND payment_status = 1
-";
-$certificate_tracking_result = mysqli_query($conn, $certificate_tracking_sql);
-$analytics['certificate_tracking'] = [];
-while ($row = mysqli_fetch_assoc($certificate_tracking_result)) {
-    $analytics['certificate_tracking'][] = $row;
-}
-
-// Workshop Resource Utilization
-$resource_utilization_sql = "
-    SELECT 
-        w.id,
-        w.name,
-        w.meeting_id,
-        COUNT(a.id) as total_attendees,
-        AVG(a.duration_attend) as avg_attendance_duration,
-        COUNT(CASE WHEN a.duration_attend > 0 THEN 1 END) as active_attendees
-    FROM workshops w
-    LEFT JOIN Attendees a ON w.id = a.workshop_id
-    WHERE w.meeting_id IS NOT NULL
-    GROUP BY w.id
-    ORDER BY total_attendees DESC
-    LIMIT 15
-";
-$resource_utilization_result = mysqli_query($conn, $resource_utilization_sql);
-$analytics['resource_utilization'] = [];
-while ($row = mysqli_fetch_assoc($resource_utilization_result)) {
-    $analytics['resource_utilization'][] = $row;
-}
 ?>
 
 <!DOCTYPE html>
@@ -1843,7 +1365,11 @@ while ($row = mysqli_fetch_assoc($resource_utilization_result)) {
                     </div>
                 </div>
 
-                <!-- ===== WORKSHOP ANALYTICS SECTION ===== -->
+
+
+
+
+                <!-- 🎓 WORKSHOP ANALYTICS SECTION -->
                 <div class="row g-4 mb-4">
                     <div class="col-12">
                         <h4 class="section-title">🎓 Workshop Analytics</h4>
@@ -1868,23 +1394,42 @@ while ($row = mysqli_fetch_assoc($resource_utilization_result)) {
                                                 <th>Enrollments</th>
                                                 <th>Revenue</th>
                                                 <th>Rating</th>
+                                                <th>Feedback</th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            <?php if(isset($analytics['workshop_performance'])): foreach (array_slice($analytics['workshop_performance'], 0, 10) as $workshop): ?>
-                                            <tr>
-                                                <td><?php echo htmlspecialchars($workshop['name']); ?></td>
-                                                <td><?php echo htmlspecialchars($workshop['trainer_name']); ?></td>
-                                                <td>₹<?php echo number_format($workshop['price']); ?></td>
-                                                <td><?php echo $workshop['total_enrollments']; ?></td>
-                                                <td>₹<?php echo number_format($workshop['revenue']); ?></td>
-                                                <td>
-                                                    <span class="badge bg-<?php echo $workshop['avg_rating'] >= 4 ? 'success' : ($workshop['avg_rating'] >= 3 ? 'warning' : 'danger'); ?>">
-                                                        <?php echo number_format($workshop['avg_rating'], 1); ?>/5
-                                                    </span>
-                                                </td>
-                                            </tr>
-                                            <?php endforeach; endif; ?>
+                                            <?php if (!empty($analytics['workshop_performance'])): ?>
+                                                <?php foreach (array_slice($analytics['workshop_performance'], 0, 10) as $workshop): ?>
+                                                    <tr>
+                                                        <td>
+                                                            <strong><?php echo htmlspecialchars(substr($workshop['name'], 0, 30)); ?></strong>
+                                                            <?php if (strlen($workshop['name']) > 30) echo '...'; ?>
+                                                        </td>
+                                                        <td><?php echo htmlspecialchars($workshop['trainer_name']); ?></td>
+                                                        <td>₹<?php echo number_format($workshop['price']); ?></td>
+                                                        <td>
+                                                            <span class="badge bg-primary"><?php echo $workshop['total_enrollments']; ?></span>
+                                                        </td>
+                                                        <td>
+                                                            <strong class="text-success">₹<?php echo number_format($workshop['revenue']); ?></strong>
+                                                        </td>
+                                                        <td>
+                                                            <?php if ($workshop['avg_rating'] > 0): ?>
+                                                                <span class="badge bg-warning"><?php echo number_format($workshop['avg_rating'], 1); ?>★</span>
+                                                            <?php else: ?>
+                                                                <span class="text-muted">No rating</span>
+                                                            <?php endif; ?>
+                                                        </td>
+                                                        <td>
+                                                            <span class="badge bg-info"><?php echo $workshop['feedback_count']; ?></span>
+                                                        </td>
+                                                    </tr>
+                                                <?php endforeach; ?>
+                                            <?php else: ?>
+                                                <tr>
+                                                    <td colspan="7" class="text-center text-muted">No workshop data available</td>
+                                                </tr>
+                                            <?php endif; ?>
                                         </tbody>
                                     </table>
                                 </div>
@@ -1898,417 +1443,100 @@ while ($row = mysqli_fetch_assoc($resource_utilization_result)) {
                     <div class="col-lg-6">
                         <div class="card analytics-card">
                             <div class="card-header">
-                                <h5 class="card-title mb-0">👨‍🏫 Top Trainers by Revenue</h5>
+                                <h5 class="card-title mb-0">👨‍🏫 Trainer Performance Metrics</h5>
                             </div>
                             <div class="card-body">
-                                <canvas id="trainerPerformanceChart"></canvas>
+                                <div style="height: 400px; position: relative;">
+                                    <canvas id="trainerPerformanceChart"></canvas>
+                                </div>
                             </div>
                         </div>
                     </div>
                     <div class="col-lg-6">
                         <div class="card analytics-card">
                             <div class="card-header">
-                                <h5 class="card-title mb-0">📚 Category Performance</h5>
+                                <h5 class="card-title mb-0">📚 Workshop Category Analysis</h5>
                             </div>
                             <div class="card-body">
-                                <canvas id="categoryAnalysisChart"></canvas>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- ===== PAYMENT & REVENUE ANALYTICS SECTION ===== -->
-                <div class="row g-4 mb-4">
-                    <div class="col-12">
-                        <h4 class="section-title">💳 Payment & Revenue Analytics</h4>
-                    </div>
-                </div>
-
-                <!-- Payment Methods & Revenue Breakdown -->
-                <div class="row g-4 mb-4">
-                    <div class="col-lg-6">
-                        <div class="card analytics-card">
-                            <div class="card-header">
-                                <h5 class="card-title mb-0">💳 Payment Methods</h5>
-                            </div>
-                            <div class="card-body">
-                                <canvas id="paymentMethodsChart"></canvas>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-lg-6">
-                        <div class="card analytics-card">
-                            <div class="card-header">
-                                <h5 class="card-title mb-0">🏫 Revenue: School vs Individual</h5>
-                            </div>
-                            <div class="card-body">
-                                <canvas id="revenueBreakdownChart"></canvas>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Coupon Usage Analytics -->
-                <div class="row g-4 mb-4">
-                    <div class="col-12">
-                        <div class="card analytics-card">
-                            <div class="card-header">
-                                <h5 class="card-title mb-0">🎫 Top Coupons by Usage</h5>
-                            </div>
-                            <div class="card-body">
-                                <div class="table-responsive">
-                                    <table class="table table-hover">
-                                        <thead>
-                                            <tr>
-                                                <th>Coupon Code</th>
-                                                <th>Discount</th>
-                                                <th>Usage Count</th>
-                                                <th>Total Revenue</th>
-                                                <th>Discount Given</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <?php if(isset($analytics['coupon_usage'])): foreach (array_slice($analytics['coupon_usage'], 0, 10) as $coupon): ?>
-                                            <tr>
-                                                <td><span class="badge bg-primary"><?php echo htmlspecialchars($coupon['coupon_code']); ?></span></td>
-                                                <td>₹<?php echo number_format($coupon['flat_discount']); ?></td>
-                                                <td><?php echo $coupon['usage_count']; ?></td>
-                                                <td>₹<?php echo number_format($coupon['total_revenue']); ?></td>
-                                                <td>₹<?php echo number_format($coupon['total_discount_given']); ?></td>
-                                            </tr>
-                                            <?php endforeach; endif; ?>
-                                        </tbody>
-                                    </table>
+                                <div style="height: 400px; position: relative;">
+                                    <canvas id="categoryAnalysisChart"></canvas>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- ===== SCHOOL & USER ANALYTICS SECTION ===== -->
+                <!-- Pricing Analysis & Completion Rates -->
                 <div class="row g-4 mb-4">
-                    <div class="col-12">
-                        <h4 class="section-title">🏫 School & User Advanced Analytics</h4>
-                    </div>
-                </div>
-
-                <!-- School Performance Ranking -->
-                <div class="row g-4 mb-4">
-                    <div class="col-12">
+                    <div class="col-lg-6">
                         <div class="card analytics-card">
                             <div class="card-header">
-                                <h5 class="card-title mb-0">🏆 School Performance Ranking</h5>
+                                <h5 class="card-title mb-0">💰 Workshop Pricing Analysis</h5>
                             </div>
                             <div class="card-body">
-                                <div class="table-responsive">
-                                    <table class="table table-hover">
-                                        <thead>
-                                            <tr>
-                                                <th>Rank</th>
-                                                <th>School Name</th>
-                                                <th>Total Users</th>
-                                                <th>Purchases</th>
-                                                <th>Revenue</th>
-                                                <th>Avg Purchase Value</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <?php if(isset($analytics['school_ranking'])): foreach (array_slice($analytics['school_ranking'], 0, 10) as $index => $school): ?>
-                                            <tr>
-                                                <td>
-                                                    <span class="badge bg-<?php echo $index < 3 ? 'warning' : 'secondary'; ?>">
-                                                        #<?php echo $index + 1; ?>
-                                                    </span>
-                                                </td>
-                                                <td><?php echo htmlspecialchars($school['school_name']); ?></td>
-                                                <td><?php echo $school['total_users']; ?></td>
-                                                <td><?php echo $school['total_purchases']; ?></td>
-                                                <td>₹<?php echo number_format($school['total_revenue']); ?></td>
-                                                <td>₹<?php echo number_format($school['avg_purchase_value']); ?></td>
-                                            </tr>
-                                            <?php endforeach; endif; ?>
-                                        </tbody>
-                                    </table>
+                                <div style="height: 400px; position: relative;">
+                                    <canvas id="pricingAnalysisChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="card analytics-card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">✅ Workshop Completion Rates</h5>
+                            </div>
+                            <div class="card-body">
+                                <div style="height: 400px; position: relative;">
+                                    <canvas id="completionRatesChart"></canvas>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- User Engagement & Retention -->
+                <!-- Feedback Analysis & Revenue Trends -->
                 <div class="row g-4 mb-4">
                     <div class="col-lg-6">
                         <div class="card analytics-card">
                             <div class="card-header">
-                                <h5 class="card-title mb-0">👥 User Engagement Levels</h5>
+                                <h5 class="card-title mb-0">⭐ Workshop Feedback Analysis</h5>
                             </div>
                             <div class="card-body">
-                                <canvas id="userEngagementChart"></canvas>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-lg-6">
-                        <div class="card analytics-card">
-                            <div class="card-header">
-                                <h5 class="card-title mb-0">🔄 User Retention Analysis</h5>
-                            </div>
-                            <div class="card-body">
-                                <canvas id="userRetentionChart"></canvas>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Geographic Performance & User Lifecycle -->
-                <div class="row g-4 mb-4">
-                    <div class="col-lg-8">
-                        <div class="card analytics-card">
-                            <div class="card-header">
-                                <h5 class="card-title mb-0">🌍 Geographic Performance</h5>
-                            </div>
-                            <div class="card-body">
-                                <canvas id="geographicPerformanceChart"></canvas>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-lg-4">
-                        <div class="card analytics-card">
-                            <div class="card-header">
-                                <h5 class="card-title mb-0">🔄 User Lifecycle Analysis</h5>
-                            </div>
-                            <div class="card-body">
-                                <canvas id="userLifecycleChart"></canvas>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- ===== ADVANCED BUSINESS INTELLIGENCE SECTION ===== -->
-                <div class="row g-4 mb-4">
-                    <div class="col-12">
-                        <h4 class="section-title">🧠 Advanced Business Intelligence</h4>
-                    </div>
-                </div>
-
-                <!-- Conversion Funnel & CLV Analysis -->
-                <div class="row g-4 mb-4">
-                    <div class="col-lg-6">
-                        <div class="card analytics-card">
-                            <div class="card-header">
-                                <h5 class="card-title mb-0">🎯 Conversion Funnel Analysis</h5>
-                            </div>
-                            <div class="card-body">
-                                <canvas id="conversionFunnelChart"></canvas>
+                                <div style="height: 400px; position: relative;">
+                                    <canvas id="feedbackAnalysisChart"></canvas>
+                                </div>
                             </div>
                         </div>
                     </div>
                     <div class="col-lg-6">
                         <div class="card analytics-card">
                             <div class="card-header">
-                                <h5 class="card-title mb-0">💎 Customer Lifetime Value (Top 8)</h5>
+                                <h5 class="card-title mb-0">📈 Workshop Revenue Trends</h5>
                             </div>
                             <div class="card-body">
-                                <div class="table-responsive">
-                                    <table class="table table-sm">
-                                        <thead>
-                                            <tr>
-                                                <th>Customer</th>
-                                                <th>Purchases</th>
-                                                <th>Total Spent</th>
-                                                <th>Annual CLV</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <?php if(isset($analytics['clv_analysis'])): foreach (array_slice($analytics['clv_analysis'], 0, 8) as $customer): ?>
-                                            <tr>
-                                                <td><?php echo htmlspecialchars(substr($customer['name'], 0, 20)); ?></td>
-                                                <td><?php echo $customer['total_purchases']; ?></td>
-                                                <td>₹<?php echo number_format($customer['total_spent']); ?></td>
-                                                <td>₹<?php echo number_format($customer['annual_clv']); ?></td>
-                                            </tr>
-                                            <?php endforeach; endif; ?>
-                                        </tbody>
-                                    </table>
+                                <div style="height: 400px; position: relative;">
+                                    <canvas id="revenueTrendsChart"></canvas>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Market Penetration Analysis -->
+                <!-- Attendance Patterns -->
                 <div class="row g-4 mb-4">
                     <div class="col-12">
                         <div class="card analytics-card">
                             <div class="card-header">
-                                <h5 class="card-title mb-0">🎯 Market Penetration Analysis</h5>
+                                <h5 class="card-title mb-0">🕐 Workshop Attendance Patterns</h5>
                             </div>
                             <div class="card-body">
-                                <canvas id="marketPenetrationChart"></canvas>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- ===== REAL-TIME MONITORING SECTION ===== -->
-                <div class="row g-4 mb-4">
-                    <div class="col-12">
-                        <h4 class="section-title">⚡ Real-Time Monitoring</h4>
-                    </div>
-                </div>
-
-                <!-- Live Stats Cards -->
-                <div class="row g-4 mb-4">
-                    <div class="col-lg-3">
-                        <div class="card analytics-card text-center">
-                            <div class="card-body">
-                                <h3 class="text-primary"><?php echo isset($analytics['live_registrations']) ? $analytics['live_registrations'] : 0; ?></h3>
-                                <p class="text-muted mb-0">Today's Registrations</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-lg-3">
-                        <div class="card analytics-card text-center">
-                            <div class="card-body">
-                                <h3 class="text-success"><?php echo isset($analytics['active_workshops']) ? count($analytics['active_workshops']) : 0; ?></h3>
-                                <p class="text-muted mb-0">Active Workshops (7 Days)</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-lg-3">
-                        <div class="card analytics-card text-center">
-                            <div class="card-body">
-                                <h3 class="text-warning"><?php echo isset($analytics['payment_processing']) ? array_sum(array_column($analytics['payment_processing'], 'count')) : 0; ?></h3>
-                                <p class="text-muted mb-0">Payments (24h)</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-lg-3">
-                        <div class="card analytics-card text-center">
-                            <div class="card-body">
-                                <h3 class="text-info"><?php echo isset($analytics['system_health'][0]) ? number_format($analytics['system_health'][0]['value']) : 0; ?></h3>
-                                <p class="text-muted mb-0">Total Users</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Active Workshops & Payment Processing -->
-                <div class="row g-4 mb-4">
-                    <div class="col-lg-8">
-                        <div class="card analytics-card">
-                            <div class="card-header">
-                                <h5 class="card-title mb-0">📅 Upcoming Workshops (Next 7 Days)</h5>
-                            </div>
-                            <div class="card-body">
-                                <div class="table-responsive">
-                                    <table class="table table-hover">
-                                        <thead>
-                                            <tr>
-                                                <th>Workshop</th>
-                                                <th>Trainer</th>
-                                                <th>Date</th>
-                                                <th>Enrollments</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <?php if(isset($analytics['active_workshops'])): foreach (array_slice($analytics['active_workshops'], 0, 8) as $workshop): ?>
-                                            <tr>
-                                                <td><?php echo htmlspecialchars($workshop['name']); ?></td>
-                                                <td><?php echo htmlspecialchars($workshop['trainer_name']); ?></td>
-                                                <td><?php echo date('M d, Y', strtotime($workshop['start_date'])); ?></td>
-                                                <td><?php echo $workshop['enrollments']; ?></td>
-                                            </tr>
-                                            <?php endforeach; endif; ?>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-lg-4">
-                        <div class="card analytics-card">
-                            <div class="card-header">
-                                <h5 class="card-title mb-0">💳 Payment Processing (24h)</h5>
-                            </div>
-                            <div class="card-body">
-                                <canvas id="paymentProcessingChart"></canvas>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- ===== OPERATIONAL ANALYTICS SECTION ===== -->
-                <div class="row g-4 mb-4">
-                    <div class="col-12">
-                        <h4 class="section-title">⚙️ Operational Analytics</h4>
-                    </div>
-                </div>
-
-                <!-- Email Performance & Certificate Tracking -->
-                <div class="row g-4 mb-4">
-                    <div class="col-lg-6">
-                        <div class="card analytics-card">
-                            <div class="card-header">
-                                <h5 class="card-title mb-0">📧 Email Campaign Performance</h5>
-                            </div>
-                            <div class="card-body">
-                                <canvas id="emailPerformanceChart"></canvas>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-lg-6">
-                        <div class="card analytics-card">
-                            <div class="card-header">
-                                <h5 class="card-title mb-0">📜 Certificate Generation Tracking</h5>
-                            </div>
-                            <div class="card-body">
-                                <canvas id="certificateTrackingChart"></canvas>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Workshop Resource Utilization -->
-                <div class="row g-4 mb-4">
-                    <div class="col-12">
-                        <div class="card analytics-card">
-                            <div class="card-header">
-                                <h5 class="card-title mb-0">🎥 Workshop Resource Utilization</h5>
-                            </div>
-                            <div class="card-body">
-                                <div class="table-responsive">
-                                    <table class="table table-hover">
-                                        <thead>
-                                            <tr>
-                                                <th>Workshop</th>
-                                                <th>Meeting ID</th>
-                                                <th>Total Attendees</th>
-                                                <th>Active Attendees</th>
-                                                <th>Avg Duration</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <?php if(isset($analytics['resource_utilization'])): foreach (array_slice($analytics['resource_utilization'], 0, 10) as $resource): ?>
-                                            <tr>
-                                                <td><?php echo htmlspecialchars($resource['name']); ?></td>
-                                                <td><code><?php echo htmlspecialchars($resource['meeting_id']); ?></code></td>
-                                                <td><?php echo $resource['total_attendees']; ?></td>
-                                                <td><?php echo $resource['active_attendees']; ?></td>
-                                                <td><?php echo number_format($resource['avg_attendance_duration'], 1); ?> min</td>
-                                            </tr>
-                                            <?php endforeach; endif; ?>
-                                        </tbody>
-                                    </table>
+                                <div style="height: 400px; position: relative;">
+                                    <canvas id="attendancePatternsChart"></canvas>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-
-
-
-
-
 
             </div>
         </div>
@@ -2861,358 +2089,357 @@ while ($row = mysqli_fetch_assoc($resource_utilization_result)) {
             }
         });
 
-
-
-    </script>
-
         // ===== WORKSHOP ANALYTICS CHARTS =====
         
         // Trainer Performance Chart
-        if (document.getElementById('trainerPerformanceChart')) {
-            const trainerData = <?php echo isset($analytics['trainer_performance']) ? json_encode(array_slice($analytics['trainer_performance'], 0, 8)) : '[]'; ?>;
+        const trainerData = <?php echo json_encode(isset($analytics['trainer_performance']) ? array_slice($analytics['trainer_performance'], 0, 8) : []); ?>;
+        if (trainerData.length > 0) {
+            const trainerLabels = trainerData.map(trainer => trainer.name.substring(0, 15));
+            const trainerRevenue = trainerData.map(trainer => parseInt(trainer.total_revenue) || 0);
+            const trainerWorkshops = trainerData.map(trainer => parseInt(trainer.total_workshops) || 0);
+            
             new Chart(document.getElementById('trainerPerformanceChart'), {
                 type: 'bar',
                 data: {
-                    labels: trainerData.map(t => t.name),
+                    labels: trainerLabels,
                     datasets: [{
                         label: 'Revenue (₹)',
-                        data: trainerData.map(t => parseFloat(t.total_revenue)),
-                        backgroundColor: '#3498db',
-                        borderRadius: 8
+                        data: trainerRevenue,
+                        backgroundColor: 'rgba(54, 162, 235, 0.8)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 1,
+                        yAxisID: 'y'
+                    }, {
+                        label: 'Workshops Count',
+                        data: trainerWorkshops,
+                        backgroundColor: 'rgba(255, 99, 132, 0.8)',
+                        borderColor: 'rgba(255, 99, 132, 1)',
+                        borderWidth: 1,
+                        yAxisID: 'y1'
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false }
-                    },
                     scales: {
-                        y: { beginAtZero: true }
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            title: {
+                                display: true,
+                                text: 'Revenue (₹)'
+                            }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            title: {
+                                display: true,
+                                text: 'Workshops Count'
+                            },
+                            grid: {
+                                drawOnChartArea: false,
+                            },
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        }
                     }
                 }
             });
         }
 
         // Category Analysis Chart
-        if (document.getElementById('categoryAnalysisChart')) {
-            const categoryData = <?php echo isset($analytics['category_analysis']) ? json_encode($analytics['category_analysis']) : '[]'; ?>;
+        const categoryData = <?php echo json_encode(isset($analytics['category_analysis']) ? $analytics['category_analysis'] : []); ?>;
+        if (categoryData.length > 0) {
+            const categoryLabels = categoryData.map(cat => cat.category_name);
+            const categoryRevenue = categoryData.map(cat => parseInt(cat.revenue) || 0);
+            
             new Chart(document.getElementById('categoryAnalysisChart'), {
                 type: 'doughnut',
                 data: {
-                    labels: categoryData.map(c => c.category_name),
+                    labels: categoryLabels,
                     datasets: [{
-                        data: categoryData.map(c => parseFloat(c.revenue)),
-                        backgroundColor: ['#3498db', '#2ecc71', '#f39c12', '#e74c3c', '#9b59b6', '#1abc9c']
+                        data: categoryRevenue,
+                        backgroundColor: [
+                            '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', 
+                            '#9966FF', '#FF9F40', '#FF6384', '#C9CBCF'
+                        ],
+                        borderWidth: 2,
+                        borderColor: '#fff'
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {
-                        legend: { position: 'bottom' }
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 20,
+                                usePointStyle: true
+                            }
+                        }
                     }
                 }
             });
         }
 
-        // ===== PAYMENT & REVENUE ANALYTICS CHARTS =====
-        
-        // Payment Methods Chart
-        if (document.getElementById('paymentMethodsChart')) {
-            const paymentMethodsData = <?php echo isset($analytics['payment_methods']) ? json_encode($analytics['payment_methods']) : '[]'; ?>;
-            new Chart(document.getElementById('paymentMethodsChart'), {
-                type: 'pie',
-                data: {
-                    labels: paymentMethodsData.map(p => p.payment_method),
-                    datasets: [{
-                        data: paymentMethodsData.map(p => parseInt(p.count)),
-                        backgroundColor: ['#3498db', '#2ecc71', '#f39c12']
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { position: 'bottom' }
-                    }
-                }
-            });
-        }
-
-        // Revenue Breakdown Chart
-        if (document.getElementById('revenueBreakdownChart')) {
-            const revenueBreakdownData = <?php echo isset($analytics['revenue_breakdown']) ? json_encode($analytics['revenue_breakdown']) : '[]'; ?>;
-            new Chart(document.getElementById('revenueBreakdownChart'), {
+        // Pricing Analysis Chart
+        const pricingData = <?php echo json_encode(isset($analytics['pricing_analysis']) ? $analytics['pricing_analysis'] : []); ?>;
+        if (pricingData.length > 0) {
+            const pricingLabels = pricingData.map(price => price.price_range);
+            const pricingEnrollments = pricingData.map(price => parseInt(price.enrollments) || 0);
+            const pricingConversion = pricingData.map(price => parseFloat(price.conversion_rate) || 0);
+            
+            new Chart(document.getElementById('pricingAnalysisChart'), {
                 type: 'bar',
                 data: {
-                    labels: revenueBreakdownData.map(r => r.user_type),
+                    labels: pricingLabels,
                     datasets: [{
-                        label: 'Revenue (₹)',
-                        data: revenueBreakdownData.map(r => parseFloat(r.total_revenue)),
-                        backgroundColor: ['#3498db', '#2ecc71'],
-                        borderRadius: 8
+                        label: 'Enrollments',
+                        data: pricingEnrollments,
+                        backgroundColor: 'rgba(75, 192, 192, 0.8)',
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 1,
+                        yAxisID: 'y'
+                    }, {
+                        label: 'Conversion Rate (%)',
+                        data: pricingConversion,
+                        backgroundColor: 'rgba(255, 159, 64, 0.8)',
+                        borderColor: 'rgba(255, 159, 64, 1)',
+                        borderWidth: 1,
+                        yAxisID: 'y1'
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false }
-                    },
                     scales: {
-                        y: { beginAtZero: true }
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            title: {
+                                display: true,
+                                text: 'Enrollments'
+                            }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            title: {
+                                display: true,
+                                text: 'Conversion Rate (%)'
+                            },
+                            grid: {
+                                drawOnChartArea: false,
+                            },
+                        }
                     }
                 }
             });
         }
 
-        // ===== SCHOOL & USER ANALYTICS CHARTS =====
-        
-        // User Engagement Chart
-        if (document.getElementById('userEngagementChart')) {
-            const engagementData = <?php echo isset($analytics['user_engagement']) ? json_encode($analytics['user_engagement']) : '[]'; ?>;
-            const engagementLevels = {
-                'High': engagementData.filter(u => u.engagement_level === 'High').length,
-                'Medium': engagementData.filter(u => u.engagement_level === 'Medium').length,
-                'Low': engagementData.filter(u => u.engagement_level === 'Low').length
-            };
-            new Chart(document.getElementById('userEngagementChart'), {
-                type: 'doughnut',
-                data: {
-                    labels: ['High', 'Medium', 'Low'],
-                    datasets: [{
-                        data: [engagementLevels.High, engagementLevels.Medium, engagementLevels.Low],
-                        backgroundColor: ['#2ecc71', '#f39c12', '#e74c3c']
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { position: 'bottom' }
-                    }
-                }
-            });
-        }
-
-        // User Retention Chart
-        if (document.getElementById('userRetentionChart')) {
-            const retentionData = <?php echo isset($analytics['user_retention']) ? json_encode(array_slice($analytics['user_retention'], 0, 6)) : '[]'; ?>;
-            new Chart(document.getElementById('userRetentionChart'), {
-                type: 'line',
-                data: {
-                    labels: retentionData.map(r => r.registration_month),
-                    datasets: [{
-                        label: 'Retention Rate (%)',
-                        data: retentionData.map(r => parseFloat(r.retention_rate)),
-                        borderColor: '#3498db',
-                        backgroundColor: 'rgba(52, 152, 219, 0.1)',
-                        fill: true,
-                        tension: 0.4
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false }
-                    },
-                    scales: {
-                        y: { beginAtZero: true, max: 100 }
-                    }
-                }
-            });
-        }
-
-        // Geographic Performance Chart
-        if (document.getElementById('geographicPerformanceChart')) {
-            const geoData = <?php echo isset($analytics['geographic_performance']) ? json_encode(array_slice($analytics['geographic_performance'], 0, 10)) : '[]'; ?>;
-            new Chart(document.getElementById('geographicPerformanceChart'), {
+        // Completion Rates Chart
+        const completionData = <?php echo json_encode(isset($analytics['completion_rates']) ? array_slice($analytics['completion_rates'], 0, 10) : []); ?>;
+        if (completionData.length > 0) {
+            const completionLabels = completionData.map(comp => comp.name.substring(0, 20));
+            const completionRates = completionData.map(comp => parseFloat(comp.completion_rate) || 0);
+            
+            new Chart(document.getElementById('completionRatesChart'), {
                 type: 'bar',
                 data: {
-                    labels: geoData.map(g => g.city),
+                    labels: completionLabels,
                     datasets: [{
-                        label: 'Revenue (₹)',
-                        data: geoData.map(g => parseFloat(g.total_revenue)),
-                        backgroundColor: '#3498db',
-                        borderRadius: 8
+                        label: 'Completion Rate (%)',
+                        data: completionRates,
+                        backgroundColor: completionRates.map(rate => 
+                            rate >= 80 ? 'rgba(75, 192, 192, 0.8)' :
+                            rate >= 60 ? 'rgba(255, 206, 86, 0.8)' :
+                            'rgba(255, 99, 132, 0.8)'
+                        ),
+                        borderColor: completionRates.map(rate => 
+                            rate >= 80 ? 'rgba(75, 192, 192, 1)' :
+                            rate >= 60 ? 'rgba(255, 206, 86, 1)' :
+                            'rgba(255, 99, 132, 1)'
+                        ),
+                        borderWidth: 1
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
                     indexAxis: 'y',
-                    plugins: {
-                        legend: { display: false }
-                    },
                     scales: {
-                        x: { beginAtZero: true }
-                    }
-                }
-            });
-        }
-
-        // User Lifecycle Chart
-        if (document.getElementById('userLifecycleChart')) {
-            const lifecycleData = <?php echo isset($analytics['user_lifecycle']) ? json_encode($analytics['user_lifecycle']) : '[]'; ?>;
-            new Chart(document.getElementById('userLifecycleChart'), {
-                type: 'pie',
-                data: {
-                    labels: lifecycleData.map(l => l.lifecycle_stage),
-                    datasets: [{
-                        data: lifecycleData.map(l => parseInt(l.user_count)),
-                        backgroundColor: ['#3498db', '#2ecc71', '#f39c12', '#e74c3c', '#9b59b6']
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 9 } } }
-                    }
-                }
-            });
-        }
-
-        // ===== ADVANCED BUSINESS INTELLIGENCE CHARTS =====
-        
-        // Conversion Funnel Chart
-        if (document.getElementById('conversionFunnelChart')) {
-            const funnelData = <?php echo isset($analytics['conversion_funnel']) ? json_encode($analytics['conversion_funnel']) : '[]'; ?>;
-            new Chart(document.getElementById('conversionFunnelChart'), {
-                type: 'bar',
-                data: {
-                    labels: funnelData.map(f => f.stage),
-                    datasets: [{
-                        label: 'Count',
-                        data: funnelData.map(f => parseInt(f.count)),
-                        backgroundColor: ['#3498db', '#2ecc71', '#f39c12', '#e74c3c'],
-                        borderRadius: 8
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false }
-                    },
-                    scales: {
-                        y: { beginAtZero: true }
-                    }
-                }
-            });
-        }
-
-        // Market Penetration Chart
-        if (document.getElementById('marketPenetrationChart')) {
-            const penetrationData = <?php echo isset($analytics['market_penetration']) ? json_encode(array_slice($analytics['market_penetration'], 0, 10)) : '[]'; ?>;
-            new Chart(document.getElementById('marketPenetrationChart'), {
-                type: 'bar',
-                data: {
-                    labels: penetrationData.map(p => p.city),
-                    datasets: [
-                        {
-                            label: 'Registered Users',
-                            data: penetrationData.map(p => parseInt(p.registered_users)),
-                            backgroundColor: '#3498db',
-                            borderRadius: 8
-                        },
-                        {
-                            label: 'Paying Users',
-                            data: penetrationData.map(p => parseInt(p.paying_users)),
-                            backgroundColor: '#2ecc71',
-                            borderRadius: 8
+                        x: {
+                            beginAtZero: true,
+                            max: 100,
+                            title: {
+                                display: true,
+                                text: 'Completion Rate (%)'
+                            }
                         }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { position: 'top' }
-                    },
-                    scales: {
-                        y: { beginAtZero: true }
                     }
                 }
             });
         }
 
-        // ===== REAL-TIME MONITORING CHARTS =====
-        
-        // Payment Processing Chart
-        if (document.getElementById('paymentProcessingChart')) {
-            const processingData = <?php echo isset($analytics['payment_processing']) ? json_encode($analytics['payment_processing']) : '[]'; ?>;
-            new Chart(document.getElementById('paymentProcessingChart'), {
-                type: 'doughnut',
-                data: {
-                    labels: processingData.map(p => p.status),
-                    datasets: [{
-                        data: processingData.map(p => parseInt(p.count)),
-                        backgroundColor: ['#f39c12', '#2ecc71', '#e74c3c']
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 9 } } }
-                    }
-                }
-            });
-        }
-
-        // ===== OPERATIONAL ANALYTICS CHARTS =====
-        
-        // Email Performance Chart
-        if (document.getElementById('emailPerformanceChart')) {
-            const emailData = <?php echo isset($analytics['email_performance']) ? json_encode($analytics['email_performance']) : '[]'; ?>;
-            new Chart(document.getElementById('emailPerformanceChart'), {
-                type: 'bar',
-                data: {
-                    labels: emailData.map(e => e.metric),
-                    datasets: [{
-                        label: 'Count',
-                        data: emailData.map(e => parseInt(e.count)),
-                        backgroundColor: ['#2ecc71', '#f39c12'],
-                        borderRadius: 8
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false }
-                    },
-                    scales: {
-                        y: { beginAtZero: true }
-                    }
-                }
-            });
-        }
-
-        // Certificate Tracking Chart
-        if (document.getElementById('certificateTrackingChart')) {
-            const certData = <?php echo isset($analytics['certificate_tracking']) ? json_encode($analytics['certificate_tracking']) : '[]'; ?>;
-            new Chart(document.getElementById('certificateTrackingChart'), {
+        // Feedback Analysis Chart
+        const feedbackData = <?php echo json_encode(isset($analytics['feedback_analysis']) ? $analytics['feedback_analysis'] : []); ?>;
+        if (feedbackData.length > 0) {
+            const feedbackLabels = feedbackData.map(fb => fb.feedback_rating + ' Star' + (fb.feedback_rating > 1 ? 's' : ''));
+            const feedbackCounts = feedbackData.map(fb => parseInt(fb.count) || 0);
+            
+            new Chart(document.getElementById('feedbackAnalysisChart'), {
                 type: 'pie',
                 data: {
-                    labels: certData.map(c => c.metric),
+                    labels: feedbackLabels,
                     datasets: [{
-                        data: certData.map(c => parseInt(c.count)),
-                        backgroundColor: ['#2ecc71', '#f39c12']
+                        data: feedbackCounts,
+                        backgroundColor: [
+                            '#FF6384', '#FF9F40', '#FFCE56', '#4BC0C0', '#36A2EB'
+                        ],
+                        borderWidth: 2,
+                        borderColor: '#fff'
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {
-                        legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 9 } } }
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 20,
+                                usePointStyle: true
+                            }
+                        }
                     }
                 }
             });
         }
 
+        // Revenue Trends Chart
+        const revenueData = <?php echo json_encode(isset($analytics['revenue_trends']) ? $analytics['revenue_trends'] : []); ?>;
+        if (revenueData.length > 0) {
+            const revenueLabels = revenueData.map(rev => {
+                const date = new Date(rev.month + '-01');
+                return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+            }).reverse();
+            const revenueAmounts = revenueData.map(rev => parseInt(rev.total_revenue) || 0).reverse();
+            const revenueCounts = revenueData.map(rev => parseInt(rev.payment_count) || 0).reverse();
+            
+            new Chart(document.getElementById('revenueTrendsChart'), {
+                type: 'line',
+                data: {
+                    labels: revenueLabels,
+                    datasets: [{
+                        label: 'Revenue (₹)',
+                        data: revenueAmounts,
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4,
+                        yAxisID: 'y'
+                    }, {
+                        label: 'Payment Count',
+                        data: revenueCounts,
+                        borderColor: 'rgba(255, 99, 132, 1)',
+                        backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                        borderWidth: 2,
+                        fill: false,
+                        tension: 0.4,
+                        yAxisID: 'y1'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            title: {
+                                display: true,
+                                text: 'Revenue (₹)'
+                            }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            title: {
+                                display: true,
+                                text: 'Payment Count'
+                            },
+                            grid: {
+                                drawOnChartArea: false,
+                            },
+                        }
+                    }
+                }
+            });
+        }
+
+        // Attendance Patterns Chart
+        const attendanceData = <?php echo json_encode(isset($analytics['attendance_patterns']) ? $analytics['attendance_patterns'] : []); ?>;
+        if (attendanceData.length > 0) {
+            // Group by hour of day
+            const hourData = {};
+            attendanceData.forEach(att => {
+                const hour = att.hour_of_day;
+                if (!hourData[hour]) {
+                    hourData[hour] = 0;
+                }
+                hourData[hour] += parseInt(att.attendance_count);
+            });
+            
+            const hourLabels = Object.keys(hourData).sort((a, b) => a - b).map(h => h + ':00');
+            const hourCounts = Object.keys(hourData).sort((a, b) => a - b).map(h => hourData[h]);
+            
+            new Chart(document.getElementById('attendancePatternsChart'), {
+                type: 'bar',
+                data: {
+                    labels: hourLabels,
+                    datasets: [{
+                        label: 'Attendance Count',
+                        data: hourCounts,
+                        backgroundColor: 'rgba(153, 102, 255, 0.8)',
+                        borderColor: 'rgba(153, 102, 255, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Attendance Count'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Hour of Day'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+    </script>
 </body>
 </html>
