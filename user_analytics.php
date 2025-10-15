@@ -2476,156 +2476,176 @@ while ($row = mysqli_fetch_assoc($user_segmentation_result)) {
 
         // Heatmap
         function createHeatmap() {
-            const hours = Array.from({length: 24}, (_, i) => i);
-            const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-            const data = [];
+            try {
+                const hours = Array.from({length: 24}, (_, i) => i);
+                const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+                const data = [];
 
-            for (let i = 0; i < days.length; i++) {
-                for (let j = 0; j < hours.length; j++) {
-                    data.push({
-                        x: hours[j],
-                        y: days[i],
-                        z: Math.random() * 100
-                    });
+                for (let i = 0; i < days.length; i++) {
+                    for (let j = 0; j < hours.length; j++) {
+                        data.push({
+                            x: hours[j],
+                            y: days[i],
+                            z: Math.random() * 100
+                        });
+                    }
                 }
+
+                const heatmapData = [{
+                    type: 'heatmap',
+                    x: hours,
+                    y: days,
+                    z: data.map(d => d.z),
+                    colorscale: 'Viridis',
+                    showscale: true
+                }];
+
+                const layout = {
+                    title: 'Registration Activity Heatmap',
+                    xaxis: { title: 'Hour of Day' },
+                    yaxis: { title: 'Day of Week' },
+                    paper_bgcolor: 'rgba(0,0,0,0)',
+                    plot_bgcolor: 'rgba(0,0,0,0)',
+                    font: { color: 'white' }
+                };
+
+                Plotly.newPlot('heatmap', heatmapData, layout, {responsive: true});
+            } catch (error) {
+                console.log('Error creating Heatmap:', error);
             }
-
-            const heatmapData = [{
-                type: 'heatmap',
-                x: hours,
-                y: days,
-                z: data.map(d => d.z),
-                colorscale: 'Viridis',
-                showscale: true
-            }];
-
-            const layout = {
-                title: 'Registration Activity Heatmap',
-                xaxis: { title: 'Hour of Day' },
-                yaxis: { title: 'Day of Week' },
-                paper_bgcolor: 'rgba(0,0,0,0)',
-                plot_bgcolor: 'rgba(0,0,0,0)',
-                font: { color: 'white' }
-            };
-
-            Plotly.newPlot('heatmap', heatmapData, layout, {responsive: true});
         }
 
         // Prediction Chart
         function createPredictionChart() {
-            const months = monthlyLabels.slice(-6);
-            const actual = monthlyCounts.slice(-6);
-            const predicted = actual.map(val => val * (1 + Math.random() * 0.3));
+            try {
+                const months = monthlyLabels.slice(-6);
+                const actual = monthlyCounts.slice(-6);
+                const predicted = actual.map(val => val * (1 + Math.random() * 0.3));
 
-            const data = [
-                {
-                    type: 'scatter',
-                    mode: 'lines+markers',
-                    name: 'Actual',
-                    x: months,
-                    y: actual,
-                    line: { color: '#3498db', width: 3 },
-                    marker: { size: 8 }
-                },
-                {
-                    type: 'scatter',
-                    mode: 'lines+markers',
-                    name: 'Predicted',
-                    x: months,
-                    y: predicted,
-                    line: { color: '#e74c3c', width: 3, dash: 'dash' },
-                    marker: { size: 8 }
-                }
-            ];
+                const data = [
+                    {
+                        type: 'scatter',
+                        mode: 'lines+markers',
+                        name: 'Actual',
+                        x: months,
+                        y: actual,
+                        line: { color: '#3498db', width: 3 },
+                        marker: { size: 8 }
+                    },
+                    {
+                        type: 'scatter',
+                        mode: 'lines+markers',
+                        name: 'Predicted',
+                        x: months,
+                        y: predicted,
+                        line: { color: '#e74c3c', width: 3, dash: 'dash' },
+                        marker: { size: 8 }
+                    }
+                ];
 
-            const layout = {
-                title: 'User Growth Prediction',
-                xaxis: { title: 'Month' },
-                yaxis: { title: 'User Count' },
-                paper_bgcolor: 'rgba(0,0,0,0)',
-                plot_bgcolor: 'rgba(0,0,0,0)',
-                font: { color: 'white' }
-            };
+                const layout = {
+                    title: 'User Growth Prediction',
+                    xaxis: { title: 'Month' },
+                    yaxis: { title: 'User Count' },
+                    paper_bgcolor: 'rgba(0,0,0,0)',
+                    plot_bgcolor: 'rgba(0,0,0,0)',
+                    font: { color: 'white' }
+                };
 
-            Plotly.newPlot('predictionChart', data, layout, {responsive: true});
+                Plotly.newPlot('predictionChart', data, layout, {responsive: true});
+            } catch (error) {
+                console.log('Error creating Prediction Chart:', error);
+            }
         }
 
         // Seasonal Analysis
         function createSeasonalChart() {
-            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-            const seasonalData = months.map(month => Math.random() * 100 + 50);
+            try {
+                const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                const seasonalData = months.map(month => Math.random() * 100 + 50);
 
-            const data = [{
-                type: 'scatterpolar',
-                r: seasonalData,
-                theta: months,
-                fill: 'toself',
-                name: 'Seasonal Pattern',
-                line: { color: '#4ECDC4' },
-                fillcolor: 'rgba(78, 205, 196, 0.3)'
-            }];
+                const data = [{
+                    type: 'scatterpolar',
+                    r: seasonalData,
+                    theta: months,
+                    fill: 'toself',
+                    name: 'Seasonal Pattern',
+                    line: { color: '#4ECDC4' },
+                    fillcolor: 'rgba(78, 205, 196, 0.3)'
+                }];
 
-            const layout = {
-                polar: {
-                    radialaxis: {
-                        visible: true,
-                        range: [0, 150]
-                    }
-                },
-                title: 'Seasonal Registration Pattern',
-                paper_bgcolor: 'rgba(0,0,0,0)',
-                plot_bgcolor: 'rgba(0,0,0,0)',
-                font: { color: 'white' }
-            };
+                const layout = {
+                    polar: {
+                        radialaxis: {
+                            visible: true,
+                            range: [0, 150]
+                        }
+                    },
+                    title: 'Seasonal Registration Pattern',
+                    paper_bgcolor: 'rgba(0,0,0,0)',
+                    plot_bgcolor: 'rgba(0,0,0,0)',
+                    font: { color: 'white' }
+                };
 
-            Plotly.newPlot('seasonalChart', data, layout, {responsive: true});
+                Plotly.newPlot('seasonalChart', data, layout, {responsive: true});
+            } catch (error) {
+                console.log('Error creating Seasonal Analysis:', error);
+            }
         }
 
         // Cohort Analysis
         function createCohortChart() {
-            const cohorts = ['Jan 2024', 'Feb 2024', 'Mar 2024', 'Apr 2024', 'May 2024'];
-            const retentionData = cohorts.map(() => 
-                Array.from({length: 5}, (_, i) => Math.max(0, 100 - i * 20 + Math.random() * 10))
-            );
+            try {
+                const cohorts = ['Jan 2024', 'Feb 2024', 'Mar 2024', 'Apr 2024', 'May 2024'];
+                const retentionData = cohorts.map(() => 
+                    Array.from({length: 5}, (_, i) => Math.max(0, 100 - i * 20 + Math.random() * 10))
+                );
 
-            const data = [{
-                type: 'heatmap',
-                x: ['Month 0', 'Month 1', 'Month 2', 'Month 3', 'Month 4'],
-                y: cohorts,
-                z: retentionData,
-                colorscale: 'RdYlBu',
-                showscale: true,
-                text: retentionData.map(row => row.map(val => `${val.toFixed(1)}%`)),
-                texttemplate: '%{text}',
-                textfont: { size: 10 }
-            }];
+                const data = [{
+                    type: 'heatmap',
+                    x: ['Month 0', 'Month 1', 'Month 2', 'Month 3', 'Month 4'],
+                    y: cohorts,
+                    z: retentionData,
+                    colorscale: 'RdYlBu',
+                    showscale: true,
+                    text: retentionData.map(row => row.map(val => `${val.toFixed(1)}%`)),
+                    texttemplate: '%{text}',
+                    textfont: { size: 10 }
+                }];
 
-            const layout = {
-                title: 'User Cohort Retention Analysis',
-                xaxis: { title: 'Months After Registration' },
-                yaxis: { title: 'Registration Cohort' },
-                paper_bgcolor: 'rgba(0,0,0,0)',
-                plot_bgcolor: 'rgba(0,0,0,0)',
-                font: { color: 'white' }
-            };
+                const layout = {
+                    title: 'User Cohort Retention Analysis',
+                    xaxis: { title: 'Months After Registration' },
+                    yaxis: { title: 'Registration Cohort' },
+                    paper_bgcolor: 'rgba(0,0,0,0)',
+                    plot_bgcolor: 'rgba(0,0,0,0)',
+                    font: { color: 'white' }
+                };
 
-            Plotly.newPlot('cohortChart', data, layout, {responsive: true});
+                Plotly.newPlot('cohortChart', data, layout, {responsive: true});
+            } catch (error) {
+                console.log('Error creating Cohort Analysis:', error);
+            }
         }
 
         // Live Counter Animation
         function animateLiveCounter() {
-            const counter = document.getElementById('liveCounter');
-            const target = <?php echo $analytics['today_users']; ?>;
-            let current = 0;
-            const increment = target / 100;
-            const timer = setInterval(() => {
-                current += increment;
-                if (current >= target) {
-                    current = target;
-                    clearInterval(timer);
-                }
-                counter.textContent = Math.floor(current);
-            }, 20);
+            try {
+                const counter = document.getElementById('liveCounter');
+                const target = <?php echo isset($analytics['today_users']) ? $analytics['today_users'] : 0; ?>;
+                let current = 0;
+                const increment = target / 100;
+                const timer = setInterval(() => {
+                    current += increment;
+                    if (current >= target) {
+                        current = target;
+                        clearInterval(timer);
+                    }
+                    counter.textContent = Math.floor(current);
+                }, 20);
+            } catch (error) {
+                console.log('Error creating Live Counter Animation:', error);
+            }
         }
 
         // Theme Toggle Function
