@@ -536,12 +536,9 @@ while ($row = mysqli_fetch_assoc($user_segmentation_result)) {
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
     
     <!-- Advanced Chart Libraries -->
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-3d@latest/dist/chartjs-chart-3d.min.js"></script>
-    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-2.26.0.min.js"></script>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/apexcharts@latest"></script>
     
     <!-- CSS for Advanced Visualizations -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -2087,67 +2084,103 @@ while ($row = mysqli_fetch_assoc($user_segmentation_result)) {
 
         // 🚀 Advanced 3D Visualizations
         document.addEventListener('DOMContentLoaded', function() {
-            initializeAdvancedVisualizations();
+            // Wait a bit for all libraries to load
+            setTimeout(function() {
+                initializeAdvancedVisualizations();
+            }, 1000);
         });
 
         function initializeAdvancedVisualizations() {
-            // 3D Pyramid Chart
-            create3DPyramid();
-            
-            // 3D Geographic Distribution
-            create3DGeoChart();
-            
-            // 3D School Performance Matrix
-            create3DSchoolMatrix();
-            
-            // 3D User Journey Funnel
-            create3DFunnel();
-            
-            // Sankey Flow Diagram
-            createSankeyFlow();
-            
-            // Network Graph
-            createNetworkGraph();
-            
-            // Interactive Map
-            createInteractiveMap();
-            
-            // Heatmap
-            createHeatmap();
-            
-            // Prediction Chart
-            createPredictionChart();
-            
-            // Seasonal Analysis
-            createSeasonalChart();
-            
-            // Cohort Analysis
-            createCohortChart();
-            
-            // Live Counter Animation
-            animateLiveCounter();
+            try {
+                // 3D Pyramid Chart
+                if (document.getElementById('pyramid3d')) {
+                    create3DPyramid();
+                }
+                
+                // 3D Geographic Distribution
+                if (document.getElementById('geo3d')) {
+                    create3DGeoChart();
+                }
+                
+                // 3D School Performance Matrix
+                if (document.getElementById('school3d')) {
+                    create3DSchoolMatrix();
+                }
+                
+                // 3D User Journey Funnel
+                if (document.getElementById('funnel3d')) {
+                    create3DFunnel();
+                }
+                
+                // Sankey Flow Diagram
+                if (document.getElementById('sankeyFlow')) {
+                    createSankeyFlow();
+                }
+                
+                // Network Graph
+                if (document.getElementById('networkGraph')) {
+                    createNetworkGraph();
+                }
+                
+                // Interactive Map
+                if (document.getElementById('interactiveMap')) {
+                    createInteractiveMap();
+                }
+                
+                // Heatmap
+                if (document.getElementById('heatmap')) {
+                    createHeatmap();
+                }
+                
+                // Prediction Chart
+                if (document.getElementById('predictionChart')) {
+                    createPredictionChart();
+                }
+                
+                // Seasonal Analysis
+                if (document.getElementById('seasonalChart')) {
+                    createSeasonalChart();
+                }
+                
+                // Cohort Analysis
+                if (document.getElementById('cohortChart')) {
+                    createCohortChart();
+                }
+                
+                // Live Counter Animation
+                if (document.getElementById('liveCounter')) {
+                    animateLiveCounter();
+                }
+            } catch (error) {
+                console.log('Some visualizations could not be loaded:', error);
+            }
         }
 
         // 3D Pyramid Chart
         function create3DPyramid() {
-            const data = [{
-                type: 'bar',
-                x: ['Students', 'Teachers', 'Principals', 'Coordinators', 'Others'],
-                y: [<?php echo $analytics['total_users'] * 0.4; ?>, <?php echo $analytics['total_users'] * 0.3; ?>, <?php echo $analytics['total_users'] * 0.15; ?>, <?php echo $analytics['total_users'] * 0.1; ?>, <?php echo $analytics['total_users'] * 0.05; ?>],
-                marker: {
-                    color: ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7'],
-                    line: { color: 'white', width: 2 }
-                }
-            }];
+            try {
+                const totalUsers = <?php echo isset($analytics['total_users']) ? $analytics['total_users'] : 1000; ?>;
+                const data = [{
+                    type: 'bar',
+                    x: ['Students', 'Teachers', 'Principals', 'Coordinators', 'Others'],
+                    y: [totalUsers * 0.4, totalUsers * 0.3, totalUsers * 0.15, totalUsers * 0.1, totalUsers * 0.05],
+                    marker: {
+                        color: ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7'],
+                        line: { color: 'white', width: 2 }
+                    }
+                }];
 
-            const layout = {
-                title: 'User Growth Pyramid',
-                paper_bgcolor: 'rgba(0,0,0,0)',
-                plot_bgcolor: 'rgba(0,0,0,0)',
-                font: { color: 'white' }
-            };
+                const layout = {
+                    title: 'User Growth Pyramid',
+                    paper_bgcolor: 'rgba(0,0,0,0)',
+                    plot_bgcolor: 'rgba(0,0,0,0)',
+                    font: { color: 'white' }
+                };
 
-            Plotly.newPlot('pyramid3d', data, layout, {responsive: true});
+                Plotly.newPlot('pyramid3d', data, layout, {responsive: true});
+            } catch (error) {
+                console.log('Error creating 3D Pyramid:', error);
+            }
         }
 
         // 3D Geographic Distribution
