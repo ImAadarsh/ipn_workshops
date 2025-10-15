@@ -296,7 +296,7 @@ $stats['year'] = mysqli_fetch_assoc($year_result)['count'];
                             <div class="card-body text-center">
                                 <div class="d-flex align-items-center justify-content-center stats-icon-container">
                                     <div class="bg-primary bg-opacity-10 rounded-circle">
-                                        <i class="ti ti-calendar-day text-primary stats-icon"></i>
+                                        <i class="ti ti-calendar-week text-primary stats-icon"></i>
                                     </div>
                                 </div>
                                 <h3 class="fw-bold text-primary stats-number"><?php echo number_format($stats['today']); ?></h3>
@@ -338,7 +338,7 @@ $stats['year'] = mysqli_fetch_assoc($year_result)['count'];
                             <div class="card-body text-center">
                                 <div class="d-flex align-items-center justify-content-center stats-icon-container">
                                     <div class="bg-warning bg-opacity-10 rounded-circle">
-                                        <i class="ti ti-calendar-year text-warning stats-icon"></i>
+                                        <i class="ti ti-calendar-month text-warning stats-icon"></i>
                                     </div>
                                 </div>
                                 <h3 class="fw-bold text-warning stats-number"><?php echo number_format($stats['year']); ?></h3>
