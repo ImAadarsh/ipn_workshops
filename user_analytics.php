@@ -55,12 +55,19 @@ $top_cities_sql = "SELECT
     WHERE city IS NOT NULL AND city != ''
     GROUP BY city
     ORDER BY count DESC
-    LIMIT 10";
+    LIMIT 15";
 $top_cities_result = mysqli_query($conn, $top_cities_sql);
 $analytics['top_cities'] = [];
+$analytics['total_cities'] = 0;
 while ($row = mysqli_fetch_assoc($top_cities_result)) {
     $analytics['top_cities'][] = $row;
+    $analytics['total_cities'] += $row['count'];
 }
+
+// Get total unique cities count
+$unique_cities_sql = "SELECT COUNT(DISTINCT city) as unique_cities FROM users WHERE city IS NOT NULL AND city != ''";
+$unique_cities_result = mysqli_query($conn, $unique_cities_sql);
+$analytics['unique_cities_count'] = mysqli_fetch_assoc($unique_cities_result)['unique_cities'];
 
 // 5. School-wise Distribution
 $school_distribution_sql = "SELECT 
@@ -71,12 +78,19 @@ $school_distribution_sql = "SELECT
     GROUP BY s.id, s.name
     HAVING user_count > 0
     ORDER BY user_count DESC
-    LIMIT 10";
+    LIMIT 15";
 $school_distribution_result = mysqli_query($conn, $school_distribution_sql);
 $analytics['school_distribution'] = [];
+$analytics['total_school_users'] = 0;
 while ($row = mysqli_fetch_assoc($school_distribution_result)) {
     $analytics['school_distribution'][] = $row;
+    $analytics['total_school_users'] += $row['user_count'];
 }
+
+// Get total active schools count
+$active_schools_sql = "SELECT COUNT(DISTINCT s.id) as active_schools FROM schools s INNER JOIN users u ON s.id = u.school_id";
+$active_schools_result = mysqli_query($conn, $active_schools_sql);
+$analytics['active_schools_count'] = mysqli_fetch_assoc($active_schools_result)['active_schools'];
 
 // 6. Designation Distribution
 $designation_distribution_sql = "SELECT 
@@ -407,6 +421,94 @@ $analytics['registration_source'] = [];
 while ($row = mysqli_fetch_assoc($registration_source_result)) {
     $analytics['registration_source'][] = $row;
 }
+
+// 26. City-School Interconnection Analysis
+$city_school_analysis_sql = "SELECT 
+    u.city,
+    COUNT(DISTINCT u.school_id) as schools_in_city,
+    COUNT(u.id) as users_in_city
+    FROM users u
+    WHERE u.city IS NOT NULL AND u.city != '' AND u.school_id IS NOT NULL
+    GROUP BY u.city
+    ORDER BY users_in_city DESC
+    LIMIT 10";
+$city_school_analysis_result = mysqli_query($conn, $city_school_analysis_sql);
+$analytics['city_school_analysis'] = [];
+while ($row = mysqli_fetch_assoc($city_school_analysis_result)) {
+    $analytics['city_school_analysis'][] = $row;
+}
+
+// 27. School Performance Metrics
+$school_performance_sql = "SELECT 
+    s.name as school_name,
+    COUNT(u.id) as total_users,
+    COUNT(CASE WHEN u.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY) THEN 1 END) as recent_users_30d,
+    COUNT(CASE WHEN u.created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 END) as recent_users_7d,
+    ROUND(COUNT(CASE WHEN u.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY) THEN 1 END) * 100.0 / COUNT(u.id), 2) as growth_rate_30d
+    FROM schools s
+    INNER JOIN users u ON s.id = u.school_id
+    GROUP BY s.id, s.name
+    HAVING total_users > 0
+    ORDER BY total_users DESC
+    LIMIT 15";
+$school_performance_result = mysqli_query($conn, $school_performance_sql);
+$analytics['school_performance'] = [];
+while ($row = mysqli_fetch_assoc($school_performance_result)) {
+    $analytics['school_performance'][] = $row;
+}
+
+// 28. Designation-City Cross Analysis
+$designation_city_analysis_sql = "SELECT 
+    u.designation,
+    u.city,
+    COUNT(*) as count
+    FROM users u
+    WHERE u.designation IS NOT NULL AND u.designation != '' 
+    AND u.city IS NOT NULL AND u.city != ''
+    GROUP BY u.designation, u.city
+    HAVING count >= 5
+    ORDER BY count DESC
+    LIMIT 20";
+$designation_city_analysis_result = mysqli_query($conn, $designation_city_analysis_sql);
+$analytics['designation_city_analysis'] = [];
+while ($row = mysqli_fetch_assoc($designation_city_analysis_result)) {
+    $analytics['designation_city_analysis'][] = $row;
+}
+
+// 29. Institute-City Cross Analysis
+$institute_city_analysis_sql = "SELECT 
+    u.institute_name,
+    u.city,
+    COUNT(*) as count
+    FROM users u
+    WHERE u.institute_name IS NOT NULL AND u.institute_name != '' 
+    AND u.city IS NOT NULL AND u.city != ''
+    GROUP BY u.institute_name, u.city
+    HAVING count >= 3
+    ORDER BY count DESC
+    LIMIT 15";
+$institute_city_analysis_result = mysqli_query($conn, $institute_city_analysis_sql);
+$analytics['institute_city_analysis'] = [];
+while ($row = mysqli_fetch_assoc($institute_city_analysis_result)) {
+    $analytics['institute_city_analysis'][] = $row;
+}
+
+// 30. Advanced User Segmentation
+$user_segmentation_sql = "SELECT 
+    CASE 
+        WHEN school_id IS NOT NULL AND designation IS NOT NULL AND institute_name IS NOT NULL THEN 'Complete School Profile'
+        WHEN school_id IS NOT NULL THEN 'School User (Incomplete)'
+        WHEN designation IS NOT NULL AND institute_name IS NOT NULL THEN 'Complete Individual Profile'
+        ELSE 'Basic Profile'
+    END as segment,
+    COUNT(*) as count
+    FROM users
+    GROUP BY segment";
+$user_segmentation_result = mysqli_query($conn, $user_segmentation_sql);
+$analytics['user_segmentation'] = [];
+while ($row = mysqli_fetch_assoc($user_segmentation_result)) {
+    $analytics['user_segmentation'][] = $row;
+}
 ?>
 
 <!DOCTYPE html>
@@ -534,8 +636,9 @@ while ($row = mysqli_fetch_assoc($registration_source_result)) {
                     <div class="metric-card warning">
                         <div class="d-flex justify-content-between align-items-center">
                             <div>
-                                <h3 class="fw-bold mb-1"><?php echo count($analytics['top_cities']); ?></h3>
+                                <h3 class="fw-bold mb-1"><?php echo number_format($analytics['unique_cities_count']); ?></h3>
                                 <p class="mb-0">Active Cities</p>
+                                <small class="opacity-75"><?php echo number_format($analytics['total_cities']); ?> users across cities</small>
                             </div>
                             <i class="ti ti-map-pin fs-1 opacity-75"></i>
                         </div>
@@ -544,10 +647,28 @@ while ($row = mysqli_fetch_assoc($registration_source_result)) {
                     <div class="metric-card danger">
                         <div class="d-flex justify-content-between align-items-center">
                             <div>
-                                <h3 class="fw-bold mb-1"><?php echo count($analytics['school_distribution']); ?></h3>
+                                <h3 class="fw-bold mb-1"><?php echo number_format($analytics['active_schools_count']); ?></h3>
                                 <p class="mb-0">Active Schools</p>
+                                <small class="opacity-75"><?php echo number_format($analytics['total_school_users']); ?> school users</small>
                             </div>
                             <i class="ti ti-school fs-1 opacity-75"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Overall User Trends - Full Width -->
+                <div class="row g-4 mb-4">
+                    <div class="col-12">
+                        <div class="card analytics-card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">📈 Overall User Registration Trends (Last 12 Months)</h5>
+                                <p class="text-muted mb-0">Comprehensive view of user growth patterns and trends</p>
+                            </div>
+                            <div class="card-body">
+                                <div class="chart-container large">
+                                    <canvas id="overallTrendsChart"></canvas>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -892,7 +1013,7 @@ while ($row = mysqli_fetch_assoc($registration_source_result)) {
                     <div class="col-lg-8">
                         <div class="card analytics-card">
                             <div class="card-header">
-                                <h5 class="card-title mb-0">School-wise User Distribution</h5>
+                                <h5 class="card-title mb-0">Top 15 Schools - User Distribution</h5>
                             </div>
                             <div class="card-body">
                                 <div class="chart-container">
@@ -909,6 +1030,179 @@ while ($row = mysqli_fetch_assoc($registration_source_result)) {
                             <div class="card-body">
                                 <div class="chart-container small">
                                     <canvas id="engagementChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Advanced Interconnected Analytics -->
+                <div class="row g-4 mb-4">
+                    <div class="col-12">
+                        <h4 class="section-title">🔗 Interconnected Analytics</h4>
+                    </div>
+                </div>
+
+                <!-- School Performance Metrics -->
+                <div class="row g-4 mb-4">
+                    <div class="col-lg-12">
+                        <div class="card analytics-card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">Top 15 Schools - Performance Metrics</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>School Name</th>
+                                                <th>Total Users</th>
+                                                <th>Recent (30d)</th>
+                                                <th>Recent (7d)</th>
+                                                <th>Growth Rate</th>
+                                                <th>Performance</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <?php foreach ($analytics['school_performance'] as $school): ?>
+                                            <tr>
+                                                <td><?php echo htmlspecialchars($school['school_name']); ?></td>
+                                                <td><span class="badge bg-primary"><?php echo number_format($school['total_users']); ?></span></td>
+                                                <td><span class="badge bg-info"><?php echo number_format($school['recent_users_30d']); ?></span></td>
+                                                <td><span class="badge bg-success"><?php echo number_format($school['recent_users_7d']); ?></span></td>
+                                                <td>
+                                                    <?php if ($school['growth_rate_30d'] > 20): ?>
+                                                        <span class="badge bg-success"><?php echo $school['growth_rate_30d']; ?>%</span>
+                                                    <?php elseif ($school['growth_rate_30d'] > 10): ?>
+                                                        <span class="badge bg-warning"><?php echo $school['growth_rate_30d']; ?>%</span>
+                                                    <?php else: ?>
+                                                        <span class="badge bg-danger"><?php echo $school['growth_rate_30d']; ?>%</span>
+                                                    <?php endif; ?>
+                                                </td>
+                                                <td>
+                                                    <?php if ($school['total_users'] > 100): ?>
+                                                        <span class="badge bg-success">High</span>
+                                                    <?php elseif ($school['total_users'] > 50): ?>
+                                                        <span class="badge bg-warning">Medium</span>
+                                                    <?php else: ?>
+                                                        <span class="badge bg-danger">Low</span>
+                                                    <?php endif; ?>
+                                                </td>
+                                            </tr>
+                                            <?php endforeach; ?>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- City-School Interconnection -->
+                <div class="row g-4 mb-4">
+                    <div class="col-lg-6">
+                        <div class="card analytics-card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">City-School Interconnection</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>City</th>
+                                                <th>Schools</th>
+                                                <th>Users</th>
+                                                <th>Avg/ School</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <?php foreach ($analytics['city_school_analysis'] as $city): 
+                                                $avg_per_school = $city['schools_in_city'] > 0 ? round($city['users_in_city'] / $city['schools_in_city'], 1) : 0;
+                                            ?>
+                                            <tr>
+                                                <td><?php echo htmlspecialchars($city['city']); ?></td>
+                                                <td><span class="badge bg-info"><?php echo $city['schools_in_city']; ?></span></td>
+                                                <td><span class="badge bg-primary"><?php echo number_format($city['users_in_city']); ?></span></td>
+                                                <td><span class="badge bg-success"><?php echo $avg_per_school; ?></span></td>
+                                            </tr>
+                                            <?php endforeach; ?>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="card analytics-card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">User Segmentation Analysis</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="chart-container small">
+                                    <canvas id="userSegmentationChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cross-Analysis Tables -->
+                <div class="row g-4 mb-4">
+                    <div class="col-lg-6">
+                        <div class="card analytics-card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">Designation-City Cross Analysis</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Designation</th>
+                                                <th>City</th>
+                                                <th>Count</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <?php foreach ($analytics['designation_city_analysis'] as $analysis): ?>
+                                            <tr>
+                                                <td><?php echo htmlspecialchars($analysis['designation']); ?></td>
+                                                <td><?php echo htmlspecialchars($analysis['city']); ?></td>
+                                                <td><span class="badge bg-warning"><?php echo number_format($analysis['count']); ?></span></td>
+                                            </tr>
+                                            <?php endforeach; ?>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="card analytics-card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">Institute-City Cross Analysis</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Institute</th>
+                                                <th>City</th>
+                                                <th>Count</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <?php foreach ($analytics['institute_city_analysis'] as $analysis): ?>
+                                            <tr>
+                                                <td><?php echo htmlspecialchars($analysis['institute_name']); ?></td>
+                                                <td><?php echo htmlspecialchars($analysis['city']); ?></td>
+                                                <td><span class="badge bg-info"><?php echo number_format($analysis['count']); ?></span></td>
+                                            </tr>
+                                            <?php endforeach; ?>
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
                         </div>
@@ -932,13 +1226,136 @@ while ($row = mysqli_fetch_assoc($registration_source_result)) {
         Chart.defaults.font.family = "'Inter', sans-serif";
         Chart.defaults.color = '#6c757d';
 
-        // Monthly Trends Chart
+        // Overall Trends Chart - Full Width
         const monthlyData = <?php echo json_encode($analytics['monthly_users']); ?>;
         const monthlyLabels = monthlyData.map(item => {
             const date = new Date(item.month + '-01');
             return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
         });
         const monthlyCounts = monthlyData.map(item => item.count);
+
+        // Calculate cumulative totals for overall trends
+        let cumulativeTotal = 0;
+        const cumulativeData = monthlyCounts.map(count => {
+            cumulativeTotal += count;
+            return cumulativeTotal;
+        });
+
+        // Calculate moving averages (3-month)
+        const movingAverageData = [];
+        for (let i = 0; i < monthlyCounts.length; i++) {
+            if (i < 2) {
+                movingAverageData.push(null);
+            } else {
+                const avg = (monthlyCounts[i-2] + monthlyCounts[i-1] + monthlyCounts[i]) / 3;
+                movingAverageData.push(Math.round(avg));
+            }
+        }
+
+        new Chart(document.getElementById('overallTrendsChart'), {
+            type: 'line',
+            data: {
+                labels: monthlyLabels,
+                datasets: [
+                    {
+                        label: 'Monthly Registrations',
+                        data: monthlyCounts,
+                        borderColor: '#3498db',
+                        backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                        borderWidth: 3,
+                        fill: false,
+                        tension: 0.4,
+                        yAxisID: 'y'
+                    },
+                    {
+                        label: 'Cumulative Total Users',
+                        data: cumulativeData,
+                        borderColor: '#2ecc71',
+                        backgroundColor: 'rgba(46, 204, 113, 0.1)',
+                        borderWidth: 3,
+                        fill: false,
+                        tension: 0.4,
+                        yAxisID: 'y1'
+                    },
+                    {
+                        label: '3-Month Moving Average',
+                        data: movingAverageData,
+                        borderColor: '#e74c3c',
+                        backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                        borderWidth: 2,
+                        fill: false,
+                        tension: 0.4,
+                        borderDash: [5, 5],
+                        yAxisID: 'y'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        labels: {
+                            usePointStyle: true,
+                            padding: 20
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0,0,0,0.8)',
+                        titleColor: '#fff',
+                        bodyColor: '#fff',
+                        borderColor: '#3498db',
+                        borderWidth: 1
+                    }
+                },
+                scales: {
+                    x: {
+                        display: true,
+                        title: {
+                            display: true,
+                            text: 'Month'
+                        },
+                        grid: {
+                            color: 'rgba(0,0,0,0.1)'
+                        }
+                    },
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        title: {
+                            display: true,
+                            text: 'Monthly Registrations'
+                        },
+                        grid: {
+                            color: 'rgba(0,0,0,0.1)'
+                        },
+                        beginAtZero: true
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        title: {
+                            display: true,
+                            text: 'Cumulative Total Users'
+                        },
+                        grid: {
+                            drawOnChartArea: false,
+                        },
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+
+        // Monthly Trends Chart (Simplified version)
 
         new Chart(document.getElementById('monthlyTrendsChart'), {
             type: 'line',
@@ -1239,6 +1656,35 @@ while ($row = mysqli_fetch_assoc($registration_source_result)) {
                 plugins: {
                     legend: {
                         position: 'bottom'
+                    }
+                }
+            }
+        });
+
+        // User Segmentation Chart
+        const userSegmentationData = <?php echo json_encode($analytics['user_segmentation']); ?>;
+        new Chart(document.getElementById('userSegmentationChart'), {
+            type: 'pie',
+            data: {
+                labels: userSegmentationData.map(item => item.segment),
+                datasets: [{
+                    data: userSegmentationData.map(item => item.count),
+                    backgroundColor: ['#2ecc71', '#3498db', '#f39c12', '#e74c3c'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            boxWidth: 12,
+                            font: {
+                                size: 10
+                            }
+                        }
                     }
                 }
             }
