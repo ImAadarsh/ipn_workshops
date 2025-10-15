@@ -139,6 +139,29 @@ $schools = [];
 while ($school = mysqli_fetch_assoc($schools_result)) {
     $schools[] = $school;
 }
+
+// Get user statistics for different time periods
+$stats = [];
+
+// Today
+$today_sql = "SELECT COUNT(*) as count FROM users WHERE DATE(created_at) = CURDATE()";
+$today_result = mysqli_query($conn, $today_sql);
+$stats['today'] = mysqli_fetch_assoc($today_result)['count'];
+
+// This Week
+$week_sql = "SELECT COUNT(*) as count FROM users WHERE YEARWEEK(created_at, 1) = YEARWEEK(CURDATE(), 1)";
+$week_result = mysqli_query($conn, $week_sql);
+$stats['week'] = mysqli_fetch_assoc($week_result)['count'];
+
+// This Month
+$month_sql = "SELECT COUNT(*) as count FROM users WHERE YEAR(created_at) = YEAR(CURDATE()) AND MONTH(created_at) = MONTH(CURDATE())";
+$month_result = mysqli_query($conn, $month_sql);
+$stats['month'] = mysqli_fetch_assoc($month_result)['count'];
+
+// This Year
+$year_sql = "SELECT COUNT(*) as count FROM users WHERE YEAR(created_at) = YEAR(CURDATE())";
+$year_result = mysqli_query($conn, $year_sql);
+$stats['year'] = mysqli_fetch_assoc($year_result)['count'];
 ?>
 
 <!DOCTYPE html>
@@ -195,6 +218,27 @@ while ($school = mysqli_fetch_assoc($schools_result)) {
                 font-size: 0.875rem;
             }
         }
+        /* Statistics Cards */
+        .stats-card {
+            transition: all 0.3s ease;
+            border-radius: 12px;
+        }
+        .stats-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15) !important;
+        }
+        .stats-icon {
+            transition: all 0.3s ease;
+        }
+        .stats-card:hover .stats-icon {
+            transform: scale(1.1);
+        }
+        .stats-number {
+            transition: all 0.3s ease;
+        }
+        .stats-card:hover .stats-number {
+            transform: scale(1.05);
+        }
     </style>
 </head>
 <body>
@@ -218,6 +262,66 @@ while ($school = mysqli_fetch_assoc($schools_result)) {
                                 <a href="dashboard.php" class="btn btn-primary">
                                     <i class="ti ti-arrow-left me-1"></i> Back to Dashboard
                                 </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- User Statistics Cards -->
+                <div class="row g-4 mb-4">
+                    <div class="col-12 col-sm-6 col-lg-3">
+                        <div class="card stats-card border-0 shadow-sm h-100">
+                            <div class="card-body text-center">
+                                <div class="d-flex align-items-center justify-content-center mb-3">
+                                    <div class="bg-primary bg-opacity-10 rounded-circle p-3">
+                                        <i class="ti ti-calendar-day text-primary fs-4 stats-icon"></i>
+                                    </div>
+                                </div>
+                                <h3 class="fw-bold text-primary mb-1 stats-number"><?php echo number_format($stats['today']); ?></h3>
+                                <p class="text-muted mb-0">Today</p>
+                                <small class="text-muted">New registrations</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-sm-6 col-lg-3">
+                        <div class="card stats-card border-0 shadow-sm h-100">
+                            <div class="card-body text-center">
+                                <div class="d-flex align-items-center justify-content-center mb-3">
+                                    <div class="bg-info bg-opacity-10 rounded-circle p-3">
+                                        <i class="ti ti-calendar-week text-info fs-4 stats-icon"></i>
+                                    </div>
+                                </div>
+                                <h3 class="fw-bold text-info mb-1 stats-number"><?php echo number_format($stats['week']); ?></h3>
+                                <p class="text-muted mb-0">This Week</p>
+                                <small class="text-muted">New registrations</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-sm-6 col-lg-3">
+                        <div class="card stats-card border-0 shadow-sm h-100">
+                            <div class="card-body text-center">
+                                <div class="d-flex align-items-center justify-content-center mb-3">
+                                    <div class="bg-success bg-opacity-10 rounded-circle p-3">
+                                        <i class="ti ti-calendar-month text-success fs-4 stats-icon"></i>
+                                    </div>
+                                </div>
+                                <h3 class="fw-bold text-success mb-1 stats-number"><?php echo number_format($stats['month']); ?></h3>
+                                <p class="text-muted mb-0">This Month</p>
+                                <small class="text-muted">New registrations</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-sm-6 col-lg-3">
+                        <div class="card stats-card border-0 shadow-sm h-100">
+                            <div class="card-body text-center">
+                                <div class="d-flex align-items-center justify-content-center mb-3">
+                                    <div class="bg-warning bg-opacity-10 rounded-circle p-3">
+                                        <i class="ti ti-calendar-year text-warning fs-4 stats-icon"></i>
+                                    </div>
+                                </div>
+                                <h3 class="fw-bold text-warning mb-1 stats-number"><?php echo number_format($stats['year']); ?></h3>
+                                <p class="text-muted mb-0">This Year</p>
+                                <small class="text-muted">New registrations</small>
                             </div>
                         </div>
                     </div>
