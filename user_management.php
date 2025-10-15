@@ -310,10 +310,35 @@ while ($school = mysqli_fetch_assoc($schools_result)) {
                     <div class="col-12">
                         <div class="card bg-light border-0">
                             <div class="card-body py-2">
-                                <small class="text-muted">
-                                    Showing <?php echo $offset + 1; ?> - <?php echo min($offset + $per_page, $total_users); ?> 
-                                    of <?php echo number_format($total_users); ?> users
-                                </small>
+                                <div class="d-flex justify-content-between align-items-center flex-wrap">
+                                    <small class="text-muted">
+                                        Showing <?php echo $offset + 1; ?> - <?php echo min($offset + $per_page, $total_users); ?> 
+                                        of <?php echo number_format($total_users); ?> users
+                                    </small>
+                                    <?php if (!empty($search) || !empty($filter_school) || !empty($date_from) || !empty($date_to)): ?>
+                                        <div class="d-flex flex-wrap gap-1">
+                                            <small class="text-muted">Active filters:</small>
+                                            <?php if (!empty($search)): ?>
+                                                <span class="badge bg-primary">Search: <?php echo htmlspecialchars($search); ?></span>
+                                            <?php endif; ?>
+                                            <?php if (!empty($filter_school)): ?>
+                                                <?php 
+                                                $selected_school = array_filter($schools, function($s) use ($filter_school) { 
+                                                    return $s['id'] == $filter_school; 
+                                                });
+                                                $selected_school = reset($selected_school);
+                                                ?>
+                                                <span class="badge bg-info">School: <?php echo htmlspecialchars($selected_school['name']); ?></span>
+                                            <?php endif; ?>
+                                            <?php if (!empty($date_from)): ?>
+                                                <span class="badge bg-success">From: <?php echo date('d M Y', strtotime($date_from)); ?></span>
+                                            <?php endif; ?>
+                                            <?php if (!empty($date_to)): ?>
+                                                <span class="badge bg-success">To: <?php echo date('d M Y', strtotime($date_to)); ?></span>
+                                            <?php endif; ?>
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
                             </div>
                         </div>
                     </div>
