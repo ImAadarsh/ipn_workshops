@@ -61,6 +61,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // Get search and filter parameters
 $search = isset($_GET['search']) ? mysqli_real_escape_string($conn, $_GET['search']) : '';
 $filter_school = isset($_GET['filter_school']) ? intval($_GET['filter_school']) : '';
+$date_from = isset($_GET['date_from']) ? $_GET['date_from'] : '';
+$date_to = isset($_GET['date_to']) ? $_GET['date_to'] : '';
 $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
 $per_page = 100; // Reduced from 20 to 12
 $offset = ($page - 1) * $per_page;
@@ -84,6 +86,18 @@ if (!empty($filter_school)) {
     $where_conditions[] = "u.school_id = ?";
     $params[] = $filter_school;
     $param_types .= "i";
+}
+
+if (!empty($date_from)) {
+    $where_conditions[] = "DATE(u.created_at) >= ?";
+    $params[] = $date_from;
+    $param_types .= "s";
+}
+
+if (!empty($date_to)) {
+    $where_conditions[] = "DATE(u.created_at) <= ?";
+    $params[] = $date_to;
+    $param_types .= "s";
 }
 
 $where_clause = implode(" AND ", $where_conditions);
@@ -244,12 +258,12 @@ while ($school = mysqli_fetch_assoc($schools_result)) {
                     </div>
                     <div class="card-body">
                         <form method="GET" class="row g-3">
-                            <div class="col-md-8">
+                            <div class="col-md-6">
                                 <label class="form-label">Search</label>
                                 <input type="text" class="form-control" name="search" value="<?php echo htmlspecialchars($search); ?>" 
                                        placeholder="Name, Email, Mobile, Institute...">
                             </div>
-                            <div class="col-md-2">
+                            <div class="col-md-3">
                                 <label class="form-label">School</label>
                                 <select class="form-select" name="filter_school">
                                     <option value="">All Schools</option>
@@ -260,12 +274,31 @@ while ($school = mysqli_fetch_assoc($schools_result)) {
                                     <?php endforeach; ?>
                                 </select>
                             </div>
-                            <div class="col-md-2">
+                            <div class="col-md-3">
                                 <label class="form-label">&nbsp;</label>
                                 <div class="d-grid">
                                     <button type="submit" class="btn btn-primary">
                                         <i class="ti ti-search me-1"></i> Search
                                     </button>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Date From</label>
+                                <input type="date" class="form-control" name="date_from" value="<?php echo htmlspecialchars($date_from); ?>">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Date To</label>
+                                <input type="date" class="form-control" name="date_to" value="<?php echo htmlspecialchars($date_to); ?>">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">&nbsp;</label>
+                                <div class="d-flex gap-2">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="ti ti-filter me-1"></i> Apply Filters
+                                    </button>
+                                    <a href="user_management.php" class="btn btn-outline-secondary">
+                                        <i class="ti ti-x me-1"></i> Clear
+                                    </a>
                                 </div>
                             </div>
                         </form>
