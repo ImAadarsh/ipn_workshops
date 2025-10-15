@@ -36,6 +36,60 @@ if ($result) {
     }
 }
 
+// Get analytics data for dashboard
+$analytics = [];
+
+// Get total users
+$total_users_sql = "SELECT COUNT(*) as total FROM users";
+$result = mysqli_query($conn, $total_users_sql);
+if ($result && $row = mysqli_fetch_assoc($result)) {
+    $analytics['total_users'] = $row['total'];
+}
+
+// Get monthly users for the last 12 months
+$monthly_users_sql = "SELECT 
+    DATE_FORMAT(created_at, '%Y-%m') as month,
+    COUNT(*) as count
+    FROM users 
+    WHERE created_at >= DATE_SUB(NOW(), INTERVAL 12 MONTH)
+    GROUP BY DATE_FORMAT(created_at, '%Y-%m')
+    ORDER BY month ASC";
+$result = mysqli_query($conn, $monthly_users_sql);
+$analytics['monthly_users'] = [];
+if ($result) {
+    while ($row = mysqli_fetch_assoc($result)) {
+        $analytics['monthly_users'][] = $row;
+    }
+}
+
+// Get today's users
+$today_users_sql = "SELECT COUNT(*) as count FROM users WHERE DATE(created_at) = CURDATE()";
+$result = mysqli_query($conn, $today_users_sql);
+if ($result && $row = mysqli_fetch_assoc($result)) {
+    $analytics['today_users'] = $row['count'];
+}
+
+// Get this week's users
+$week_users_sql = "SELECT COUNT(*) as count FROM users WHERE YEARWEEK(created_at, 1) = YEARWEEK(CURDATE(), 1)";
+$result = mysqli_query($conn, $week_users_sql);
+if ($result && $row = mysqli_fetch_assoc($result)) {
+    $analytics['week_users'] = $row['count'];
+}
+
+// Get this month's users
+$month_users_sql = "SELECT COUNT(*) as count FROM users WHERE YEAR(created_at) = YEAR(CURDATE()) AND MONTH(created_at) = MONTH(CURDATE())";
+$result = mysqli_query($conn, $month_users_sql);
+if ($result && $row = mysqli_fetch_assoc($result)) {
+    $analytics['month_users'] = $row['count'];
+}
+
+// Get this year's users
+$year_users_sql = "SELECT COUNT(*) as count FROM users WHERE YEAR(created_at) = YEAR(CURDATE())";
+$result = mysqli_query($conn, $year_users_sql);
+if ($result && $row = mysqli_fetch_assoc($result)) {
+    $analytics['year_users'] = $row['count'];
+}
+
 // Featured upcoming workshop stats
 $featuredStats = [
     'b2b' => 0,
@@ -122,6 +176,10 @@ if (!empty($upcomingWorkshops)) {
     <title>Dashboard | IPN Academy</title>
     <?php include 'includes/head.php'; ?>
     
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    
     <!-- Custom CSS for enhanced statistics design -->
     <style>
         .stat-card {
@@ -145,6 +203,25 @@ if (!empty($upcomingWorkshops)) {
             .stat-number {
                 font-size: 1.5rem !important;
             }
+        }
+        
+        /* Gradient Button */
+        .btn-gradient-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+        .btn-gradient-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+            color: white;
         }
     </style>
 </head>
@@ -196,6 +273,69 @@ if (!empty($upcomingWorkshops)) {
                         </div>
                     </div>
                 </div> -->
+
+                <!-- User Analytics Section -->
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h4 class="header-title">📊 User Analytics Overview</h4>
+                                <a href="user_analytics.php" class="btn btn-info">
+                                    <i class="ti ti-chart-line me-1"></i>View Full Analytics
+                                </a>
+                            </div>
+                            <div class="card-body">
+                                <!-- Quick Stats Cards -->
+                                <div class="row g-3 mb-4">
+                                    <div class="col-6 col-md-3">
+                                        <div class="stat-card bg-primary-subtle border border-primary rounded-3 p-3 text-center">
+                                            <div class="stat-number text-primary fw-bold fs-4"><?php echo number_format($analytics['today_users']); ?></div>
+                                            <div class="stat-label text-muted small">Today</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-6 col-md-3">
+                                        <div class="stat-card bg-success-subtle border border-success rounded-3 p-3 text-center">
+                                            <div class="stat-number text-success fw-bold fs-4"><?php echo number_format($analytics['week_users']); ?></div>
+                                            <div class="stat-label text-muted small">This Week</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-6 col-md-3">
+                                        <div class="stat-card bg-info-subtle border border-info rounded-3 p-3 text-center">
+                                            <div class="stat-number text-info fw-bold fs-4"><?php echo number_format($analytics['month_users']); ?></div>
+                                            <div class="stat-label text-muted small">This Month</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-6 col-md-3">
+                                        <div class="stat-card bg-warning-subtle border border-warning rounded-3 p-3 text-center">
+                                            <div class="stat-number text-warning fw-bold fs-4"><?php echo number_format($analytics['total_users']); ?></div>
+                                            <div class="stat-label text-muted small">Total Users</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- User Registration Trends Chart -->
+                                <div class="row">
+                                    <div class="col-12">
+                                        <h5 class="mb-3">📈 User Registration Trends (Last 12 Months)</h5>
+                                        <div style="height: 400px; position: relative;">
+                                            <canvas id="userTrendsChart"></canvas>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Navigation Button -->
+                                <div class="row mt-4">
+                                    <div class="col-12 text-center">
+                                        <a href="user_analytics.php" class="btn btn-lg btn-gradient-primary">
+                                            <i class="ti ti-chart-dots me-2"></i>
+                                            Need More Smart Analytics? Visit Full Dashboard
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
                 <!-- Upcoming Workshops Section -->
                 <div class="row mt-4">
@@ -656,6 +796,207 @@ if (!empty($upcomingWorkshops)) {
     <script src="assets/vendor/jquery/jquery.min.js"></script>
     <script src="https://unpkg.com/@popperjs/core@2.11.8/dist/umd/popper.min.js"></script>
     <script src="assets/vendor/bootstrap/js/bootstrap.min.js"></script>
+
+    <!-- Chart.js Script -->
+    <script>
+        // User Registration Trends Chart
+        const monthlyData = <?php echo json_encode($analytics['monthly_users']); ?>;
+        const monthlyLabels = monthlyData.map(item => {
+            const date = new Date(item.month + '-01');
+            return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+        });
+        const monthlyCounts = monthlyData.map(item => parseInt(item.count));
+
+        // Calculate cumulative totals
+        let cumulativeTotal = 0;
+        const cumulativeData = monthlyCounts.map(count => {
+            cumulativeTotal += count;
+            return cumulativeTotal;
+        });
+
+        // Calculate moving averages (3-month)
+        const movingAverageData = [];
+        for (let i = 0; i < monthlyCounts.length; i++) {
+            if (i < 2) {
+                movingAverageData.push(null);
+            } else {
+                const sum = monthlyCounts[i-2] + monthlyCounts[i-1] + monthlyCounts[i];
+                const avg = sum / 3;
+                movingAverageData.push(Math.round(avg * 100) / 100);
+            }
+        }
+
+        // Calculate growth rate (month-over-month percentage)
+        const growthRateData = [];
+        for (let i = 0; i < monthlyCounts.length; i++) {
+            if (i === 0) {
+                growthRateData.push(null);
+            } else {
+                const prevCount = monthlyCounts[i-1];
+                const currentCount = monthlyCounts[i];
+                if (prevCount > 0) {
+                    const growthRate = ((currentCount - prevCount) / prevCount) * 100;
+                    growthRateData.push(Math.round(growthRate * 100) / 100);
+                } else {
+                    growthRateData.push(null);
+                }
+            }
+        }
+
+        new Chart(document.getElementById('userTrendsChart'), {
+            type: 'line',
+            data: {
+                labels: monthlyLabels,
+                datasets: [
+                    {
+                        label: 'Monthly Registrations',
+                        data: monthlyCounts,
+                        borderColor: '#3498db',
+                        backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4,
+                        yAxisID: 'y',
+                        pointRadius: 4,
+                        pointHoverRadius: 6
+                    },
+                    {
+                        label: 'Cumulative Total Users',
+                        data: cumulativeData,
+                        borderColor: '#2ecc71',
+                        backgroundColor: 'rgba(46, 204, 113, 0.1)',
+                        borderWidth: 3,
+                        fill: false,
+                        tension: 0.4,
+                        yAxisID: 'y1',
+                        pointRadius: 3,
+                        pointHoverRadius: 5
+                    },
+                    {
+                        label: '3-Month Moving Average',
+                        data: movingAverageData,
+                        borderColor: '#e74c3c',
+                        backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                        borderWidth: 2,
+                        fill: false,
+                        tension: 0.4,
+                        borderDash: [5, 5],
+                        yAxisID: 'y',
+                        pointRadius: 2,
+                        pointHoverRadius: 4
+                    },
+                    {
+                        label: 'Growth Rate (%)',
+                        data: growthRateData,
+                        borderColor: '#f39c12',
+                        backgroundColor: 'rgba(243, 156, 18, 0.1)',
+                        borderWidth: 2,
+                        fill: false,
+                        tension: 0.4,
+                        borderDash: [3, 3],
+                        yAxisID: 'y2',
+                        pointRadius: 2,
+                        pointHoverRadius: 4
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        labels: {
+                            usePointStyle: true,
+                            padding: 20
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0,0,0,0.8)',
+                        titleColor: '#fff',
+                        bodyColor: '#fff',
+                        borderColor: '#3498db',
+                        borderWidth: 1
+                    }
+                },
+                scales: {
+                    x: {
+                        display: true,
+                        title: {
+                            display: true,
+                            text: 'Month',
+                            font: {
+                                size: 12,
+                                weight: 'bold'
+                            }
+                        },
+                        grid: {
+                            color: 'rgba(0,0,0,0.1)'
+                        },
+                        ticks: {
+                            maxRotation: 45,
+                            minRotation: 0
+                        }
+                    },
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        title: {
+                            display: true,
+                            text: 'Monthly Registrations',
+                            font: {
+                                size: 12,
+                                weight: 'bold'
+                            }
+                        },
+                        grid: {
+                            color: 'rgba(0,0,0,0.1)'
+                        },
+                        beginAtZero: true
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        title: {
+                            display: true,
+                            text: 'Cumulative Total Users',
+                            font: {
+                                size: 12,
+                                weight: 'bold'
+                            }
+                        },
+                        grid: {
+                            drawOnChartArea: false,
+                        },
+                        beginAtZero: true
+                    },
+                    y2: {
+                        type: 'linear',
+                        display: false, // Initially hidden, can be toggled
+                        position: 'right',
+                        title: {
+                            display: true,
+                            text: 'Growth Rate (%)',
+                            font: {
+                                size: 12,
+                                weight: 'bold'
+                            }
+                        },
+                        grid: {
+                            drawOnChartArea: false,
+                        }
+                    }
+                }
+            }
+        });
+    </script>
 
 </body>
 

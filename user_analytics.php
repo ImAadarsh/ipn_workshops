@@ -535,6 +535,18 @@ while ($row = mysqli_fetch_assoc($user_segmentation_result)) {
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
     
+    <!-- Advanced Chart Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-3d@latest/dist/chartjs-chart-3d.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts@latest"></script>
+    
+    <!-- CSS for Advanced Visualizations -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+    
     <!-- Custom CSS -->
     <style>
         .analytics-card {
@@ -597,6 +609,151 @@ while ($row = mysqli_fetch_assoc($user_segmentation_result)) {
         .badge-custom {
             font-size: 0.8rem;
             padding: 0.4rem 0.8rem;
+        }
+        
+        /* Advanced Visualization Styles */
+        .viz-container {
+            position: relative;
+            height: 400px;
+            margin-bottom: 2rem;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        .viz-container.large {
+            height: 500px;
+        }
+        .viz-container.small {
+            height: 300px;
+        }
+        
+        /* 3D Chart Styles */
+        .chart-3d {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 12px;
+        }
+        
+        /* Flow Chart Styles */
+        .flow-chart {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+        
+        /* Map Styles */
+        .map-container {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+        
+        /* Heatmap Styles */
+        .heatmap-container {
+            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+        }
+        
+        /* Glassmorphism Effect */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        
+        /* Animated Counters */
+        .counter {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #2c3e50;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        /* Particle Background */
+        .particle-bg {
+            position: relative;
+            overflow: hidden;
+        }
+        .particle-bg::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at 20% 50%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
+                        radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.3) 0%, transparent 50%),
+                        radial-gradient(circle at 40% 80%, rgba(120, 219, 255, 0.3) 0%, transparent 50%);
+            animation: particleFloat 20s ease-in-out infinite;
+        }
+        
+        @keyframes particleFloat {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(180deg); }
+        }
+        
+        /* Interactive Elements */
+        .interactive-element {
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .interactive-element:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        /* Glow Effects */
+        .glow {
+            box-shadow: 0 0 20px rgba(52, 152, 219, 0.5);
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+        
+        @keyframes glow {
+            from { box-shadow: 0 0 20px rgba(52, 152, 219, 0.5); }
+            to { box-shadow: 0 0 30px rgba(52, 152, 219, 0.8); }
+        }
+        
+        /* Progress Rings */
+        .progress-ring {
+            transform: rotate(-90deg);
+        }
+        .progress-ring-circle {
+            stroke-dasharray: 283;
+            stroke-dashoffset: 283;
+            transition: stroke-dashoffset 0.5s ease-in-out;
+        }
+        
+        /* Floating Action Button */
+        .fab {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            cursor: pointer;
+            z-index: 1000;
+            transition: all 0.3s ease;
+        }
+        .fab:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 25px rgba(0,0,0,0.4);
+        }
+        
+        /* Neumorphism */
+        .neomorphic {
+            background: #f0f0f3;
+            border-radius: 20px;
+            box-shadow: 20px 20px 60px #bebebe, -20px -20px 60px #ffffff;
+        }
+        
+        /* Dark Theme Support */
+        .dark-theme {
+            background: #1a1a1a;
+            color: #ffffff;
+        }
+        .dark-theme .analytics-card {
+            background: #2d2d2d;
+            border: 1px solid #404040;
         }
     </style>
 </head>
@@ -1188,12 +1345,201 @@ while ($row = mysqli_fetch_assoc($user_segmentation_result)) {
                         </div>
                     </div>
                 </div>
+
+                <!-- 🚀 Advanced 3D Visualizations -->
+                <div class="row g-4 mb-4">
+                    <div class="col-12">
+                        <h4 class="section-title">🚀 Advanced 3D Visualizations</h4>
+                    </div>
+                </div>
+
+                <!-- 3D Charts Row 1 -->
+                <div class="row g-4 mb-4">
+                    <div class="col-lg-6">
+                        <div class="card analytics-card chart-3d particle-bg">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">🎯 3D User Growth Pyramid</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="viz-container" id="pyramid3d"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="card analytics-card chart-3d particle-bg">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">🌍 3D Geographic Distribution</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="viz-container" id="geo3d"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3D Charts Row 2 -->
+                <div class="row g-4 mb-4">
+                    <div class="col-lg-6">
+                        <div class="card analytics-card chart-3d particle-bg">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">📊 3D School Performance Matrix</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="viz-container" id="school3d"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="card analytics-card chart-3d particle-bg">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">🎪 3D User Journey Funnel</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="viz-container" id="funnel3d"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 🔄 Flow Charts & Network Diagrams -->
+                <div class="row g-4 mb-4">
+                    <div class="col-12">
+                        <h4 class="section-title">🔄 Flow Charts & Network Diagrams</h4>
+                    </div>
+                </div>
+
+                <!-- Flow Charts Row -->
+                <div class="row g-4 mb-4">
+                    <div class="col-lg-8">
+                        <div class="card analytics-card flow-chart particle-bg">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">🌊 User Registration Flow (Sankey Diagram)</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="viz-container large" id="sankeyFlow"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-4">
+                        <div class="card analytics-card flow-chart particle-bg">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">🕸️ School-User Network</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="viz-container" id="networkGraph"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 🗺️ Interactive Maps & Heatmaps -->
+                <div class="row g-4 mb-4">
+                    <div class="col-12">
+                        <h4 class="section-title">🗺️ Interactive Maps & Heatmaps</h4>
+                    </div>
+                </div>
+
+                <!-- Maps Row -->
+                <div class="row g-4 mb-4">
+                    <div class="col-lg-8">
+                        <div class="card analytics-card map-container particle-bg">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">🗺️ Interactive User Distribution Map</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="viz-container large" id="interactiveMap"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-4">
+                        <div class="card analytics-card heatmap-container particle-bg">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">🔥 Registration Heatmap</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="viz-container" id="heatmap"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 📈 Advanced Analytics & Predictions -->
+                <div class="row g-4 mb-4">
+                    <div class="col-12">
+                        <h4 class="section-title">📈 Advanced Analytics & Predictions</h4>
+                    </div>
+                </div>
+
+                <!-- Advanced Analytics Row -->
+                <div class="row g-4 mb-4">
+                    <div class="col-lg-6">
+                        <div class="card analytics-card glass-card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">🔮 User Growth Prediction</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="viz-container" id="predictionChart"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="card analytics-card glass-card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">📊 Seasonal Pattern Analysis</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="viz-container" id="seasonalChart"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 🎯 Interactive Dashboards -->
+                <div class="row g-4 mb-4">
+                    <div class="col-12">
+                        <h4 class="section-title">🎯 Interactive Dashboards</h4>
+                    </div>
+                </div>
+
+                <!-- Interactive Dashboard Row -->
+                <div class="row g-4 mb-4">
+                    <div class="col-lg-6">
+                        <div class="card analytics-card neomorphic">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">📊 Real-time Registration Counter</h5>
+                            </div>
+                            <div class="card-body text-center">
+                                <div class="counter glow" id="liveCounter">0</div>
+                                <p class="text-muted">Live registrations today</p>
+                                <div class="progress mt-3">
+                                    <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                                         role="progressbar" style="width: 75%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="card analytics-card neomorphic">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">🎯 User Cohort Analysis</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="viz-container small" id="cohortChart"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
         <!-- Footer Start -->
         <?php include 'includes/footer.php'; ?>
         <!-- end Footer -->
+        
+        <!-- Floating Action Button -->
+        <button class="fab" onclick="toggleTheme()" title="Toggle Theme">
+            <i class="fas fa-palette"></i>
+        </button>
     </div>
 
     <!-- Core JS -->
