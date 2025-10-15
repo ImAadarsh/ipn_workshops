@@ -143,6 +143,11 @@
                         </a>
                     </li>
                     <li class="side-nav-item">
+                        <a href="<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/') !== false) ? '../../user_analytics.php' : 'user_analytics.php'; ?>" class="side-nav-link">
+                            <span class="menu-text">User Analytics</span>
+                        </a>
+                    </li>
+                    <li class="side-nav-item">
                         <a href="<?php echo (strpos($_SERVER['REQUEST_URI'], '/tlc_editions/') !== false) ? '../../bad_users.php' : 'bad_users.php'; ?>" class="side-nav-link">
                             <span class="menu-text">Bad Users</span>
                         </a>

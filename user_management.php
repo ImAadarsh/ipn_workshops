@@ -278,6 +278,9 @@ $stats['year'] = mysqli_fetch_assoc($year_result)['count'];
                                 <h4 class="fs-18 text-uppercase fw-bold m-0">Smart User Management</h4>
                             </div>
                             <div class="mt-3 mt-sm-0">
+                                <a href="user_analytics.php" class="btn btn-info me-2">
+                                    <i class="ti ti-chart-line me-1"></i> Analytics
+                                </a>
                                 <a href="bad_users.php" class="btn btn-danger me-2">
                                     <i class="ti ti-alert-triangle me-1"></i> Bad Users
                                 </a>
