@@ -224,8 +224,8 @@ $stats['year'] = mysqli_fetch_assoc($year_result)['count'];
             border-radius: 12px;
         }
         .stats-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.15) !important;
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important;
         }
         .stats-icon {
             transition: all 0.3s ease;
@@ -238,6 +238,28 @@ $stats['year'] = mysqli_fetch_assoc($year_result)['count'];
         }
         .stats-card:hover .stats-number {
             transform: scale(1.05);
+        }
+        .stats-card .card-body {
+            padding: 1rem 0.75rem;
+        }
+        .stats-card .stats-icon-container {
+            margin-bottom: 0.75rem;
+        }
+        .stats-card .stats-icon-container .rounded-circle {
+            padding: 0.5rem !important;
+        }
+        .stats-card .stats-icon {
+            font-size: 1.25rem !important;
+        }
+        .stats-card .stats-number {
+            font-size: 1.5rem !important;
+            margin-bottom: 0.25rem !important;
+        }
+        .stats-card p {
+            margin-bottom: 0.25rem !important;
+        }
+        .stats-card small {
+            font-size: 0.75rem;
         }
     </style>
 </head>
@@ -268,58 +290,58 @@ $stats['year'] = mysqli_fetch_assoc($year_result)['count'];
                 </div>
 
                 <!-- User Statistics Cards -->
-                <div class="row g-4 mb-4">
+                <div class="row g-3 mb-4">
                     <div class="col-12 col-sm-6 col-lg-3">
-                        <div class="card stats-card border-0 shadow-sm h-100">
+                        <div class="card stats-card border-0 shadow-sm">
                             <div class="card-body text-center">
-                                <div class="d-flex align-items-center justify-content-center mb-3">
-                                    <div class="bg-primary bg-opacity-10 rounded-circle p-3">
-                                        <i class="ti ti-calendar-day text-primary fs-4 stats-icon"></i>
+                                <div class="d-flex align-items-center justify-content-center stats-icon-container">
+                                    <div class="bg-primary bg-opacity-10 rounded-circle">
+                                        <i class="ti ti-calendar-day text-primary stats-icon"></i>
                                     </div>
                                 </div>
-                                <h3 class="fw-bold text-primary mb-1 stats-number"><?php echo number_format($stats['today']); ?></h3>
+                                <h3 class="fw-bold text-primary stats-number"><?php echo number_format($stats['today']); ?></h3>
                                 <p class="text-muted mb-0">Today</p>
                                 <small class="text-muted">New registrations</small>
                             </div>
                         </div>
                     </div>
                     <div class="col-12 col-sm-6 col-lg-3">
-                        <div class="card stats-card border-0 shadow-sm h-100">
+                        <div class="card stats-card border-0 shadow-sm">
                             <div class="card-body text-center">
-                                <div class="d-flex align-items-center justify-content-center mb-3">
-                                    <div class="bg-info bg-opacity-10 rounded-circle p-3">
-                                        <i class="ti ti-calendar-week text-info fs-4 stats-icon"></i>
+                                <div class="d-flex align-items-center justify-content-center stats-icon-container">
+                                    <div class="bg-info bg-opacity-10 rounded-circle">
+                                        <i class="ti ti-calendar-week text-info stats-icon"></i>
                                     </div>
                                 </div>
-                                <h3 class="fw-bold text-info mb-1 stats-number"><?php echo number_format($stats['week']); ?></h3>
+                                <h3 class="fw-bold text-info stats-number"><?php echo number_format($stats['week']); ?></h3>
                                 <p class="text-muted mb-0">This Week</p>
                                 <small class="text-muted">New registrations</small>
                             </div>
                         </div>
                     </div>
                     <div class="col-12 col-sm-6 col-lg-3">
-                        <div class="card stats-card border-0 shadow-sm h-100">
+                        <div class="card stats-card border-0 shadow-sm">
                             <div class="card-body text-center">
-                                <div class="d-flex align-items-center justify-content-center mb-3">
-                                    <div class="bg-success bg-opacity-10 rounded-circle p-3">
-                                        <i class="ti ti-calendar-month text-success fs-4 stats-icon"></i>
+                                <div class="d-flex align-items-center justify-content-center stats-icon-container">
+                                    <div class="bg-success bg-opacity-10 rounded-circle">
+                                        <i class="ti ti-calendar-month text-success stats-icon"></i>
                                     </div>
                                 </div>
-                                <h3 class="fw-bold text-success mb-1 stats-number"><?php echo number_format($stats['month']); ?></h3>
+                                <h3 class="fw-bold text-success stats-number"><?php echo number_format($stats['month']); ?></h3>
                                 <p class="text-muted mb-0">This Month</p>
                                 <small class="text-muted">New registrations</small>
                             </div>
                         </div>
                     </div>
                     <div class="col-12 col-sm-6 col-lg-3">
-                        <div class="card stats-card border-0 shadow-sm h-100">
+                        <div class="card stats-card border-0 shadow-sm">
                             <div class="card-body text-center">
-                                <div class="d-flex align-items-center justify-content-center mb-3">
-                                    <div class="bg-warning bg-opacity-10 rounded-circle p-3">
-                                        <i class="ti ti-calendar-year text-warning fs-4 stats-icon"></i>
+                                <div class="d-flex align-items-center justify-content-center stats-icon-container">
+                                    <div class="bg-warning bg-opacity-10 rounded-circle">
+                                        <i class="ti ti-calendar-year text-warning stats-icon"></i>
                                     </div>
                                 </div>
-                                <h3 class="fw-bold text-warning mb-1 stats-number"><?php echo number_format($stats['year']); ?></h3>
+                                <h3 class="fw-bold text-warning stats-number"><?php echo number_format($stats['year']); ?></h3>
                                 <p class="text-muted mb-0">This Year</p>
                                 <small class="text-muted">New registrations</small>
                             </div>
