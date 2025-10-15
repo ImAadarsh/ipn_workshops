@@ -19,18 +19,31 @@ $total_users_sql = "SELECT COUNT(*) as total FROM users";
 $total_users_result = mysqli_query($conn, $total_users_sql);
 $analytics['total_users'] = mysqli_fetch_assoc($total_users_result)['total'];
 
-// 2. Users by Month (Last 12 months)
+// 2. Users by Month (All Time - Complete History)
 $monthly_users_sql = "SELECT 
     DATE_FORMAT(created_at, '%Y-%m') as month,
     COUNT(*) as count
     FROM users 
-    WHERE created_at >= DATE_SUB(NOW(), INTERVAL 12 MONTH)
     GROUP BY DATE_FORMAT(created_at, '%Y-%m')
     ORDER BY month ASC";
 $monthly_users_result = mysqli_query($conn, $monthly_users_sql);
 $analytics['monthly_users'] = [];
 while ($row = mysqli_fetch_assoc($monthly_users_result)) {
     $analytics['monthly_users'][] = $row;
+}
+
+// 2b. Users by Month (Last 12 months for comparison)
+$monthly_users_12m_sql = "SELECT 
+    DATE_FORMAT(created_at, '%Y-%m') as month,
+    COUNT(*) as count
+    FROM users 
+    WHERE created_at >= DATE_SUB(NOW(), INTERVAL 12 MONTH)
+    GROUP BY DATE_FORMAT(created_at, '%Y-%m')
+    ORDER BY month ASC";
+$monthly_users_12m_result = mysqli_query($conn, $monthly_users_12m_sql);
+$analytics['monthly_users_12m'] = [];
+while ($row = mysqli_fetch_assoc($monthly_users_12m_result)) {
+    $analytics['monthly_users_12m'][] = $row;
 }
 
 // 3. Users by Day (Last 30 days)
@@ -661,8 +674,8 @@ while ($row = mysqli_fetch_assoc($user_segmentation_result)) {
                     <div class="col-12">
                         <div class="card analytics-card">
                             <div class="card-header">
-                                <h5 class="card-title mb-0">📈 Overall User Registration Trends (Last 12 Months)</h5>
-                                <p class="text-muted mb-0">Comprehensive view of user growth patterns and trends</p>
+                                <h5 class="card-title mb-0">📈 Overall User Registration Trends (Complete History)</h5>
+                                <p class="text-muted mb-0">Complete historical view of user growth patterns from start to end</p>
                             </div>
                             <div class="card-body">
                                 <div class="chart-container large">
@@ -734,11 +747,11 @@ while ($row = mysqli_fetch_assoc($user_segmentation_result)) {
                     <div class="col-lg-6">
                         <div class="card analytics-card">
                             <div class="card-header">
-                                <h5 class="card-title mb-0">Registration by Hour of Day</h5>
+                                <h5 class="card-title mb-0">Profile Completion Status</h5>
                             </div>
                             <div class="card-body">
                                 <div class="chart-container">
-                                    <canvas id="hourlyChart"></canvas>
+                                    <canvas id="profileCompletionChart"></canvas>
                                 </div>
                             </div>
                         </div>
@@ -746,11 +759,11 @@ while ($row = mysqli_fetch_assoc($user_segmentation_result)) {
                     <div class="col-lg-6">
                         <div class="card analytics-card">
                             <div class="card-header">
-                                <h5 class="card-title mb-0">Profile Completion Status</h5>
+                                <h5 class="card-title mb-0">User Engagement Levels</h5>
                             </div>
                             <div class="card-body">
                                 <div class="chart-container">
-                                    <canvas id="profileCompletionChart"></canvas>
+                                    <canvas id="engagementChart"></canvas>
                                 </div>
                             </div>
                         </div>
@@ -795,32 +808,11 @@ while ($row = mysqli_fetch_assoc($user_segmentation_result)) {
                     <div class="col-lg-6">
                         <div class="card analytics-card">
                             <div class="card-header">
-                                <h5 class="card-title mb-0">Top Institutes</h5>
+                                <h5 class="card-title mb-0">User Registration by Hour of Day</h5>
                             </div>
                             <div class="card-body">
-                                <div class="table-responsive">
-                                    <table class="table table-hover">
-                                        <thead class="table-light">
-                                            <tr>
-                                                <th>Institute</th>
-                                                <th>Count</th>
-                                                <th>Percentage</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <?php 
-                                            $total_institutes = array_sum(array_column($analytics['institute_distribution'], 'count'));
-                                            foreach ($analytics['institute_distribution'] as $institute): 
-                                                $percentage = ($institute['count'] / $total_institutes) * 100;
-                                            ?>
-                                            <tr>
-                                                <td><?php echo htmlspecialchars($institute['institute_name']); ?></td>
-                                                <td><span class="badge bg-success"><?php echo number_format($institute['count']); ?></span></td>
-                                                <td><?php echo number_format($percentage, 1); ?>%</td>
-                                            </tr>
-                                            <?php endforeach; ?>
-                                        </tbody>
-                                    </table>
+                                <div class="chart-container">
+                                    <canvas id="hourlyChart"></canvas>
                                 </div>
                             </div>
                         </div>
@@ -1008,9 +1000,9 @@ while ($row = mysqli_fetch_assoc($user_segmentation_result)) {
                     </div>
                 </div>
 
-                <!-- School Distribution & Engagement Analysis -->
+                <!-- School Distribution -->
                 <div class="row g-4 mb-4">
-                    <div class="col-lg-8">
+                    <div class="col-12">
                         <div class="card analytics-card">
                             <div class="card-header">
                                 <h5 class="card-title mb-0">Top 15 Schools - User Distribution</h5>
@@ -1018,18 +1010,6 @@ while ($row = mysqli_fetch_assoc($user_segmentation_result)) {
                             <div class="card-body">
                                 <div class="chart-container">
                                     <canvas id="schoolDistributionChart"></canvas>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-lg-4">
-                        <div class="card analytics-card">
-                            <div class="card-header">
-                                <h5 class="card-title mb-0">User Engagement Levels</h5>
-                            </div>
-                            <div class="card-body">
-                                <div class="chart-container small">
-                                    <canvas id="engagementChart"></canvas>
                                 </div>
                             </div>
                         </div>
@@ -1226,29 +1206,47 @@ while ($row = mysqli_fetch_assoc($user_segmentation_result)) {
         Chart.defaults.font.family = "'Inter', sans-serif";
         Chart.defaults.color = '#6c757d';
 
-        // Overall Trends Chart - Full Width
+        // Overall Trends Chart - Full Width (Complete History)
         const monthlyData = <?php echo json_encode($analytics['monthly_users']); ?>;
         const monthlyLabels = monthlyData.map(item => {
             const date = new Date(item.month + '-01');
             return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
         });
-        const monthlyCounts = monthlyData.map(item => item.count);
+        const monthlyCounts = monthlyData.map(item => parseInt(item.count));
 
-        // Calculate cumulative totals for overall trends
+        // Calculate cumulative totals for overall trends (perfect calculation)
         let cumulativeTotal = 0;
         const cumulativeData = monthlyCounts.map(count => {
             cumulativeTotal += count;
             return cumulativeTotal;
         });
 
-        // Calculate moving averages (3-month)
+        // Calculate moving averages (3-month) with proper handling
         const movingAverageData = [];
         for (let i = 0; i < monthlyCounts.length; i++) {
             if (i < 2) {
                 movingAverageData.push(null);
             } else {
-                const avg = (monthlyCounts[i-2] + monthlyCounts[i-1] + monthlyCounts[i]) / 3;
-                movingAverageData.push(Math.round(avg));
+                const sum = monthlyCounts[i-2] + monthlyCounts[i-1] + monthlyCounts[i];
+                const avg = sum / 3;
+                movingAverageData.push(Math.round(avg * 100) / 100); // Round to 2 decimal places
+            }
+        }
+
+        // Calculate growth rate (month-over-month percentage)
+        const growthRateData = [];
+        for (let i = 0; i < monthlyCounts.length; i++) {
+            if (i === 0) {
+                growthRateData.push(null);
+            } else {
+                const prevCount = monthlyCounts[i-1];
+                const currentCount = monthlyCounts[i];
+                if (prevCount > 0) {
+                    const growthRate = ((currentCount - prevCount) / prevCount) * 100;
+                    growthRateData.push(Math.round(growthRate * 100) / 100);
+                } else {
+                    growthRateData.push(null);
+                }
             }
         }
 
@@ -1263,9 +1261,11 @@ while ($row = mysqli_fetch_assoc($user_segmentation_result)) {
                         borderColor: '#3498db',
                         backgroundColor: 'rgba(52, 152, 219, 0.1)',
                         borderWidth: 3,
-                        fill: false,
+                        fill: true,
                         tension: 0.4,
-                        yAxisID: 'y'
+                        yAxisID: 'y',
+                        pointRadius: 4,
+                        pointHoverRadius: 6
                     },
                     {
                         label: 'Cumulative Total Users',
@@ -1275,7 +1275,9 @@ while ($row = mysqli_fetch_assoc($user_segmentation_result)) {
                         borderWidth: 3,
                         fill: false,
                         tension: 0.4,
-                        yAxisID: 'y1'
+                        yAxisID: 'y1',
+                        pointRadius: 3,
+                        pointHoverRadius: 5
                     },
                     {
                         label: '3-Month Moving Average',
@@ -1286,7 +1288,22 @@ while ($row = mysqli_fetch_assoc($user_segmentation_result)) {
                         fill: false,
                         tension: 0.4,
                         borderDash: [5, 5],
-                        yAxisID: 'y'
+                        yAxisID: 'y',
+                        pointRadius: 2,
+                        pointHoverRadius: 4
+                    },
+                    {
+                        label: 'Growth Rate (%)',
+                        data: growthRateData,
+                        borderColor: '#f39c12',
+                        backgroundColor: 'rgba(243, 156, 18, 0.1)',
+                        borderWidth: 2,
+                        fill: false,
+                        tension: 0.4,
+                        borderDash: [3, 3],
+                        yAxisID: 'y2',
+                        pointRadius: 2,
+                        pointHoverRadius: 4
                     }
                 ]
             },
@@ -1319,10 +1336,18 @@ while ($row = mysqli_fetch_assoc($user_segmentation_result)) {
                         display: true,
                         title: {
                             display: true,
-                            text: 'Month'
+                            text: 'Month',
+                            font: {
+                                size: 12,
+                                weight: 'bold'
+                            }
                         },
                         grid: {
                             color: 'rgba(0,0,0,0.1)'
+                        },
+                        ticks: {
+                            maxRotation: 45,
+                            minRotation: 0
                         }
                     },
                     y: {
@@ -1331,7 +1356,11 @@ while ($row = mysqli_fetch_assoc($user_segmentation_result)) {
                         position: 'left',
                         title: {
                             display: true,
-                            text: 'Monthly Registrations'
+                            text: 'Monthly Registrations',
+                            font: {
+                                size: 12,
+                                weight: 'bold'
+                            }
                         },
                         grid: {
                             color: 'rgba(0,0,0,0.1)'
@@ -1344,12 +1373,32 @@ while ($row = mysqli_fetch_assoc($user_segmentation_result)) {
                         position: 'right',
                         title: {
                             display: true,
-                            text: 'Cumulative Total Users'
+                            text: 'Cumulative Total Users',
+                            font: {
+                                size: 12,
+                                weight: 'bold'
+                            }
                         },
                         grid: {
                             drawOnChartArea: false,
                         },
                         beginAtZero: true
+                    },
+                    y2: {
+                        type: 'linear',
+                        display: false,
+                        position: 'right',
+                        title: {
+                            display: true,
+                            text: 'Growth Rate (%)',
+                            font: {
+                                size: 12,
+                                weight: 'bold'
+                            }
+                        },
+                        grid: {
+                            drawOnChartArea: false,
+                        }
                     }
                 }
             }
